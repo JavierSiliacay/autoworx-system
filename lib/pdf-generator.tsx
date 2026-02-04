@@ -41,14 +41,9 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
             min-height: 40px;
             display: flex;
             align-items: center;
-            background-image: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url('/autoworxlogo.png');
-            background-size: 20px 20px;
-            background-position: left 50%;
-            background-repeat: no-repeat;
           }
           .header-content {
             flex: 1;
-            padding-left: 35px;
             position: relative;
             z-index: 1;
           }
