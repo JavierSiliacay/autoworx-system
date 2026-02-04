@@ -12,12 +12,12 @@ export function TestimonialsSection() {
               target="_blank"
               rel="noopener noreferrer"
               className="hover:opacity-80 transition-opacity"
-            >
+            ><center>
               <img
                 src="/at_logo.png"
                 alt="Autotronics Logo"
-                className="h-48 w-auto object-contain"
-              />
+                className="h-70 w-auto object-contain"
+              /></center>
             </Link>
           </div>
 
