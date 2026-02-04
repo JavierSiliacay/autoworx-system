@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { Menu, X, Phone, Wrench } from "lucide-react"
+import { Menu, X, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const navigation = [
@@ -35,8 +35,8 @@ export function Header() {
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 lg:px-8">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-lg">
-              <Wrench className="w-6 h-6 text-primary-foreground" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden">
+              <img src="/autoworxlogo.png" alt="Autoworx Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
               <span className="font-serif text-xl font-bold tracking-tight text-foreground">AUTOWORX</span>
