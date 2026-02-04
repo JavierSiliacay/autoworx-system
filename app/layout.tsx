@@ -16,7 +16,11 @@ export const metadata: Metadata = {
     description: 'Professional automotive repair and diagnostics services. Book your appointment today.',
     type: 'website',
   },
-    generator: 'v0.app'
+  icons: {
+    icon: '/logo.jpg',
+    apple: '/apple-icon.png',
+  },
+  generator: 'v0.app'
 }
 
 export const viewport: Viewport = {
