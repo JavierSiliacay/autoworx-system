@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   icons: {
-    icon: '/logo.jpg',
+    icon: '/icon.svg',
     apple: '/apple-icon.png',
   },
   generator: 'v0.app'
