@@ -14,7 +14,7 @@ export function TestimonialsSection() {
               className="hover:opacity-80 transition-opacity"
             ><center>
               <img
-                src="/at_logo.png"
+                src="/at_logo.png?v=1"
                 alt="Autotronics Logo"
                 className="h-70 w-auto object-contain"
               /></center>

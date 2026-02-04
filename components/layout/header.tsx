@@ -36,7 +36,7 @@ export function Header() {
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex items-center justify-center w-24 h-25 rounded-lg overflow-hidden">
-              <img src="/autoworxlogo.png" alt="Autoworx Logo" className="w-full h-full object-cover" />
+              <img src="/autoworxlogo.png?v=1" alt="Autoworx Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
               <span className="font-serif text-xl font-bold tracking-tight text-foreground">AUTOWORX</span>
