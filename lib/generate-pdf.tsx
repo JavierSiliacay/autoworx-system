@@ -74,22 +74,31 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     
     /* Header */
     .header {
-      display: flex;
-      align-items: center;
+      position: relative;
       border-bottom: 2px solid #1a5f9c;
       padding: 8px 0;
       margin-bottom: 10px;
-      gap: 8px;
+      min-height: 35px;
+      display: flex;
+      align-items: center;
     }
     
     .header-logo {
-      max-width: 45px;
-      height: auto;
-      flex-shrink: 0;
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      opacity: 0.3;
+      z-index: 0;
     }
     
     .header-content {
       flex: 1;
+      padding-left: 35px;
+      position: relative;
+      z-index: 1;
     }
     
     .header h1 {
