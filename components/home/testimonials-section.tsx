@@ -33,7 +33,7 @@ export function TestimonialsSection() {
             </div>
 
             <p className="text-foreground leading-relaxed">
-              We would also like to express a special and heartfelt thanks to Javier Siliacay, whose dedication, technical expertise, and innovative approach led to the successful design and development of this system.
+              We would also like to express a special and heartfelt thanks to <b>Javier Siliacay</b>, whose dedication, technical expertise, and innovative approach led to the successful design and development of this system.
             </p>
           </div>
         </div>
