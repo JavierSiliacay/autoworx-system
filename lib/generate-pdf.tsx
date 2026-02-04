@@ -81,20 +81,15 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       min-height: 35px;
       display: flex;
       align-items: center;
-      background-image: linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)), url('/autoworxlogo.png');
-      background-size: 45px 45px;
+      background-image: linear-gradient(rgba(255,255,255,0.96), rgba(255,255,255,0.96)), url('/autoworxlogo.png');
+      background-size: 18px 18px;
       background-position: left 50%;
       background-repeat: no-repeat;
-      background-attachment: fixed;
-    }
-    
-    .header-logo {
-      display: none;
     }
     
     .header-content {
       flex: 1;
-      padding-left: 55px;
+      padding-left: 30px;
       position: relative;
       z-index: 1;
     }
@@ -205,7 +200,6 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <img src="/autoworxlogo.png" alt="Autoworx Logo" class="header-logo">
       <div class="header-content">
         <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
         <p>Appointment Request Confirmation</p>
@@ -516,7 +510,6 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
 <body>
   <div class="container">
     <div class="header">
-      <img src="/autoworxlogo.png" alt="Autoworx Logo" class="header-logo">
       <div class="header-content">
         <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
         <p>Appointment Status Report</p>

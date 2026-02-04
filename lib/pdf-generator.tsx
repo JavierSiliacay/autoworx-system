@@ -41,22 +41,14 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
             min-height: 40px;
             display: flex;
             align-items: center;
-            background-image: url('/autoworxlogo.png');
-            background-size: 50px 50px;
+            background-image: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url('/autoworxlogo.png');
+            background-size: 20px 20px;
             background-position: left 50%;
             background-repeat: no-repeat;
-            background-attachment: fixed;
-            opacity: 1;
-          }
-          .header {
-            background-image: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url('/autoworxlogo.png');
-          }
-          .header-logo {
-            display: none;
           }
           .header-content {
             flex: 1;
-            padding-left: 60px;
+            padding-left: 35px;
             position: relative;
             z-index: 1;
           }
@@ -141,8 +133,7 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
       <body>
         <div class="container">
           <div class="header">
-            <img src="/autoworxlogo.png" alt="Autoworx Logo" class="header-logo">
-            <div class="header-content">
+
               <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
               <p>Appointment Request Confirmation</p>
             </div>
