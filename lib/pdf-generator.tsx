@@ -34,26 +34,31 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
             box-shadow: 0 2 8px rgba(0,0,0,0.1);
           }
           .header {
-            text-align: center;
+            display: flex;
+            align-items: center;
             border-bottom: 3px solid #1a5f9c;
-            padding-bottom: 30px;
-            margin-bottom: 30px;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+            gap: 15px;
           }
           .header-logo {
-            max-width: 120px;
+            max-width: 80px;
             height: auto;
-            margin-bottom: 15px;
+            flex-shrink: 0;
+          }
+          .header-content {
+            flex: 1;
           }
           .header h1 {
-            font-size: 32px;
+            font-size: 24px;
             color: #1a5f9c;
-            margin-bottom: 5px;
-            letter-spacing: 2px;
+            margin: 0;
+            letter-spacing: 1px;
           }
           .header p {
             color: #666;
-            font-size: 14px;
-            margin: 5px 0;
+            font-size: 12px;
+            margin: 4px 0 0 0;
           }
           .tracking-section {
             background-color: #f0f7ff;
@@ -126,8 +131,10 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
         <div class="container">
           <div class="header">
             <img src="/autoworxlogo.png" alt="Autoworx Logo" class="header-logo">
-            <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
-            <p>Appointment Request Confirmation</p>
+            <div class="header-content">
+              <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
+              <p>Appointment Request Confirmation</p>
+            </div>
           </div>
 
           <div class="tracking-section">

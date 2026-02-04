@@ -74,28 +74,34 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     
     /* Header */
     .header {
-      text-align: center;
+      display: flex;
+      align-items: center;
       border-bottom: 2px solid #1a5f9c;
       padding-bottom: 8px;
       margin-bottom: 10px;
+      gap: 10px;
     }
     
     .header-logo {
-      max-width: 100px;
+      max-width: 70px;
       height: auto;
-      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+    
+    .header-content {
+      flex: 1;
     }
     
     .header h1 {
       color: #1a5f9c;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       margin: 0;
     }
     
     .header p {
       color: #666;
-      font-size: 10px;
+      font-size: 9px;
       margin: 2px 0 0 0;
     }
     
@@ -193,8 +199,10 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     <!-- Header -->
     <div class="header">
       <img src="/autoworxlogo.png" alt="Autoworx Logo" class="header-logo">
-      <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
-      <p>Appointment Request Confirmation</p>
+      <div class="header-content">
+        <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
+        <p>Appointment Request Confirmation</p>
+      </div>
     </div>
     
     <!-- Tracking Code -->
@@ -502,8 +510,10 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
   <div class="container">
     <div class="header">
       <img src="/autoworxlogo.png" alt="Autoworx Logo" class="header-logo">
-      <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
-      <p>Appointment Status Report</p>
+      <div class="header-content">
+        <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
+        <p>Appointment Status Report</p>
+      </div>
     </div>
     
     <div class="tracking-box">
