@@ -81,22 +81,20 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       min-height: 35px;
       display: flex;
       align-items: center;
+      background-image: linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)), url('/autoworxlogo.png');
+      background-size: 45px 45px;
+      background-position: left 50%;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
     }
     
     .header-logo {
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 15px;
-      height: 15px;
-      opacity: 0.12;
-      z-index: 0;
+      display: none;
     }
     
     .header-content {
       flex: 1;
-      padding-left: 35px;
+      padding-left: 55px;
       position: relative;
       z-index: 1;
     }

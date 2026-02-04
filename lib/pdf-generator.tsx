@@ -41,20 +41,22 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
             min-height: 40px;
             display: flex;
             align-items: center;
+            background-image: url('/autoworxlogo.png');
+            background-size: 50px 50px;
+            background-position: left 50%;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            opacity: 1;
+          }
+          .header {
+            background-image: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url('/autoworxlogo.png');
           }
           .header-logo {
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
-            opacity: 0.15;
-            z-index: 0;
+            display: none;
           }
           .header-content {
             flex: 1;
-            padding-left: 40px;
+            padding-left: 60px;
             position: relative;
             z-index: 1;
           }
