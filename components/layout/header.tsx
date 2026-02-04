@@ -35,7 +35,7 @@ export function Header() {
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 lg:px-8">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden">
+            <div className="flex items-center justify-center w-24 h-25 rounded-lg overflow-hidden">
               <img src="/autoworxlogo.png" alt="Autoworx Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
