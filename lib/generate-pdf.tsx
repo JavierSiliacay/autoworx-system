@@ -88,9 +88,9 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       left: 0;
       top: 50%;
       transform: translateY(-50%);
-      width: 28px;
-      height: 28px;
-      opacity: 0.3;
+      width: 15px;
+      height: 15px;
+      opacity: 0.12;
       z-index: 0;
     }
     

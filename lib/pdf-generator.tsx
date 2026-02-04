@@ -34,20 +34,29 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
             box-shadow: 0 2 8px rgba(0,0,0,0.1);
           }
           .header {
+            position: relative;
+            border-bottom: 3px solid #1a5f9c;
+            padding: 8px 0 8px 0;
+            margin-bottom: 20px;
+            min-height: 40px;
             display: flex;
             align-items: center;
-            border-bottom: 3px solid #1a5f9c;
-            padding: 10px 0;
-            margin-bottom: 20px;
-            gap: 12px;
           }
           .header-logo {
-            max-width: 50px;
-            height: auto;
-            flex-shrink: 0;
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            opacity: 0.15;
+            z-index: 0;
           }
           .header-content {
             flex: 1;
+            padding-left: 40px;
+            position: relative;
+            z-index: 1;
           }
           .header h1 {
             font-size: 18px;
