@@ -222,6 +222,11 @@ This project is open source and available under the MIT License.
 
 For support, please open an issue on GitHub or contact the project maintainer.
 
+## About the Developer
+
+**Developer:** Javier Siliacay  
+**Program:** Autotronics from USTP
+
 ## Roadmap
 
 - [ ] Email notifications for appointment updates
