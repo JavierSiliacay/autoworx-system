@@ -39,6 +39,11 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
             padding-bottom: 30px;
             margin-bottom: 30px;
           }
+          .header-logo {
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 15px;
+          }
           .header h1 {
             font-size: 32px;
             color: #1a5f9c;
@@ -120,6 +125,7 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
       <body>
         <div class="container">
           <div class="header">
+            <img src="/autoworxlogo.png" alt="Autoworx Logo" class="header-logo">
             <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
             <p>Appointment Request Confirmation</p>
           </div>

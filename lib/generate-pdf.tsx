@@ -80,6 +80,12 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       margin-bottom: 10px;
     }
     
+    .header-logo {
+      max-width: 100px;
+      height: auto;
+      margin-bottom: 8px;
+    }
+    
     .header h1 {
       color: #1a5f9c;
       font-size: 18px;
@@ -186,6 +192,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
   <div class="container">
     <!-- Header -->
     <div class="header">
+      <img src="/autoworxlogo.png" alt="Autoworx Logo" class="header-logo">
       <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
       <p>Appointment Request Confirmation</p>
     </div>
@@ -494,6 +501,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
 <body>
   <div class="container">
     <div class="header">
+      <img src="/autoworxlogo.png" alt="Autoworx Logo" class="header-logo">
       <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
       <p>Appointment Status Report</p>
     </div>
