@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/autoworxlogo.png',
-    apple: '/apple-icon.png',
+    apple: '/autoworxlogo.png',
   },
   generator: 'v0.app'
 }
