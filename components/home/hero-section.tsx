@@ -34,7 +34,7 @@ export function HeroSection() {
       <div className="relative z-10 mx-auto max-w-7xl px-4 py-24 lg:px-8">
         <div className="text-center max-w-4xl mx-auto">
           {/* Main heading with entrance animation */}
-          <h1 className={`font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white text-balance leading-tight transition-all duration-1000 ease-out ${
+          <h1 className={`font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary text-balance leading-tight transition-all duration-1000 ease-out ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
           }`}>
             Professional Auto Repair

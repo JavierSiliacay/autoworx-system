@@ -52,7 +52,7 @@ export function Header() {
               <img src="/autoworxlogo.png?v=1" alt="Autoworx Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
-              <span className="font-serif text-lg font-bold tracking-tight text-foreground">AUTOWORX</span>
+              <span className="font-serif text-lg font-bold tracking-tight text-primary">AUTOWORX</span>
               <span className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-1">Repairs and Gen. Merchandise</span>
             </div>
           </Link>
