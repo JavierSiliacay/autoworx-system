@@ -576,7 +576,7 @@ export default function AdminDashboard() {
   const filteredAndSortedHistory = historyRecords
     .filter((record) => {
       // Date range filter
-      if (!isInDateRange(record.created_at, historyDateRangeFilter)) return false
+      if (!isInDateRange(record.original_created_at, historyDateRangeFilter)) return false
       
       // Service filter
       if (historyServiceFilter !== "all" && record.service !== historyServiceFilter) return false
@@ -602,13 +602,13 @@ export default function AdminDashboard() {
     .sort((a, b) => {
       switch (historySortBy) {
         case "latest":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          return new Date(b.original_created_at).getTime() - new Date(a.original_created_at).getTime()
         case "oldest":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          return new Date(a.original_created_at).getTime() - new Date(b.original_created_at).getTime()
         case "name":
           return (a.name || "").localeCompare(b.name || "")
         case "status":
-          return (a.status || "").localeCompare(b.status || "")
+          return (a.final_status || "").localeCompare(b.final_status || "")
         default:
           return 0
       }
@@ -644,7 +644,7 @@ export default function AdminDashboard() {
                   <Wrench className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-serif text-lg font-bold tracking-tight text-foreground">
+                  <span className="font-serif text-lg font-bold tracking-tight text-primary">
                     AUTOWORX
                   </span>
                   <span className="text-[9px] uppercase tracking-widest text-muted-foreground -mt-1">
