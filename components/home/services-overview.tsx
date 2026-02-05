@@ -10,37 +10,31 @@ const services = [
     icon: Cog,
     title: "Engine & Transmission",
     description: "Complete engine diagnostics, repairs, and transmission services to keep your vehicle running smoothly.",
-    objective: "Ensure optimal engine performance and reliable transmission operation"
   },
   {
     icon: Car,
     title: "Under Chassis",
     description: "Suspension, steering, brakes, and drivetrain repairs for optimal handling and safety.",
-    objective: "Provide safe and responsive vehicle handling through proper chassis maintenance"
   },
   {
     icon: Thermometer,
     title: "AC & Electrical",
     description: "Air conditioning repairs, electrical diagnostics, battery service, and wiring repairs.",
-    objective: "Maintain comfortable cabin conditions and reliable electrical system function"
   },
   {
     icon: Paintbrush,
     title: "Body Repairs & Painting",
     description: "Collision repair, dent removal, rust treatment, and professional automotive painting.",
-    objective: "Restore vehicle appearance and structural integrity after damage"
   },
   {
     icon: Sparkles,
     title: "Car Detailing",
     description: "Interior and exterior detailing, wash services, and paint protection treatments.",
-    objective: "Enhance and preserve vehicle appearance while protecting against environmental damage"
   },
   {
     icon: Truck,
     title: "24/7 Towing",
     description: "Round-the-clock emergency towing and roadside assistance when you need it most.",
-    objective: "Provide immediate assistance and safe vehicle transport during emergencies"
   },
 ]
 
@@ -89,9 +83,6 @@ export function ServicesOverview() {
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                     {service.description}
                   </p>
-                  <div className="mt-4 text-xs text-primary font-medium">
-                    Objective: {service.objective}
-                  </div>
                 </div>
               </div>
             </div>
