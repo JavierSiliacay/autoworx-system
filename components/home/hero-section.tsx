@@ -3,15 +3,23 @@
 import Link from "next/link"
 import { Phone, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
 
 export function HeroSection() {
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    // Trigger entrance animation on mount
+    setIsVisible(true)
+  }, [])
+
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
       {/* Realistic auto repair shop background with dark overlay */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1500 ease-out"
         style={{
-          backgroundImage: "url('/placeholder.jpg')",
+          backgroundImage: "url('/background-picture.jpg')",
           filter: "brightness(0.6)"
         }}
         aria-hidden="true"
@@ -25,26 +33,32 @@ export function HeroSection() {
       
       <div className="relative z-10 mx-auto max-w-7xl px-4 py-24 lg:px-8">
         <div className="text-center max-w-4xl mx-auto">
-          {/* Main heading */}
-          <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white text-balance leading-tight">
+          {/* Main heading with entrance animation */}
+          <h1 className={`font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white text-balance leading-tight transition-all duration-1000 ease-out ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+          }`}>
             Professional Auto Repair
             <span className="block mt-2">You Can Rely On</span>
           </h1>
 
-          {/* Subheading */}
-          <p className="mt-6 text-lg sm:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed text-balance">
+          {/* Subheading with entrance animation */}
+          <p className={`mt-6 text-lg sm:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed text-balance transition-all duration-1000 ease-out delay-300 ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}>
             Accurate diagnostics, honest recommendations, and quality repairs for all makes and models.
           </p>
 
-          {/* CTA buttons */}
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" asChild className="w-full sm:w-auto text-base font-semibold bg-white text-gray-900 hover:bg-gray-100 border border-white/20 shadow-lg">
+          {/* CTA buttons with entrance animation */}
+          <div className={`mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 transition-all duration-1000 ease-out delay-500 ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}>
+            <Button size="lg" asChild className="w-full sm:w-auto text-base font-semibold bg-white text-gray-900 hover:bg-gray-100 border border-white/20 shadow-lg transition-all duration-300 hover:scale-105">
               <Link href="/contact">
                 Book Appointment
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-base text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-transparent">
+            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-base text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-transparent transition-all duration-300 hover:scale-105">
               <a href="tel:0936-354-9603">
                 <Phone className="mr-2 h-5 w-5" />
                 Call Now
@@ -52,8 +66,10 @@ export function HeroSection() {
             </Button>
           </div>
 
-          {/* Objective paragraph replacing stats */}
-          <div className="mt-12 max-w-3xl mx-auto">
+          {/* Objective paragraph with entrance animation */}
+          <div className={`mt-12 max-w-3xl mx-auto transition-all duration-1000 ease-out delay-700 ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}>
             <p className="text-white/80 text-base leading-relaxed">
               We focus on diagnosing problems accurately and performing quality repairs with clear communication and fair recommendations. Our goal is to fix vehicles correctly the first time.
             </p>
