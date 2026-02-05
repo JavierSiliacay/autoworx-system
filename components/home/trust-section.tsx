@@ -35,9 +35,9 @@ export function TrustSection() {
               Quality Service You Can Depend On
             </h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
-              For over 20 years, Autoworx Repairs has been the trusted choice for vehicle 
+              For over 10 years, Autoworx Repairs has been the trusted choice for vehicle 
               owners who demand quality workmanship and honest service. We treat every 
-              vehicle like it&apos;s our own.
+              vehicle like it's our own.
             </p>
 
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
