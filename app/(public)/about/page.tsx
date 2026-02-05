@@ -112,10 +112,10 @@ export default function AboutPage() {
           <div className="text-center max-w-3xl mx-auto">
             <span className="text-sm font-semibold uppercase tracking-wider text-primary">About Us</span>
             <h1 className="mt-2 font-serif text-4xl sm:text-5xl font-bold text-foreground text-balance">
-              20 Years of Trusted Automotive Service
+              10 Years of Trusted Automotive Service
             </h1>
             <p className="mt-4 text-lg text-muted-foreground leading-relaxed">
-              Since 2004, Autoworx Repairs has been the go-to destination for vehicle owners 
+              Since 2015, Autoworx Repairs has been the go-to destination for vehicle owners 
               who demand quality workmanship, honest service, and fair prices.
             </p>
           </div>

@@ -756,7 +756,7 @@ export default function TrackingPage() {
         {!appointment && !error && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              Enter your email and tracking code above to view your appointment status
+              Enter your tracking code above to view your appointment or vehicle status
             </p>
           </div>
         )}

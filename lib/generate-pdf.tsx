@@ -74,32 +74,57 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     
     /* Header */
     .header {
-      position: relative;
+      text-align: center;
       border-bottom: 2px solid #1a5f9c;
-      padding: 8px 0;
-      margin-bottom: 10px;
-      min-height: 35px;
+      padding: 12px 0;
+      margin-bottom: 12px;
       display: flex;
+      justify-content: center;
       align-items: center;
     }
     
+    .header-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin: 0 auto;
+      max-width: 500px;
+    }
+    
+    .logo-container {
+      width: 45px;
+      height: 45px;
+      flex-shrink: 0;
+      z-index: 2;
+    }
+    
+    .logo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    
     .header-content {
-      flex: 1;
-      position: relative;
+      text-align: left;
       z-index: 1;
+      flex: 1;
     }
     
     .header h1 {
       color: #1a5f9c;
-      font-size: 13px;
+      font-size: 16px;
       font-weight: bold;
-      margin: 0;
+      margin: 0 0 4px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     
     .header p {
       color: #666;
-      font-size: 8px;
-      margin: 2px 0 0 0;
+      font-size: 10px;
+      margin: 0;
+      font-weight: 600;
     }
     
     /* Tracking Section */
@@ -195,9 +220,14 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <div class="header-content">
-        <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
-        <p>Appointment Request Confirmation</p>
+      <div class="header-container">
+        <div class="logo-container">
+          <img src="/autoworxlogo.png" alt="Autoworx Logo" />
+        </div>
+        <div class="header-content">
+          <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
+          <p>Appointment Request Confirmation</p>
+        </div>
       </div>
     </div>
     
@@ -346,24 +376,59 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       background: white;
     }
     
+    /* Header */
     .header {
       text-align: center;
       border-bottom: 2px solid #1a5f9c;
-      padding-bottom: 8px;
+      padding: 12px 0;
       margin-bottom: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .header-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin: 0 auto;
+      max-width: 500px;
+    }
+    
+    .logo-container {
+      width: 45px;
+      height: 45px;
+      flex-shrink: 0;
+      z-index: 2;
+    }
+    
+    .logo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    
+    .header-content {
+      text-align: left;
+      z-index: 1;
+      flex: 1;
     }
     
     .header h1 {
       color: #1a5f9c;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
-      margin: 0;
+      margin: 0 0 4px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     
     .header p {
       color: #666;
       font-size: 10px;
-      margin: 2px 0 0 0;
+      margin: 0;
+      font-weight: 600;
     }
     
     .tracking-box {
@@ -505,9 +570,14 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
 <body>
   <div class="container">
     <div class="header">
-      <div class="header-content">
-        <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
-        <p>Appointment Status Report</p>
+      <div class="header-container">
+        <div class="logo-container">
+          <img src="/autoworxlogo.png" alt="Autoworx Logo" />
+        </div>
+        <div class="header-content">
+          <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
+          <p>Appointment Status Report</p>
+        </div>
       </div>
     </div>
     

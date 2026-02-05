@@ -2,8 +2,8 @@
 
 import React from "react"
 
-import { useState } from "react"
-import { Send, Loader2, CheckCircle, Download, Camera, X, AlertTriangle, ImageIcon } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Send, Loader2, CheckCircle, Download, Camera, X, AlertTriangle, ImageIcon, ShieldCheck, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -234,41 +234,42 @@ export function BookingForm() {
 
   if (isSubmitted) {
     return (
-      <div className="p-8 bg-card rounded-xl border border-border text-center">
-        <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-primary/10 text-primary">
-          <CheckCircle className="w-8 h-8" />
+      <div className="p-8 bg-card rounded-xl border border-border text-center animate-in fade-in zoom-in-95 duration-500">
+        <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-primary/10 text-primary animate-in zoom-in-50 duration-500">
+          <CheckCircle className="w-8 h-8 animate-in spin-in-1.5 duration-1000" />
         </div>
-        <h3 className="mt-4 font-serif text-2xl font-bold text-foreground">Request Submitted!</h3>
-        <p className="mt-2 text-muted-foreground">
-          Thank you for choosing Autoworx Repairs. We&apos;ll contact you within 24 hours to confirm your appointment.
+        <h3 className="mt-4 font-serif text-2xl font-bold text-foreground animate-in slide-in-from-top-2 duration-700">Request Submitted!</h3>
+        <p className="mt-2 text-muted-foreground animate-in slide-in-from-bottom-2 duration-700">
+          Thank you for choosing Autoworx Repairs. We'll contact you within 24 hours to confirm your appointment.
         </p>
         
         {/* Tracking Code Section */}
-        <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/30">
+        <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/30 animate-in slide-in-from-left-2 duration-700">
           <p className="text-xs text-muted-foreground mb-2">Your Tracking Code</p>
-          <p className="font-mono text-lg font-bold text-primary">{trackingCode}</p>
+          <p className="font-mono text-lg font-bold text-primary tracking-wider animate-pulse">{trackingCode}</p>
           <p className="text-xs text-muted-foreground mt-2">
             Save this code to track your appointment status
           </p>
           <Button
             size="sm"
             variant="outline"
-            className="mt-3 text-xs bg-transparent"
+            className="mt-3 text-xs bg-transparent group"
             onClick={() => {
               navigator.clipboard.writeText(trackingCode)
               alert("Tracking code copied to clipboard!")
             }}
           >
+            <ShieldCheck className="mr-1 w-3 h-3 group-hover:scale-110 transition-transform" />
             Copy Code
           </Button>
         </div>
-        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-          <Button onClick={downloadConfirmationPDF} variant="default" className="gap-2">
-            <Download className="w-4 h-4" />
+        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center animate-in slide-in-from-right-2 duration-700">
+          <Button onClick={downloadConfirmationPDF} variant="default" className="gap-2 group">
+            <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
             Download Confirmation
           </Button>
           <Button
-            className="bg-transparent"
+            className="bg-transparent group"
             variant="outline"
             onClick={() => {
               setIsSubmitted(false)
@@ -290,6 +291,7 @@ export function BookingForm() {
               })
             }}
           >
+            <Star className="mr-2 w-4 h-4 group-hover:scale-110 transition-transform" />
             Book Another Appointment
           </Button>
         </div>
@@ -301,21 +303,22 @@ export function BookingForm() {
     <form onSubmit={handleSubmit} className="p-6 lg:p-8 bg-card rounded-xl border border-border">
       <div className="space-y-6">
         {/* Personal Information */}
-        <div>
+        <div className="animate-in fade-in slide-in-from-left-2 duration-500">
           <h3 className="font-semibold text-foreground mb-4">Personal Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name *</Label>
+            <div className="space-y-2 group">
+              <Label htmlFor="name" className="group-hover:text-primary transition-colors">Full Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => updateField("name", e.target.value)}
                 placeholder="John Doe"
                 required
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number (PH) *</Label>
+            <div className="space-y-2 group">
+              <Label htmlFor="phone" className="group-hover:text-primary transition-colors">Phone Number (PH) *</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -324,13 +327,14 @@ export function BookingForm() {
                 placeholder="09XX-XXX-XXXX"
                 maxLength={12}
                 required
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
               />
               {formData.phone && !isValidPhoneNumber(formData.phone) && (
-                <p className="text-xs text-red-500">Please enter a valid Philippine phone number (09XX-XXX-XXXX)</p>
+                <p className="text-xs text-red-500 animate-in slide-in-from-left-1 duration-300">Please enter a valid Philippine phone number (09XX-XXX-XXXX)</p>
               )}
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="email">Email Address *</Label>
+            <div className="space-y-2 sm:col-span-2 group">
+              <Label htmlFor="email" className="group-hover:text-primary transition-colors">Email Address *</Label>
               <Input
                 id="email"
                 type="email"
@@ -338,17 +342,18 @@ export function BookingForm() {
                 onChange={(e) => updateField("email", e.target.value)}
                 placeholder="john@example.com"
                 required
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
               />
             </div>
           </div>
         </div>
 
         {/* Vehicle Information */}
-        <div>
+        <div className="animate-in fade-in slide-in-from-right-2 duration-500">
           <h3 className="font-semibold text-foreground mb-4">Vehicle Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="vehicleMake">Make *</Label>
+            <div className="space-y-2 group">
+              <Label htmlFor="vehicleMake" className="group-hover:text-primary transition-colors">Manufacturer *</Label>
               {!useCustomMake ? (
                 <Select
                   value={formData.vehicleMake}
@@ -361,7 +366,7 @@ export function BookingForm() {
                     }
                   }}
                 >
-                  <SelectTrigger id="vehicleMake">
+                  <SelectTrigger id="vehicleMake" className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all">
                     <SelectValue placeholder="Select vehicle brand" />
                   </SelectTrigger>
                   <SelectContent>
@@ -383,7 +388,7 @@ export function BookingForm() {
                     onChange={(e) => updateField("vehicleMake", e.target.value)}
                     placeholder="Enter vehicle make"
                     required
-                    className="flex-1"
+                    className="flex-1 group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
                   />
                   <Button
                     type="button"
@@ -399,23 +404,24 @@ export function BookingForm() {
                 </div>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="vehicleModel">Model *</Label>
+            <div className="space-y-2 group">
+              <Label htmlFor="vehicleModel" className="group-hover:text-primary transition-colors">Model *</Label>
               <Input
                 id="vehicleModel"
                 value={formData.vehicleModel}
                 onChange={(e) => updateField("vehicleModel", e.target.value)}
                 placeholder="Camry"
                 required
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="vehicleYear">Year *</Label>
+            <div className="space-y-2 group">
+              <Label htmlFor="vehicleYear" className="group-hover:text-primary transition-colors">Year *</Label>
               <Select
                 value={formData.vehicleYear}
                 onValueChange={(value) => updateField("vehicleYear", value)}
               >
-                <SelectTrigger id="vehicleYear">
+                <SelectTrigger id="vehicleYear" className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all">
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -428,29 +434,30 @@ export function BookingForm() {
               </Select>
             </div>
           </div>
-          <div className="mt-4 space-y-2">
-            <Label htmlFor="vehiclePlate">Vehicle Plate Number *</Label>
+          <div className="mt-4 space-y-2 group">
+            <Label htmlFor="vehiclePlate" className="group-hover:text-primary transition-colors">Vehicle Plate Number *</Label>
             <Input
               id="vehiclePlate"
               value={formData.vehiclePlate}
               onChange={(e) => updateField("vehiclePlate", e.target.value.toUpperCase())}
               placeholder="ABC-1234 or ABC1234"
               required
+              className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
             />
           </div>
         </div>
 
         {/* Service Information */}
-        <div>
+        <div className="animate-in fade-in slide-in-from-left-2 duration-500">
           <h3 className="font-semibold text-foreground mb-4">Service Details</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="service">Requested Service *</Label>
+            <div className="space-y-2 group">
+              <Label htmlFor="service" className="group-hover:text-primary transition-colors">Requested Service *</Label>
               <Select
                 value={formData.service}
                 onValueChange={(value) => updateField("service", value)}
               >
-                <SelectTrigger id="service">
+                <SelectTrigger id="service" className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all">
                   <SelectValue placeholder="Select service" />
                 </SelectTrigger>
                 <SelectContent>
@@ -462,8 +469,8 @@ export function BookingForm() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="preferredDate">Preferred Date</Label>
+            <div className="space-y-2 group">
+              <Label htmlFor="preferredDate" className="group-hover:text-primary transition-colors">Preferred Date</Label>
               <div className="flex gap-2">
                 <Input
                   id="preferredDate"
@@ -471,11 +478,11 @@ export function BookingForm() {
                   value={formData.preferredDate}
                   onChange={(e) => updateField("preferredDate", e.target.value)}
                   min={new Date().toISOString().split("T")[0]}
-                  className="flex-1"
+                  className="flex-1 group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
                 />
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="px-3 bg-transparent" type="button">
+                    <Button variant="outline" className="px-3 bg-transparent group-hover:border-primary/50 group-hover:bg-primary/5 transition-all" type="button">
                       <Calendar className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
@@ -497,14 +504,15 @@ export function BookingForm() {
               </div>
             </div>
           </div>
-          <div className="mt-4 space-y-2">
-            <Label htmlFor="message">Additional Details</Label>
+          <div className="mt-4 space-y-2 group">
+            <Label htmlFor="message" className="group-hover:text-primary transition-colors">Additional Details</Label>
             <Textarea
               id="message"
               value={formData.message}
               onChange={(e) => updateField("message", e.target.value)}
               placeholder="Describe the issue or any specific requests..."
               rows={4}
+              className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
             />
           </div>
         </div>

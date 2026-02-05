@@ -17,6 +17,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [clickedLink, setClickedLink] = useState<string | null>(null)
+  const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
     // Get pending appointments count from localStorage
@@ -25,21 +26,33 @@ export function Header() {
     setPendingCount(pending)
   }, [])
 
+  useEffect(() => {
+    // Add scroll animation effect
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const handleNavClick = (href: string) => {
+    
     setClickedLink(href)
     setTimeout(() => setClickedLink(null), 500)
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+    <header className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border transition-all duration-300 ${
+      isScrolled ? 'bg-background/95 shadow-lg' : 'bg-transparent'
+    }`}>
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 lg:px-8">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-24 h-25 rounded-lg overflow-hidden">
+            <div className="flex items-center justify-center w-16 h-16 rounded-lg overflow-hidden">
               <img src="/autoworxlogo.png?v=1" alt="Autoworx Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
-              <span className="font-serif text-xl font-bold tracking-tight text-foreground">AUTOWORX</span>
+              <span className="font-serif text-lg font-bold tracking-tight text-foreground">AUTOWORX</span>
               <span className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-1">Repairs and Gen. Merchandise</span>
             </div>
           </Link>

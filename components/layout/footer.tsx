@@ -25,8 +25,8 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-lg">
-                <Wrench className="w-6 h-6 text-primary-foreground" />
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg overflow-hidden">
+                <img src="/autoworxlogo.png" alt="Autoworx Logo" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
                 <span className="font-serif text-xl font-bold tracking-tight text-foreground">AUTOWORX</span>
