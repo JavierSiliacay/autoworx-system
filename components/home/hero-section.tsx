@@ -42,7 +42,7 @@ export function HeroSection() {
           </h1>
 
           {/* Subheading with entrance animation */}
-          <p className={`mt-6 text-lg sm:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed text-balance transition-all duration-1000 ease-out delay-300 ${
+          <p className={`mt-6 text-lg sm:text-xl text-white/95 max-w-2xl mx-auto leading-relaxed text-balance transition-all duration-1000 ease-out delay-300 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
             Accurate diagnostics, honest recommendations, and quality repairs for all makes and models.
@@ -52,13 +52,13 @@ export function HeroSection() {
           <div className={`mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 transition-all duration-1000 ease-out delay-500 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
-            <Button size="lg" asChild className="w-full sm:w-auto text-base font-semibold bg-white text-gray-900 hover:bg-gray-100 border border-white/20 shadow-lg transition-all duration-300 hover:scale-105">
+            <Button size="lg" asChild className="w-full sm:w-auto text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 shadow-lg transition-all duration-300 hover:scale-105">
               <Link href="/contact">
                 Book Appointment
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-base text-white border-white/30 hover:bg-white/10 hover:border-white/50 bg-transparent transition-all duration-300 hover:scale-105">
+            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-base text-primary border-primary/30 hover:bg-primary/10 hover:border-primary/50 bg-transparent transition-all duration-300 hover:scale-105">
               <a href="tel:0936-354-9603">
                 <Phone className="mr-2 h-5 w-5" />
                 Call Now
@@ -70,7 +70,7 @@ export function HeroSection() {
           <div className={`mt-12 max-w-3xl mx-auto transition-all duration-1000 ease-out delay-700 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
-            <p className="text-white/80 text-base leading-relaxed">
+            <p className="text-white/90 text-base leading-relaxed">
               We focus on diagnosing problems accurately and performing quality repairs with clear communication and fair recommendations. Our goal is to fix vehicles correctly the first time.
             </p>
           </div>
