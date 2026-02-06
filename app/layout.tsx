@@ -5,6 +5,10 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "Autoworx Repairs - Vehicle Repair Management System",
   description: "Professional vehicle repair appointment booking and management system",
+  icons: {
+    icon: "/autoworxlogo.png",
+    apple: "/autoworxlogo.png",
+  },
 }
 
 export default function RootLayout({
