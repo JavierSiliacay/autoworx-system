@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { signOut, useSession } from "next-auth/react"
 import {
   Wrench,
   LogOut,
@@ -160,6 +161,7 @@ const vehicleBrands = VEHICLE_BRANDS
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const { status, data: session } = useSession()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [filter, setFilter] = useState<"all" | "pending" | "contacted" | "completed">("all")
   const [vehicleBrandFilter, setVehicleBrandFilter] = useState<string>("all")
@@ -215,19 +217,20 @@ export default function AdminDashboard() {
   }, [])
 
   useEffect(() => {
-    // Check authentication
-    const isLoggedIn = localStorage.getItem("adminLoggedIn")
-    if (isLoggedIn !== "true") {
+    if (status === "unauthenticated") {
+      router.push("/admin")
+      return
+    }
+    if (status === "authenticated" && session?.user?.role !== "admin") {
       router.push("/admin")
       return
     }
 
-    loadAppointments()
-  }, [router, loadAppointments])
+    if (status === "authenticated") loadAppointments()
+  }, [router, loadAppointments, status, session?.user?.role])
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminLoggedIn")
-    router.push("/admin")
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/admin" })
   }
 
   const updateStatus = async (id: string, newStatus: "pending" | "contacted" | "completed") => {
@@ -622,6 +625,14 @@ export default function AdminDashboard() {
       hour: "numeric",
       minute: "2-digit",
     })
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    )
   }
 
   if (isLoading) {

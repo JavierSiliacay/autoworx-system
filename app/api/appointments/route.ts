@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
+import { isAuthorizedAdminEmail } from "@/lib/auth"
 import { NextResponse } from "next/server"
+import { getToken } from "next-auth/jwt"
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -20,7 +22,12 @@ export async function GET(request: Request) {
     return NextResponse.json(data)
   }
 
-  // Get all appointments for admin
+  // Get all appointments (admin only)
+  const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!isAuthorizedAdminEmail(token?.email)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const { data, error } = await supabase
     .from("appointments")
     .select("*")
@@ -86,6 +93,11 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!isAuthorizedAdminEmail(token?.email)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const supabase = await createClient()
   const body = await request.json()
   const { id, ...updates } = body
@@ -118,6 +130,11 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!isAuthorizedAdminEmail(token?.email)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const supabase = await createClient()
   const body = await request.json()
   const { id } = body

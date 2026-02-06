@@ -1,7 +1,14 @@
 import { createClient } from "@/lib/supabase/server"
+import { isAuthorizedAdminEmail } from "@/lib/auth"
 import { NextResponse } from "next/server"
+import { getToken } from "next-auth/jwt"
 
-export async function GET() {
+export async function GET(request: Request) {
+  const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!isAuthorizedAdminEmail(token?.email)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -17,6 +24,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!isAuthorizedAdminEmail(token?.email)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const supabase = await createClient()
   const body = await request.json()
 
@@ -65,13 +77,15 @@ export async function POST(request: Request) {
 
   // Delete images from storage if any
   if (appointment.damage_images && appointment.damage_images.length > 0) {
-    for (const imageUrl of appointment.damage_images) {
-      // Extract filename from URL
-      const urlParts = imageUrl.split("/")
-      const filename = urlParts[urlParts.length - 1]
-      if (filename) {
-        await supabase.storage.from("damage-images").remove([filename])
-      }
+    const imagePaths = appointment.damage_images
+      .map((url: string) => {
+        const match = url.match(/damage-images\/(.+)$/)
+        return match ? match[1] : null
+      })
+      .filter(Boolean)
+
+    if (imagePaths.length > 0) {
+      await supabase.storage.from("damage-images").remove(imagePaths)
     }
   }
 
@@ -89,6 +103,11 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!isAuthorizedAdminEmail(token?.email)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const supabase = await createClient()
   const body = await request.json()
   const { id } = body

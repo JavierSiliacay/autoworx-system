@@ -1,124 +1,112 @@
 "use client"
 
 import React from "react"
-
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Wrench, Lock, Loader2 } from "lucide-react"
+import { signIn, useSession } from "next-auth/react" // ✅ Using NextAuth
+import { Wrench, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-
-// Demo credentials - in production, use proper authentication
-const DEMO_CREDENTIALS = {
-  username: "admin",
-  password: "autoworx2024",
-}
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [credentials, setCredentials] = useState({
-    username: "",
-    password: "",
-  })
+  const { data: session, status } = useSession() // ✅ Check if user is authenticated
 
   useEffect(() => {
-    // Check if already logged in
-    const isLoggedIn = localStorage.getItem("adminLoggedIn")
-    if (isLoggedIn === "true") {
+    // ✅ If authenticated with Google, redirect to dashboard
+    if (status === "authenticated") {
       router.push("/admin/dashboard")
     }
-  }, [router])
+  }, [status, router])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
-
-    // Simulate authentication delay
-    await new Promise((resolve) => setTimeout(resolve, 800))
-
-    if (
-      credentials.username === DEMO_CREDENTIALS.username &&
-      credentials.password === DEMO_CREDENTIALS.password
-    ) {
-      localStorage.setItem("adminLoggedIn", "true")
-      router.push("/admin/dashboard")
-    } else {
-      setError("Invalid username or password")
-      setIsLoading(false)
+  const handleGoogleSignIn = async () => {
+    try {
+      // ✅ Use Google OAuth to sign in
+      await signIn("google", {
+        callbackUrl: "/admin/dashboard",
+        redirect: true,
+      })
+    } catch (error) {
+      console.error("Sign in error:", error)
     }
+  }
+
+  // ✅ Show loading while checking authentication
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  // ✅ Don't show login if already authenticated
+  if (status === "authenticated") {
+    return null
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
+        {/* ✅ Same logo section */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4">
             <Wrench className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="font-serif text-2xl font-bold text-foreground">Admin Portal</h1>
+          <h1 className="font-serif text-2xl font-bold text-foreground">
+            Admin Portal
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">Autoworx Repairs</p>
         </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="p-6 bg-card rounded-xl border border-border">
+        {/* ✅ Google OAuth button instead of form */}
+        <div className="p-6 bg-card rounded-xl border border-border">
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={credentials.username}
-                onChange={(e) =>
-                  setCredentials((prev) => ({ ...prev, username: e.target.value }))
-                }
-                placeholder="Enter username"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={credentials.password}
-                onChange={(e) =>
-                  setCredentials((prev) => ({ ...prev, password: e.target.value }))
-                }
-                placeholder="Enter password"
-                required
-              />
+            <div className="text-center mb-6">
+              <h2 className="text-lg font-semibold mb-2">Sign in to continue</h2>
+              <p className="text-sm text-muted-foreground">
+                Only authorized Google accounts can access this portal
+              </p>
             </div>
 
-            {error && (
-              <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <Lock className="mr-2 h-4 w-4" />
-                  Sign In
-                </>
-              )}
+            {/* ✅ Google Sign-In Button */}
+            <Button
+              onClick={handleGoogleSignIn}
+              className="w-full"
+              size="lg"
+            >
+              <svg
+                className="mr-2 h-5 w-5"
+                aria-hidden="true"
+                focusable="false"
+                data-prefix="fab"
+                data-icon="google"
+                role="img"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 488 512"
+              >
+                <path
+                  fill="currentColor"
+                  d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
+                ></path>
+              </svg>
+              Sign in with Google
             </Button>
           </div>
-        </form>
+        </div>
 
-        {/* Demo credentials hint */}
+        {/* ✅ Shows which emails are authorized */}
         <div className="mt-4 p-4 bg-secondary rounded-lg text-center">
-          <p className="text-xs text-muted-foreground mb-2">Demo Credentials:</p>
-          <code className="text-xs text-foreground">admin / autoworx2024</code>
+          <p className="text-xs text-muted-foreground">
+            Only the following email addresses are authorized:
+          </p>
+          <ul className="mt-2 space-y-1">
+            <li className="text-xs font-mono text-foreground">
+              autoworxcagayan2025@gmail.com
+            </li>
+            <li className="text-xs font-mono text-foreground">
+              siliacay.javier@gmail.com
+            </li>
+          </ul>
         </div>
       </div>
     </div>
