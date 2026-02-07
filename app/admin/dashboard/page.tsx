@@ -57,6 +57,7 @@ interface AppointmentDB {
   status_updated_at?: string
   costing?: CostingData
   damage_images?: string[]
+  orcr_image?: string
 }
 
 // Frontend interface (camelCase)
@@ -80,6 +81,7 @@ interface Appointment {
   statusUpdatedAt?: string
   costing?: CostingData
   damageImages?: string[]
+  orcrImage?: string
 }
 
 // History interface
@@ -129,6 +131,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     statusUpdatedAt: apt.status_updated_at,
     costing: apt.costing,
     damageImages: apt.damage_images,
+    orcrImage: apt.orcr_image,
   }
 }
 
@@ -178,13 +181,13 @@ export default function AdminDashboard() {
   const [archiveModalOpen, setArchiveModalOpen] = useState(false)
   const [archiveAppointmentId, setArchiveAppointmentId] = useState<string | null>(null)
   const [archiveReason, setArchiveReason] = useState("")
-  
+
   // History search, filter, and sort states
   const [historySearchQuery, setHistorySearchQuery] = useState<string>("")
   const [historyServiceFilter, setHistoryServiceFilter] = useState<string>("all")
   const [historyDateRangeFilter, setHistoryDateRangeFilter] = useState<string>("all")
   const [historySortBy, setHistorySortBy] = useState<"latest" | "oldest" | "status" | "name">("latest")
-  
+
   // Custom repair part input states
   const [useCustomRepairPart, setUseCustomRepairPart] = useState<Record<string, boolean>>({})
 
@@ -238,7 +241,7 @@ export default function AdminDashboard() {
       apt.id === id ? { ...apt, status: newStatus } : apt
     )
     setAppointments(updated)
-    
+
     await fetch("/api/appointments", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -251,14 +254,14 @@ export default function AdminDashboard() {
     const updated = appointments.map((apt) =>
       apt.id === id
         ? {
-            ...apt,
-            repairStatus,
-            statusUpdatedAt,
-          }
+          ...apt,
+          repairStatus,
+          statusUpdatedAt,
+        }
         : apt
     )
     setAppointments(updated)
-    
+
     await fetch("/api/appointments", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -271,14 +274,14 @@ export default function AdminDashboard() {
     const updated = appointments.map((apt) =>
       apt.id === id
         ? {
-            ...apt,
-            currentRepairPart,
-            statusUpdatedAt,
-          }
+          ...apt,
+          currentRepairPart,
+          statusUpdatedAt,
+        }
         : apt
     )
     setAppointments(updated)
-    
+
     await fetch("/api/appointments", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -292,7 +295,7 @@ export default function AdminDashboard() {
     }
     const updated = appointments.filter((apt) => apt.id !== id)
     setAppointments(updated)
-    
+
     await fetch("/api/appointments", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -338,7 +341,7 @@ export default function AdminDashboard() {
     if (!window.confirm("Are you sure you want to permanently delete this history record?")) {
       return
     }
-    
+
     try {
       await fetch("/api/history", {
         method: "DELETE",
@@ -359,13 +362,13 @@ export default function AdminDashboard() {
     const updated = appointments.map((apt) =>
       apt.id === id
         ? {
-            ...apt,
-            costing: updatedCosting,
-          }
+          ...apt,
+          costing: updatedCosting,
+        }
         : apt
     )
     setAppointments(updated)
-    
+
     await fetch("/api/appointments", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -580,10 +583,10 @@ export default function AdminDashboard() {
     .filter((record) => {
       // Date range filter
       if (!isInDateRange(record.original_created_at, historyDateRangeFilter)) return false
-      
+
       // Service filter
       if (historyServiceFilter !== "all" && record.service !== historyServiceFilter) return false
-      
+
       // Search filter
       if (historySearchQuery.trim()) {
         const query = historySearchQuery.toLowerCase()
@@ -594,12 +597,12 @@ export default function AdminDashboard() {
         const matchesPlate = record.vehicle_plate?.toLowerCase().includes(query)
         const matchesMake = record.vehicle_make?.toLowerCase().includes(query)
         const matchesModel = record.vehicle_model?.toLowerCase().includes(query)
-        
+
         if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel) {
           return false
         }
       }
-      
+
       return true
     })
     .sort((a, b) => {
@@ -702,11 +705,10 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => setActiveTab("appointments")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "appointments"
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "appointments"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             <FileText className="w-4 h-4 inline-block mr-2" />
             Active Appointments ({appointments.length})
@@ -719,11 +721,10 @@ export default function AdminDashboard() {
                 loadHistory()
               }
             }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "history"
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "history"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             <History className="w-4 h-4 inline-block mr-2" />
             History ({historyRecords.length})
@@ -1423,168 +1424,168 @@ export default function AdminDashboard() {
             ) : (
               <div className="space-y-4">
                 {filteredAndSortedHistory.map((record) => (
-              <div key={record.id} className="bg-card rounded-xl border border-border overflow-hidden">
-                <div className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    {/* Main Info */}
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="font-semibold text-foreground">{record.name}</h3>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Tracking: <span className="font-mono text-primary">{record.tracking_code}</span>
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-2 items-end">
-                          <Badge variant="default">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Completed
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="w-4 h-4 shrink-0" />
-                          <a href={`tel:${record.phone}`} className="hover:text-foreground">
-                            {record.phone}
-                          </a>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Mail className="w-4 h-4 shrink-0" />
-                          <a href={`mailto:${record.email}`} className="hover:text-foreground truncate">
-                            {record.email}
-                          </a>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Car className="w-4 h-4 shrink-0" />
-                          <span>
-                            {record.vehicle_year} {record.vehicle_make}{" "}
-                            {record.vehicle_model}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <span className="font-mono font-semibold text-foreground">{record.vehicle_plate}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Wrench className="w-4 h-4 text-primary" />
-                          <span className="text-foreground">{record.service}</span>
-                        </div>
-                        {record.preferred_date && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Calendar className="w-4 h-4" />
-                            <span>Preferred: {record.preferred_date}</span>
+                  <div key={record.id} className="bg-card rounded-xl border border-border overflow-hidden">
+                    <div className="p-6">
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                        {/* Main Info */}
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="font-semibold text-foreground">{record.name}</h3>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Tracking: <span className="font-mono text-primary">{record.tracking_code}</span>
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-2 items-end">
+                              <Badge variant="default">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Completed
+                              </Badge>
+                            </div>
                           </div>
-                        )}
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          <span>Submitted: {formatDate(record.original_created_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          <span>Completed: {formatDate(record.completed_at)}</span>
-                        </div>
-                      </div>
 
-                      {record.message && (
-                        <div className="p-3 bg-secondary rounded-lg">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                            <User className="w-3 h-3" />
-                            Additional Details
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Phone className="w-4 h-4 shrink-0" />
+                              <a href={`tel:${record.phone}`} className="hover:text-foreground">
+                                {record.phone}
+                              </a>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Mail className="w-4 h-4 shrink-0" />
+                              <a href={`mailto:${record.email}`} className="hover:text-foreground truncate">
+                                {record.email}
+                              </a>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Car className="w-4 h-4 shrink-0" />
+                              <span>
+                                {record.vehicle_year} {record.vehicle_make}{" "}
+                                {record.vehicle_model}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <span className="font-mono font-semibold text-foreground">{record.vehicle_plate}</span>
+                            </div>
                           </div>
-                          <p className="text-sm text-foreground">{record.message}</p>
-                        </div>
-                      )}
 
-                      {/* Cost Estimation */}
-                      {record.costing && (
-                        <div className="p-4 bg-green-500/5 rounded-lg border border-green-500/20 space-y-2">
-                          <div className="flex items-center gap-2 mb-3">
-                            <DollarSign className="w-4 h-4 text-green-500" />
-                            <span className="text-sm font-semibold text-foreground">Final Cost Estimation</span>
+                          <div className="flex flex-wrap items-center gap-4 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Wrench className="w-4 h-4 text-primary" />
+                              <span className="text-foreground">{record.service}</span>
+                            </div>
+                            {record.preferred_date && (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Calendar className="w-4 h-4" />
+                                <span>Preferred: {record.preferred_date}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Clock className="w-4 h-4" />
+                              <span>Submitted: {formatDate(record.original_created_at)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Clock className="w-4 h-4" />
+                              <span>Completed: {formatDate(record.completed_at)}</span>
+                            </div>
                           </div>
-                          
-                          {record.costing.items && record.costing.items.length > 0 && (
-                            <div className="space-y-1 text-sm">
-                              <div className="text-xs text-muted-foreground font-medium">Items:</div>
-                              {record.costing.items.map((item, idx) => (
-                                <div key={idx} className="flex justify-between items-center text-sm">
-                                  <span className="text-muted-foreground">{item.description}</span>
-                                  <span className="font-mono font-semibold text-foreground">
-                                    P{item.total?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
+
+                          {record.message && (
+                            <div className="p-3 bg-secondary rounded-lg">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                                <User className="w-3 h-3" />
+                                Additional Details
+                              </div>
+                              <p className="text-sm text-foreground">{record.message}</p>
+                            </div>
+                          )}
+
+                          {/* Cost Estimation */}
+                          {record.costing && (
+                            <div className="p-4 bg-green-500/5 rounded-lg border border-green-500/20 space-y-2">
+                              <div className="flex items-center gap-2 mb-3">
+                                <DollarSign className="w-4 h-4 text-green-500" />
+                                <span className="text-sm font-semibold text-foreground">Final Cost Estimation</span>
+                              </div>
+
+                              {record.costing.items && record.costing.items.length > 0 && (
+                                <div className="space-y-1 text-sm">
+                                  <div className="text-xs text-muted-foreground font-medium">Items:</div>
+                                  {record.costing.items.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between items-center text-sm">
+                                      <span className="text-muted-foreground">{item.description}</span>
+                                      <span className="font-mono font-semibold text-foreground">
+                                        P{item.total?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="pt-2 border-t border-green-500/20 space-y-1 text-sm">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-muted-foreground">Subtotal</span>
+                                  <span className="font-mono font-semibold">
+                                    P{record.costing.subtotal?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
                                   </span>
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                          
-                          <div className="pt-2 border-t border-green-500/20 space-y-1 text-sm">
-                            <div className="flex justify-between items-center">
-                              <span className="text-muted-foreground">Subtotal</span>
-                              <span className="font-mono font-semibold">
-                                P{record.costing.subtotal?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
-                              </span>
-                            </div>
-                            
-                            {record.costing.discount > 0 && (
-                              <div className="flex justify-between items-center text-orange-500">
-                                <span>Discount ({record.costing.discountType === "percentage" ? `${record.costing.discount}%` : "Fixed"})</span>
-                                <span className="font-mono font-semibold">
-                                  -P{(
-                                    record.costing.discountType === "percentage"
-                                      ? (record.costing.subtotal * record.costing.discount) / 100
-                                      : record.costing.discount
-                                  ).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                </span>
+
+                                {record.costing.discount > 0 && (
+                                  <div className="flex justify-between items-center text-orange-500">
+                                    <span>Discount ({record.costing.discountType === "percentage" ? `${record.costing.discount}%` : "Fixed"})</span>
+                                    <span className="font-mono font-semibold">
+                                      -P{(
+                                        record.costing.discountType === "percentage"
+                                          ? (record.costing.subtotal * record.costing.discount) / 100
+                                          : record.costing.discount
+                                      ).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {record.costing.vatEnabled && (
+                                  <div className="flex justify-between items-center text-blue-500">
+                                    <span>VAT (12%)</span>
+                                    <span className="font-mono font-semibold">
+                                      +P{record.costing.vatAmount?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
+                                    </span>
+                                  </div>
+                                )}
+
+                                <div className="flex justify-between items-center pt-2 border-t border-green-500/30 font-semibold text-foreground">
+                                  <span>Total</span>
+                                  <span className="font-mono text-lg text-green-600">
+                                    P{record.costing.total?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
+                                  </span>
+                                </div>
                               </div>
-                            )}
-                            
-                            {record.costing.vatEnabled && (
-                              <div className="flex justify-between items-center text-blue-500">
-                                <span>VAT (12%)</span>
-                                <span className="font-mono font-semibold">
-                                  +P{record.costing.vatAmount?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
-                                </span>
-                              </div>
-                            )}
-                            
-                            <div className="flex justify-between items-center pt-2 border-t border-green-500/30 font-semibold text-foreground">
-                              <span>Total</span>
-                              <span className="font-mono text-lg text-green-600">
-                                P{record.costing.total?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {record.costing.notes && (
-                            <div className="pt-2 text-xs text-muted-foreground border-t border-green-500/20 italic">
-                              {record.costing.notes}
+
+                              {record.costing.notes && (
+                                <div className="pt-2 text-xs text-muted-foreground border-t border-green-500/20 italic">
+                                  {record.costing.notes}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
 
-                    {/* Actions */}
-                    <div className="flex flex-row lg:flex-col gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10 border-red-500/30 bg-transparent"
-                        onClick={() => deleteHistoryRecord(record.id)}
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Delete
-                      </Button>
+                        {/* Actions */}
+                        <div className="flex flex-row lg:flex-col gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-500 hover:text-red-400 hover:bg-red-500/10 border-red-500/30 bg-transparent"
+                            onClick={() => deleteHistoryRecord(record.id)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
             )}
           </div>
         )}

@@ -42,6 +42,7 @@ export interface BookingFormData {
   service: string
   preferredDate: string
   message: string
+  orcrImage?: string
 }
 
 export function BookingForm() {
@@ -66,6 +67,9 @@ export function BookingForm() {
   const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   const [uploadedImageFiles, setUploadedImageFiles] = useState<File[]>([])
+  const [orcrImage, setOrcrImage] = useState<string>("")
+  const [orcrImageFile, setOrcrImageFile] = useState<File | null>(null)
+  const [isUploadingOrcr, setIsUploadingOrcr] = useState(false)
   const [useCustomMake, setUseCustomMake] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,13 +83,17 @@ export function BookingForm() {
     try {
       const trackingCodeGenerated = generateTrackingCode()
       let uploadedImageUrls: string[] = []
+      let uploadedOrcrUrl = ""
 
       // Upload images to Supabase Storage if any
-      if (uploadedImageFiles.length > 0) {
+      if (uploadedImageFiles.length > 0 || orcrImageFile) {
         const formDataUpload = new FormData()
         uploadedImageFiles.forEach((file) => {
           formDataUpload.append("files", file)
         })
+        if (orcrImageFile) {
+          formDataUpload.append("files", orcrImageFile)
+        }
         formDataUpload.append("trackingCode", trackingCodeGenerated)
 
         const uploadResponse = await fetch("/api/upload", {
@@ -95,7 +103,14 @@ export function BookingForm() {
 
         if (uploadResponse.ok) {
           const uploadResult = await uploadResponse.json()
-          uploadedImageUrls = uploadResult.urls || []
+          const allUrls = uploadResult.urls || []
+          // Last URL is ORCR if it exists
+          if (orcrImageFile) {
+            uploadedOrcrUrl = allUrls[allUrls.length - 1]
+            uploadedImageUrls = allUrls.slice(0, -1)
+          } else {
+            uploadedImageUrls = allUrls
+          }
         }
       }
 
@@ -107,6 +122,7 @@ export function BookingForm() {
           trackingCode: trackingCodeGenerated,
           ...formData,
           damageImages: uploadedImageUrls,
+          orcrImage: uploadedOrcrUrl,
         }),
       })
 
@@ -232,6 +248,48 @@ export function BookingForm() {
     setUploadedImageFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const handleOrcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file")
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image is too large. Maximum size is 5MB.")
+      return
+    }
+
+    setIsUploadingOrcr(true)
+
+    // Store the file for later upload
+    setOrcrImageFile(file)
+
+    // Convert to base64 for preview
+    const base64 = await new Promise<string>((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        resolve(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    })
+
+    setOrcrImage(base64)
+    setIsUploadingOrcr(false)
+
+    // Reset the input
+    e.target.value = ""
+  }
+
+  const removeOrcrImage = () => {
+    setOrcrImage("")
+    setOrcrImageFile(null)
+  }
+
   if (isSubmitted) {
     return (
       <div className="p-8 bg-card rounded-xl border border-border text-center animate-in fade-in zoom-in-95 duration-500">
@@ -277,6 +335,8 @@ export function BookingForm() {
               setSubmittedData(null)
               setDamageImages([])
               setUploadedImageFiles([])
+              setOrcrImage("")
+              setOrcrImageFile(null)
               setFormData({
                 name: "",
                 email: "",
@@ -556,7 +616,7 @@ export function BookingForm() {
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg"
                       aria-label="Remove image"
                     >
                       <X className="w-4 h-4" />
@@ -610,6 +670,88 @@ export function BookingForm() {
           </div>
         </div>
 
+        {/* ORCR Attachment - Required */}
+        <div className="animate-in fade-in slide-in-from-right-2 duration-500">
+          <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+            <ImageIcon className="w-5 h-5" />
+            ORCR (Official Receipt/Certificate of Registration) *
+          </h3>
+          
+          <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            <div className="flex gap-3">
+              <AlertTriangle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Required Document</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Please upload a clear photo of your vehicle's ORCR. This is required for the admin to process your appointment. Make sure all text is readable.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* ORCR Preview */}
+            {orcrImage && (
+              <div className="relative w-full max-w-md mx-auto">
+                <div className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-primary/50 group">
+                  <img
+                    src={orcrImage}
+                    alt="ORCR Document"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeOrcrImage}
+                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg"
+                    aria-label="Remove ORCR image"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-sm py-2 text-center font-medium">
+                    ORCR Document
+                  </div>
+                </div>
+                <p className="text-xs text-center text-muted-foreground mt-2">
+                  Click the × button to replace the image
+                </p>
+              </div>
+            )}
+
+            {/* Upload Button */}
+            {!orcrImage && (
+              <label
+                htmlFor="orcrImageUpload"
+                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/50 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+              >
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  {isUploadingOrcr ? (
+                    <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                  ) : (
+                    <>
+                      <ImageIcon className="w-8 h-8 text-primary mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-primary">Click to upload ORCR</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PNG, JPG up to 5MB (Required)
+                      </p>
+                    </>
+                  )}
+                </div>
+                <input
+                  id="orcrImageUpload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleOrcrUpload}
+                  className="hidden"
+                  disabled={isUploadingOrcr}
+                  required
+                />
+              </label>
+            )}
+          </div>
+        </div>
+
         {/* CAPTCHA Verification */}
         <div className="p-4 bg-secondary/50 rounded-lg border border-border">
           <div className="flex items-start gap-3">
@@ -629,7 +771,7 @@ export function BookingForm() {
           </div>
         </div>
 
-        <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || !captchaVerified}>
+        <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || !captchaVerified || !orcrImage}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />

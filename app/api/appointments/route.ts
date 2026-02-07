@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const supabase = await createClient()
-  
+
   try {
     const body = await request.json()
 
@@ -69,6 +69,7 @@ export async function POST(request: Request) {
         preferred_date: body.preferredDate,
         message: body.message,
         damage_images: body.damageImages || [],
+        orcr_image: body.orcrImage || null,
         status: "pending",
       })
       .select()
@@ -104,14 +105,14 @@ export async function PUT(request: Request) {
 
   // Convert camelCase to snake_case for database
   const dbUpdates: Record<string, unknown> = {}
-  
+
   if (updates.status !== undefined) dbUpdates.status = updates.status
   if (updates.repairStatus !== undefined) dbUpdates.repair_status = updates.repairStatus
   if (updates.currentRepairPart !== undefined) dbUpdates.current_repair_part = updates.currentRepairPart
   if (updates.statusUpdatedAt !== undefined) dbUpdates.status_updated_at = updates.statusUpdatedAt
   if (updates.costing !== undefined) dbUpdates.costing = updates.costing
   if (updates.damageImages !== undefined) dbUpdates.damage_images = updates.damageImages
-  
+
   dbUpdates.updated_at = new Date().toISOString()
 
   const { data, error } = await supabase
@@ -146,7 +147,7 @@ export async function DELETE(request: Request) {
   // Get the appointment to find image URLs for cleanup
   const { data: appointment } = await supabase
     .from("appointments")
-    .select("damage_images")
+    .select("damage_images, orcr_image")
     .eq("id", id)
     .single()
 
@@ -161,6 +162,14 @@ export async function DELETE(request: Request) {
 
     if (imagePaths.length > 0) {
       await supabase.storage.from("damage-images").remove(imagePaths)
+    }
+  }
+
+  // Delete ORCR image from storage if exists
+  if (appointment?.orcr_image) {
+    const orcrMatch = appointment.orcr_image.match(/damage-images\/(.+)$/)
+    if (orcrMatch) {
+      await supabase.storage.from("damage-images").remove([orcrMatch[1]])
     }
   }
 

@@ -59,6 +59,7 @@ interface AppointmentDB {
   status_updated_at?: string
   costing?: CostingData
   damage_images?: string[]
+  orcr_image?: string
 }
 
 // Helper to convert DB response to frontend format
@@ -83,6 +84,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     statusUpdatedAt: apt.status_updated_at,
     costing: apt.costing,
     damageImages: apt.damage_images,
+    orcrImage: apt.orcr_image,
   }
 }
 
@@ -109,6 +111,8 @@ interface Appointment {
   costing?: CostingData
   // Damage images
   damageImages?: string[]
+  // ORCR image
+  orcrImage?: string
 }
 
 export default function TrackingPage() {
@@ -216,7 +220,7 @@ export default function TrackingPage() {
 
   const handleDownloadPDF = async () => {
     if (!appointment) return
-    
+
     const htmlContent = await generateTrackingPDF(appointment)
     const printWindow = window.open("", "_blank")
     if (printWindow) {
@@ -368,13 +372,12 @@ export default function TrackingPage() {
                       return (
                         <React.Fragment key={option.value}>
                           <div
-                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors ${
-                              isCurrent
+                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors ${isCurrent
                                 ? `${repairStatusInfo.bgColor} ${repairStatusInfo.color} ring-2 ring-offset-2 ring-offset-background ${repairStatusInfo.borderColor.replace("border-", "ring-")}`
                                 : isCompleted
                                   ? "bg-green-500/20 text-green-500"
                                   : "bg-muted text-muted-foreground"
-                            }`}
+                              }`}
                             title={option.label}
                           >
                             {isCompleted && !isCurrent ? (
@@ -385,9 +388,8 @@ export default function TrackingPage() {
                           </div>
                           {index < REPAIR_STATUS_OPTIONS.length - 1 && (
                             <div
-                              className={`flex-1 h-1 rounded ${
-                                currentStep > optionStep ? "bg-green-500/50" : "bg-muted"
-                              }`}
+                              className={`flex-1 h-1 rounded ${currentStep > optionStep ? "bg-green-500/50" : "bg-muted"
+                                }`}
                             />
                           )}
                         </React.Fragment>
