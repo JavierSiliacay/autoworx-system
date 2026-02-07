@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   const supabase = await createClient()
-  
+
   const formData = await request.formData()
   const files = formData.getAll("files") as File[]
   const trackingCode = formData.get("trackingCode") as string
@@ -21,7 +21,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many files (max 10)" }, { status: 400 })
   }
 
-  // Ensure tracking code exists before allowing uploads
+  // Ensure tracking code exists - REMOVED because we upload before creating the appointment record
+  /*
   const { data: appointment, error: appointmentError } = await supabase
     .from("appointments")
     .select("id")
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
   if (appointmentError || !appointment) {
     return NextResponse.json({ error: "Invalid trackingCode" }, { status: 400 })
   }
+  */
 
   const uploadedUrls: string[] = []
 

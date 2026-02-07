@@ -111,6 +111,10 @@ export function BookingForm() {
           } else {
             uploadedImageUrls = allUrls
           }
+        } else {
+          const errorData = await uploadResponse.json().catch(() => ({ error: "Upload failed" }))
+          console.error("Upload failed details:", errorData)
+          throw new Error(`Failed to upload images: ${errorData.error || uploadResponse.statusText}`)
         }
       }
 
@@ -132,7 +136,7 @@ export function BookingForm() {
       }
 
       const appointmentData = await response.json()
-      
+
       setIsSubmitting(false)
       setSubmittedData(formData)
       setTrackingCode(trackingCodeGenerated)
@@ -149,37 +153,34 @@ export function BookingForm() {
     if (!submittedData) return
 
     try {
-      // Generate HTML content for the PDF
       const htmlContent = await generateConfirmationPDF({
         trackingCode,
         appointmentData: submittedData,
       })
 
-      // Create a blob from the HTML content
-      const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" })
-      const url = URL.createObjectURL(blob)
-
-      // Open in a new window/tab for the user to print as PDF
-      const printWindow = window.open(url, "_blank")
+      // Fix: Open a new window and write the HTML content directly.
+      // Using a blob URL causes relative paths like /autoworxlogo.png to fail.
+      const printWindow = window.open("", "_blank")
       if (printWindow) {
-        // Give the browser time to load the content
+        printWindow.document.write(htmlContent)
+        printWindow.document.close()
+
+        // Wait for images to load before printing
         setTimeout(() => {
           printWindow.print()
-        }, 250)
+        }, 500)
       } else {
-        // Fallback: download as HTML that can be printed
+        // Fallback: download as HTML if popup is blocked
+        const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" })
+        const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
         link.href = url
         link.download = `Autoworx_Appointment_Confirmation_${trackingCode}.html`
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-      }
-
-      // Cleanup after a delay to ensure download completes
-      setTimeout(() => {
         URL.revokeObjectURL(url)
-      }, 100)
+      }
     } catch (error) {
       console.error("[v0] Error generating confirmation:", error)
       alert("Error downloading confirmation. Please try again.")
@@ -208,7 +209,7 @@ export function BookingForm() {
 
     for (let i = 0; i < Math.min(files.length, remainingSlots); i++) {
       const file = files[i]
-      
+
       // Validate file type
       if (!file.type.startsWith("image/")) {
         continue
@@ -238,7 +239,7 @@ export function BookingForm() {
     setDamageImages((prev) => [...prev, ...newImages])
     setUploadedImageFiles((prev) => [...prev, ...newFiles])
     setIsUploadingImage(false)
-    
+
     // Reset the input
     e.target.value = ""
   }
@@ -300,7 +301,7 @@ export function BookingForm() {
         <p className="mt-2 text-muted-foreground animate-in slide-in-from-bottom-2 duration-700">
           Thank you for choosing Autoworx Repairs. We'll contact you within 24 hours to confirm your appointment.
         </p>
-        
+
         {/* Tracking Code Section */}
         <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/30 animate-in slide-in-from-left-2 duration-700">
           <p className="text-xs text-muted-foreground mb-2">Your Tracking Code</p>
@@ -583,7 +584,7 @@ export function BookingForm() {
             <Camera className="w-5 h-5" />
             Damage Photos (Optional)
           </h3>
-          
+
           {/* Important Notice */}
           <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
             <div className="flex gap-3">
@@ -676,7 +677,7 @@ export function BookingForm() {
             <ImageIcon className="w-5 h-5" />
             ORCR (Official Receipt/Certificate of Registration) *
           </h3>
-          
+
           <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
             <div className="flex gap-3">
               <AlertTriangle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
@@ -723,17 +724,28 @@ export function BookingForm() {
                 htmlFor="orcrImageUpload"
                 className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/50 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
               >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
                   {isUploadingOrcr ? (
                     <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
                   ) : (
                     <>
                       <ImageIcon className="w-8 h-8 text-primary mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-medium text-primary">Click to upload ORCR</span>
+                      <p className="text-sm text-foreground">
+                        <span className="font-medium text-primary underline">Click to upload ORCR photo</span>
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        PNG, JPG up to 5MB (Required)
+                      <div className="mt-2 space-y-1">
+                        <p className="text-[10px] text-muted-foreground">
+                          📸 Tip: Place document on a flat surface with good lighting
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          🔍 Tip: Ensure all text and the plate number are clearly readable
+                        </p>
+                        <p className="text-[10px] text-primary italic">
+                          Required for appointment processing
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-2">
+                        PNG, JPG up to 5MB
                       </p>
                     </>
                   )}

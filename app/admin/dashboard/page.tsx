@@ -933,52 +933,38 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                                   {appointment.damageImages.map((image, index) => (
-                                    <button
-                                      key={index}
-                                      type="button"
-                                      onClick={() => {
-                                        setZoomImages(appointment.damageImages || [])
-                                        setZoomInitialIndex(index)
-                                        setZoomModalOpen(true)
-                                      }}
-                                      className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-zoom-in"
-                                    >
-                                      <img
-                                        src={image || "/placeholder.svg"}
-                                        alt={`Damage photo ${index + 1}`}
-                                        className="w-full h-full object-cover"
-                                      />
-                                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-0.5 text-center">
-                                        {index + 1}
-                                      </div>
-                                    </button>
+                                    <div key={index} className="flex flex-col gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setZoomImages(appointment.damageImages || [])
+                                          setZoomInitialIndex(index)
+                                          setZoomModalOpen(true)
+                                        }}
+                                        className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-zoom-in"
+                                      >
+                                        <img
+                                          src={image || "/placeholder.svg"}
+                                          alt={`Damage photo ${index + 1}`}
+                                          className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-0.5 text-center">
+                                          {index + 1}
+                                        </div>
+                                      </button>
+                                      <a
+                                        href={image}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] text-amber-600 hover:underline text-center"
+                                      >
+                                        Full Size
+                                      </a>
+                                    </div>
                                   ))}
                                 </div>
                                 <p className="text-[10px] text-muted-foreground mt-2">
-                                  Click on an image to zoom in
-                                </p>
-                                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-2">
-                                  {appointment.damageImages.map((image, index) => (
-                                    <a
-                                      key={index}
-                                      href={image}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors"
-                                    >
-                                      <img
-                                        src={image || "/placeholder.svg"}
-                                        alt={`Damage photo ${index + 1}`}
-                                        className="w-full h-full object-cover"
-                                      />
-                                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-0.5 text-center">
-                                        {index + 1}
-                                      </div>
-                                    </a>
-                                  ))}
-                                </div>
-                                <p className="text-[10px] text-muted-foreground mt-2">
-                                  Click on an image to view full size
+                                  Click to zoom or "Full Size" to download
                                 </p>
                               </div>
                             )}
