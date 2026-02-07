@@ -238,6 +238,13 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       <p>Use this code to track your appointment status</p>
       <div class="status-badge">PENDING - Awaiting Confirmation</div>
     </div>
+
+    <!-- QR Code Section -->
+    <div style="text-align: center; margin-bottom: 12px; padding: 10px; border: 1px dashed #1a5f9c; border-radius: 4px;">
+      <p style="font-size: 9px; color: #1a5f9c; font-weight: bold; margin-bottom: 6px;">SCAN TO TRACK STATUS</p>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://autoworx-system.vercel.app/track?code=${trackingCode}" alt="Tracking QR Code" style="width: 80px; height: 80px;" />
+      <p style="font-size: 8px; color: #666; margin-top: 4px;">Point your phone camera here to track live updates</p>
+    </div>
     
     <!-- Customer Information -->
     <div class="section">
@@ -332,10 +339,10 @@ function getAppointmentStatusLabel(status: string): string {
 export async function generateTrackingPDF(appointment: TrackingAppointment): Promise<string> {
   const repairStatus = getRepairStatusLabel(appointment.repairStatus)
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
-  
+
   // Calculate costing totals
   const hasCosting = appointment.costing && appointment.costing.items.length > 0
-  
+
   const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -584,6 +591,13 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
     <div class="tracking-box">
       <p style="font-size: 9px; color: #666; margin-bottom: 4px;">Tracking Code</p>
       <div class="tracking-code">${appointment.trackingCode}</div>
+    </div>
+
+    <!-- QR Code Section -->
+    <div style="text-align: center; margin-bottom: 12px; padding: 10px; border: 1px dashed #1a5f9c; border-radius: 4px;">
+      <p style="font-size: 9px; color: #1a5f9c; font-weight: bold; margin-bottom: 6px;">SCAN TO RE-TRACK LIVE</p>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://autoworx-system.vercel.app/track?code=${appointment.trackingCode}" alt="Tracking QR Code" style="width: 80px; height: 80px;" />
+      <p style="font-size: 8px; color: #666; margin-top: 4px;">Share this report - Anyone with the QR can track the status</p>
     </div>
     
     <div class="status-grid">

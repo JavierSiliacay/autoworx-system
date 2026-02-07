@@ -20,6 +20,7 @@ import {
   Settings2,
   ChevronDown,
   ChevronUp,
+  ArrowUpRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -839,9 +840,19 @@ export default function AdminDashboard() {
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <h3 className="font-semibold text-foreground">{appointment.name}</h3>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Tracking: <span className="font-mono text-primary">{appointment.trackingCode}</span>
-                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <p className="text-xs text-muted-foreground">
+                                    Tracking: <span className="font-mono text-primary">{appointment.trackingCode}</span>
+                                  </p>
+                                  <Link
+                                    href={`/track?code=${appointment.trackingCode}`}
+                                    target="_blank"
+                                    className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                                  >
+                                    View live
+                                    <ArrowUpRight className="w-2.5 h-2.5" />
+                                  </Link>
+                                </div>
                               </div>
                               <div className="flex flex-col gap-2 items-end">
                                 <Badge variant={status.variant}>

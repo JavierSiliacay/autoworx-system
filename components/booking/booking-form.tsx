@@ -3,6 +3,7 @@
 import React from "react"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Send, Loader2, CheckCircle, Download, Camera, X, AlertTriangle, ImageIcon, ShieldCheck, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -309,18 +310,35 @@ export function BookingForm() {
           <p className="text-xs text-muted-foreground mt-2">
             Save this code to track your appointment status
           </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-3 text-xs bg-transparent group"
-            onClick={() => {
-              navigator.clipboard.writeText(trackingCode)
-              alert("Tracking code copied to clipboard!")
-            }}
-          >
-            <ShieldCheck className="mr-1 w-3 h-3 group-hover:scale-110 transition-transform" />
-            Copy Code
-          </Button>
+          <div className="flex gap-2 justify-center">
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3 text-xs bg-transparent group"
+              onClick={() => {
+                navigator.clipboard.writeText(trackingCode)
+                // Use a more subtle feedback if possible, but keep simple for now
+                const btn = document.activeElement as HTMLButtonElement
+                const originalText = btn.innerText
+                btn.innerText = "Copied!"
+                setTimeout(() => { btn.innerText = originalText }, 2000)
+              }}
+            >
+              <ShieldCheck className="mr-1 w-3 h-3 group-hover:scale-110 transition-transform" />
+              Copy Code
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3 text-xs bg-transparent group"
+              asChild
+            >
+              <Link href={`/track?code=${trackingCode}`}>
+                <Star className="mr-1 w-3 h-3 group-hover:scale-110 transition-transform text-amber-500" />
+                Track Status
+              </Link>
+            </Button>
+          </div>
         </div>
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center animate-in slide-in-from-right-2 duration-700">
           <Button onClick={downloadConfirmationPDF} variant="default" className="gap-2 group">
