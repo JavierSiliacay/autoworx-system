@@ -373,10 +373,10 @@ export default function TrackingPage() {
                         <React.Fragment key={option.value}>
                           <div
                             className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors ${isCurrent
-                                ? `${repairStatusInfo.bgColor} ${repairStatusInfo.color} ring-2 ring-offset-2 ring-offset-background ${repairStatusInfo.borderColor.replace("border-", "ring-")}`
-                                : isCompleted
-                                  ? "bg-green-500/20 text-green-500"
-                                  : "bg-muted text-muted-foreground"
+                              ? `${repairStatusInfo.bgColor} ${repairStatusInfo.color} ring-2 ring-offset-2 ring-offset-background ${repairStatusInfo.borderColor.replace("border-", "ring-")}`
+                              : isCompleted
+                                ? "bg-green-500/20 text-green-500"
+                                : "bg-muted text-muted-foreground"
                               }`}
                             title={option.label}
                           >
@@ -546,6 +546,39 @@ export default function TrackingPage() {
                   <p className="text-[10px] text-muted-foreground mt-2">
                     Click on an image to zoom in
                   </p>
+                </div>
+              )}
+
+              {/* ORCR Document */}
+              {appointment.orcrImage && (
+                <div className="mt-6 pt-6 border-t border-border">
+                  <p className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    ORCR (Official Receipt/Certificate of Registration)
+                  </p>
+                  <div className="max-w-md mx-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setZoomImages([appointment.orcrImage!])
+                        setZoomInitialIndex(0)
+                        setZoomModalOpen(true)
+                      }}
+                      className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-primary/50 hover:border-primary transition-colors group cursor-zoom-in w-full"
+                    >
+                      <img
+                        src={appointment.orcrImage}
+                        alt="ORCR Document"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-sm py-2 text-center font-medium">
+                        ORCR Document - Click to Zoom
+                      </div>
+                    </button>
+                    <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                      Click on the image to zoom in
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

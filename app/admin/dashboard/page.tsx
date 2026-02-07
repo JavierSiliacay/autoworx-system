@@ -24,7 +24,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, X, Plus, DollarSign, Receipt, ImageIcon, Archive, History, FileText } from "lucide-react"
+import { Search, X, Plus, DollarSign, Receipt, ImageIcon, Archive, History, FileText, Download } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -706,8 +706,8 @@ export default function AdminDashboard() {
             type="button"
             onClick={() => setActiveTab("appointments")}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "appointments"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
           >
             <FileText className="w-4 h-4 inline-block mr-2" />
@@ -722,8 +722,8 @@ export default function AdminDashboard() {
               }
             }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "history"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
           >
             <History className="w-4 h-4 inline-block mr-2" />
@@ -979,6 +979,48 @@ export default function AdminDashboard() {
                                 </div>
                                 <p className="text-[10px] text-muted-foreground mt-2">
                                   Click on an image to view full size
+                                </p>
+                              </div>
+                            )}
+
+                            {/* ORCR Image */}
+                            {appointment.orcrImage && (
+                              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                                <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2">
+                                  <ImageIcon className="w-3 h-3" />
+                                  ORCR (Official Receipt/Certificate of Registration)
+                                </div>
+                                <div className="max-w-md mx-auto">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setZoomImages([appointment.orcrImage!])
+                                      setZoomInitialIndex(0)
+                                      setZoomModalOpen(true)
+                                    }}
+                                    className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-blue-500/50 hover:border-blue-500 transition-colors cursor-zoom-in w-full"
+                                  >
+                                    <img
+                                      src={appointment.orcrImage}
+                                      alt="ORCR Document"
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs py-1 text-center font-medium">
+                                      ORCR Document - Click to Zoom
+                                    </div>
+                                  </button>
+                                  <a
+                                    href={appointment.orcrImage}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                                  >
+                                    <Download className="w-3 h-3" />
+                                    Download ORCR
+                                  </a>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                                  Click image to zoom or download for verification
                                 </p>
                               </div>
                             )}
