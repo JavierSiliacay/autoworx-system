@@ -75,13 +75,29 @@ export async function POST(request: Request) {
       })
       .select()
       .single()
-
     if (error) {
       console.error("Error creating appointment:", error)
       return NextResponse.json(
         { error: `Database error: ${error.message}` },
         { status: 500 }
       )
+    }
+
+    // Send confirmation email directly from the server for better reliability
+    try {
+      await sendAppointmentEmail({
+        type: 'submission',
+        name: data.name,
+        email: data.email,
+        trackingCode: data.tracking_code,
+        vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
+        services: data.service,
+        status: 'Pending'
+      });
+      console.log(`Confirmation email sent to ${data.email}`);
+    } catch (emailError) {
+      // Log email error but don't fail the appointment creation
+      console.error("Failed to send initial confirmation email:", emailError);
     }
 
     return NextResponse.json(data)
