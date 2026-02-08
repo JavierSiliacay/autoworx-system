@@ -208,12 +208,9 @@ export function BookingForm() {
 
   const updateField = (field: keyof BookingFormData, value: string) => {
     // Format phone number if it's the phone field
-    // Convert plate to uppercase if it's the plate field
     let finalValue = value
     if (field === "phone") {
       finalValue = formatPhoneNumber(value)
-    } else if (field === "vehiclePlate") {
-      finalValue = value.toUpperCase()
     }
 
     setFormData((prev) => ({
@@ -539,7 +536,7 @@ export function BookingForm() {
             </div>
           </div>
           <div className="mt-4 space-y-2 group">
-            <Label htmlFor="vehiclePlate" className="group-hover:text-primary transition-colors">Vehicle Plate Number *</Label>
+            <Label htmlFor="vehiclePlate" className="group-hover:text-primary transition-colors">Vehicle Plate Number * (MUST ALL BIG LETTERS)</Label>
             <Input
               id="vehiclePlate"
               value={formData.vehiclePlate}
@@ -550,7 +547,7 @@ export function BookingForm() {
               autoCorrect="off"
               spellCheck="false"
               maxLength={10}
-              className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all uppercase"
+              className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
             />
           </div>
         </div>
