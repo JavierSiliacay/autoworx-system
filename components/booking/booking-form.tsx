@@ -138,6 +138,33 @@ export function BookingForm() {
 
       const appointmentData = await response.json()
 
+      // Send confirmation email
+      try {
+        const emailResponse = await fetch("/api/send-confirmation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: 'submission',
+            name: formData.name,
+            email: formData.email,
+            trackingCode: trackingCodeGenerated,
+            vehicleDetails: `${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}`,
+            services: formData.service,
+            status: 'Pending',
+          }),
+        })
+
+        if (!emailResponse.ok) {
+          const errorText = await emailResponse.text();
+          console.error("Email API failed with status:", emailResponse.status, errorText);
+        } else {
+          console.log("Confirmation email sent successfully!");
+        }
+      } catch (emailError) {
+        // Log email error but don't stop the success flow
+        console.error("Network error sending confirmation email:", emailError)
+      }
+
       setIsSubmitting(false)
       setSubmittedData(formData)
       setTrackingCode(trackingCodeGenerated)

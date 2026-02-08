@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { isAuthorizedAdminEmail } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
+import { sendAppointmentEmail } from "@/lib/email"
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -125,6 +126,26 @@ export async function PUT(request: Request) {
   if (error) {
     console.error("Error updating appointment:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Trigger Completion Email if status is updated to completed
+  if (updates.status?.toLowerCase() === "completed") {
+    console.log(`Triggering completion email for ${data.email}`);
+    try {
+      const emailResponse = await sendAppointmentEmail({
+        type: 'completed',
+        name: data.name,
+        email: data.email,
+        trackingCode: data.tracking_code,
+        vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
+        services: data.service,
+        status: 'Completed'
+      });
+      console.log('Completion email response:', emailResponse);
+    } catch (emailError) {
+      // Log email error but don't fail the update request
+      console.error("Failed to send completion email:", emailError);
+    }
   }
 
   return NextResponse.json(data)
