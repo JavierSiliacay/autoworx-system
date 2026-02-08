@@ -28,6 +28,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { createClient } from "@/lib/supabase/client"
 
 const years = Array.from({ length: 35 }, (_, i) => (new Date().getFullYear() - i).toString())
 const services = SERVICES; // Declare the services variable
@@ -86,36 +87,39 @@ export function BookingForm() {
       let uploadedImageUrls: string[] = []
       let uploadedOrcrUrl = ""
 
-      // Upload images to Supabase Storage if any
+      // Upload images directly to Supabase Storage if any
+      // This bypasses Vercel's 4.5MB payload limit which causes "Failed to fetch" errors on mobile
       if (uploadedImageFiles.length > 0 || orcrImageFile) {
-        const formDataUpload = new FormData()
-        uploadedImageFiles.forEach((file) => {
-          formDataUpload.append("files", file)
-        })
+        const supabase = createClient()
+        const filesToUpload = [...uploadedImageFiles]
         if (orcrImageFile) {
-          formDataUpload.append("files", orcrImageFile)
+          filesToUpload.push(orcrImageFile)
         }
-        formDataUpload.append("trackingCode", trackingCodeGenerated)
 
-        const uploadResponse = await fetch("/api/upload", {
-          method: "POST",
-          body: formDataUpload,
+        const uploadPromises = filesToUpload.map(async (file) => {
+          const fileExt = file.name.split(".").pop()
+          const fileName = `${trackingCodeGenerated}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+          const { data, error } = await supabase.storage
+            .from("damage-images")
+            .upload(fileName, file)
+
+          if (error) throw error
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("damage-images")
+            .getPublicUrl(data.path)
+
+          return publicUrl
         })
 
-        if (uploadResponse.ok) {
-          const uploadResult = await uploadResponse.json()
-          const allUrls = uploadResult.urls || []
-          // Last URL is ORCR if it exists
-          if (orcrImageFile) {
-            uploadedOrcrUrl = allUrls[allUrls.length - 1]
-            uploadedImageUrls = allUrls.slice(0, -1)
-          } else {
-            uploadedImageUrls = allUrls
-          }
+        const allUrls = await Promise.all(uploadPromises)
+
+        if (orcrImageFile) {
+          uploadedOrcrUrl = allUrls[allUrls.length - 1]
+          uploadedImageUrls = allUrls.slice(0, -1)
         } else {
-          const errorData = await uploadResponse.json().catch(() => ({ error: "Upload failed" }))
-          console.error("Upload failed details:", errorData)
-          throw new Error(`Failed to upload images: ${errorData.error || uploadResponse.statusText}`)
+          uploadedImageUrls = allUrls
         }
       }
 
