@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { createClient } from "@/lib/supabase/client"
+import { compressImage } from "@/lib/image-utils"
 
 const years = Array.from({ length: 35 }, (_, i) => (new Date().getFullYear() - i).toString())
 const services = SERVICES; // Declare the services variable
@@ -97,12 +98,22 @@ export function BookingForm() {
         }
 
         const uploadPromises = filesToUpload.map(async (file) => {
+          // Compress image before upload (max 1200px width, 70% quality)
+          let fileToUpload: Blob = file;
+          if (file.type.startsWith('image/')) {
+            try {
+              fileToUpload = await compressImage(file, 1200, 0.7);
+            } catch (err) {
+              console.warn('Compression failed, uploading original:', err);
+            }
+          }
+
           const fileExt = file.name.split(".").pop()
           const fileName = `${trackingCodeGenerated}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
 
           const { data, error } = await supabase.storage
             .from("damage-images")
-            .upload(fileName, file)
+            .upload(fileName, fileToUpload)
 
           if (error) throw error
 
