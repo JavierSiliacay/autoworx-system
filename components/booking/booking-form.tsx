@@ -238,11 +238,7 @@ export function BookingForm() {
         continue
       }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert(`Image "${file.name}" is too large. Maximum size is 5MB.`)
-        continue
-      }
+      // Files larger than 5MB will be automatically compressed by the system during submission
 
       // Store the file for later upload
       newFiles.push(file)
@@ -282,11 +278,7 @@ export function BookingForm() {
       return
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image is too large. Maximum size is 5MB.")
-      return
-    }
+    // Files larger than 5MB will be automatically compressed by the system during submission
 
     setIsUploadingOrcr(true)
 
