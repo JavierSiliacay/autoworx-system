@@ -1,242 +1,104 @@
 # Repair Status Management System
 
-A modern web application for managing vehicle repair appointments, tracking repair progress, and costing. Built with Next.js, React, TypeScript, and Supabase.
+A modern, full-stack web application designed for professional auto repair shops to manage vehicle repair appointments, track real-time progress, and handle complex costing. Built with Next.js, React, TypeScript, and Supabase.
 
-## Features
+## 🌟 Key Updates
+- **2024 Automated Email System**: Now featuring professional email notifications via Resend for both customers and staff.
+- **Enhanced Documentation**: Integrated mandatory ORCR (Official Receipt/Certificate of Registration) photo uploads for better vehicle verification.
+
+## 🚀 Features
 
 ### 🛠️ For Vehicle Owners
-- **Easy Booking** - Book repair appointments with vehicle information
-- **Real-time Tracking** - Track your repair progress with a unique tracking code
-- **Damage Documentation** - Upload photos of vehicle damage
-- **Service History** - View past repair appointments and costs
-- **Responsive Design** - Works on desktop, tablet, and mobile
+- **Easy Booking** - Steamlined form for booking repair appointments.
+- **Required Documentation** - Direct upload of ORCR images and damage photos for faster assessment.
+- **Real-time Tracking** - Track repair progress using a unique tracking code.
+- **Automated Alerts** - Receive instant email confirmation of your booking and "Service Completed" notifications.
+- **Responsive Interface** - Fully optimized for mobile devices, including easy-to-use photo management.
 
-### 👨‍💼 For Admin/Staff
-- **Appointment Dashboard** - View all pending and completed appointments
-- **Repair Tracking** - Update repair status and current part being repaired
-- **Custom Part Input** - Enter exact parts being repaired (not limited to predefined options)
-- **Cost Management** - Add itemized costs, track discounts and VAT
-- **Advanced Filtering** - Search by tracking code, name, email, phone, plate, or vehicle make
-- **History Records** - Archive and view completed repairs with full cost breakdowns
-- **Export Options** - Generate PDF confirmations for customers
+### 👨‍💼 For Admin & Staff
+- **Centralized Dashboard** - Manage all active appointments and historical records in one place.
+- **Automated Workflow** - Mark an appointment as **"Completed"** to automatically trigger a professional notification to the customer with pickup details.
+- **Precision Tracking** - Update specific repair statuses and the exact part currently being worked on.
+- **Advanced Costing** - Itemized billing for parts, labor, and services with automatic VAT (12%) and discount calculations.
+- **History & Archiving** - Move completed jobs to history while maintaining full searchable records for future reference.
 
-## Tech Stack
+## 💻 Tech Stack
 
-- **Frontend**: Next.js 16 (React 19, TypeScript)
-- **Styling**: Tailwind CSS + shadcn/ui components
+- **Framework**: Next.js 16 (React 19, TypeScript)
+- **Styling**: Vanilla CSS + Tailwind CSS + shadcn/ui
 - **Database**: Supabase (PostgreSQL)
-- **Storage**: Supabase Storage (image uploads)
-- **Authentication**: Row Level Security (RLS) policies
-- **PDF Generation**: Custom PDF library
-- **Build Tool**: Turbopack (Next.js native)
+- **Storage**: Supabase Storage (ORCR & Damage image hosting)
+- **Email Service**: Resend API
+- **Auth**: NextAuth.js
+- **Icons**: Lucide React
 
-## Getting Started
+## 🛠️ Getting Started
 
 ### Prerequisites
-- Node.js 18+ or higher
-- pnpm (or npm/yarn)
-- Supabase account
+- Node.js 18+
+- npm / pnpm / yarn
+- Supabase Account
+- Resend Account
 
 ### Installation
 
-1. **Clone the repository**
-```bash
-git clone https://github.com/YOUR_USERNAME/repair-status-management.git
-cd repair-status-management
+1. **Clone & Install**
+   ```bash
+   git clone https://github.com/JavierSiliacay/autoworx-system.git
+   cd repair-status-management
+   pnpm install
+   ```
+
+2. **Environment Configuration**
+   Create a `.env.local` file and add the following keys:
+   ```env
+   # Supabase
+   NEXT_PUBLIC_SUPABASE_URL="your_url"
+   NEXT_PUBLIC_SUPABASE_ANON_KEY="your_key"
+   
+   # Auth
+   NEXTAUTH_SECRET="your_secret"
+   GOOGLE_CLIENT_ID="your_google_id"
+   GOOGLE_CLIENT_SECRET="your_google_secret"
+   
+   # Email
+   RESEND_API_KEY="your_resend_api_key"
+   ```
+
+3. **Run Locally**
+   ```bash
+   pnpm dev
+   ```
+
+## 📧 Email Notification Details
+The system now includes professional HTML email templates for:
+1. **Appointment Submission**: A detailed summary sent to the customer immediately after booking.
+2. **Service Completion**: A themed notification sent automatically when an Admin updates the appointment status to "Completed", including shop location and contact details for pickup.
+
+## 📂 Project Structure
+```
+app/
+├── (public)/       # Booking, tracking, and info pages
+├── admin/          # Secure admin dashboard
+├── api/            # Serverless endpoints (Email, DB, History)
+├── lib/            # Shared utilities (Email handler, constants)
+components/
+├── booking/        # Advanced form with photo uploads
+├── ui/             # Reusable UI components
 ```
 
-2. **Install dependencies**
-```bash
-pnpm install
-```
+## 👨‍💻 About the Developer
+**Javier Siliacay**  
+*Autotronics Student from USTP*  
+This system was built to combine automotive expertise with modern software engineering for a more efficient repair shop experience.
 
-3. **Set up environment variables**
-
-Create a `.env.local` file in the root directory with your Supabase credentials:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL="your_supabase_url"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="your_anon_key"
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="your_publishable_key"
-
-SUPABASE_URL="your_supabase_url"
-SUPABASE_ANON_KEY="your_anon_key"
-SUPABASE_JWT_SECRET="your_jwt_secret"
-SUPABASE_SECRET_KEY="your_secret_key"
-SUPABASE_SERVICE_ROLE_KEY="your_service_role_key"
-
-POSTGRES_URL="your_postgres_url"
-POSTGRES_PRISMA_URL="your_prisma_url"
-POSTGRES_URL_NON_POOLING="your_non_pooling_url"
-```
-
-4. **Set up database schema**
-
-Run the SQL scripts in your Supabase dashboard:
-- `scripts/001_create_appointments.sql` - Creates appointments table
-- `scripts/002_create_storage.sql` - Creates storage bucket for images
-
-5. **Start development server**
-```bash
-pnpm dev
-```
-
-Visit http://localhost:3000
-
-## Project Structure
-
-```
-repair-status-management/
-├── app/
-│   ├── (public)/           # Public routes (booking, tracking, services, about, contact)
-│   ├── admin/              # Admin dashboard routes
-│   ├── api/                # API routes (appointments, history, uploads)
-│   ├── globals.css         # Global styles
-│   ├── layout.tsx          # Root layout
-│   └── page.tsx            # Home page
-├── components/
-│   ├── booking/            # Booking form component
-│   ├── home/               # Home page sections
-│   ├── layout/             # Header, footer
-│   ├── theme-provider.tsx  # Theme configuration
-│   └── ui/                 # shadcn/ui components
-├── hooks/                  # Custom React hooks
-├── lib/
-│   ├── constants.ts        # App constants (vehicle brands, services, repair parts)
-│   ├── appointment-tracking.ts
-│   ├── generate-pdf.tsx    # PDF generation
-│   ├── phone-format.ts     # Phone number formatting
-│   ├── utils.ts            # Utility functions
-│   └── supabase/           # Supabase client setup
-├── scripts/                # SQL migration scripts
-├── public/                 # Static assets
-└── styles/                 # CSS styles
-```
-
-## Usage
-
-### For Customers
-
-1. Navigate to home page
-2. Click "Book an Appointment" 
-3. Fill in vehicle information
-4. Select service type and preferred date
-5. Upload damage photos (optional)
-6. Submit booking
-7. Receive tracking code via email
-8. Use tracking code to check repair status
-
-### For Admin
-
-1. Navigate to `/admin` dashboard
-2. View all pending appointments
-3. Click an appointment to expand details
-4. Update repair status and current part
-5. Add itemized costs (services, parts, labor)
-6. Set discount and VAT rates
-7. Archive completed appointments
-
-## API Routes
-
-### Appointments
-- `POST /api/appointments` - Create new appointment
-- `GET /api/appointments` - List appointments
-- `PUT /api/appointments` - Update appointment
-- `DELETE /api/appointments` - Delete appointment
-
-### History
-- `GET /api/history` - Get archived appointments
-- `POST /api/history` - Archive appointment
-
-### Upload
-- `POST /api/upload` - Upload damage images
-
-## Features in Detail
-
-### Custom Vehicle Make Input
-Instead of selecting "Other", customers can now type their vehicle brand directly in the booking form.
-
-### Custom Repair Part Input
-Admins can enter exact parts being repaired instead of generic "Other" category for better accuracy.
-
-### Cost Tracking
-- Itemized services and parts
-- Discount support (percentage or fixed amount)
-- VAT calculation (12% default)
-- Total cost calculation and display
-
-### History Management
-- Search by tracking code, name, email, phone, plate, or make
-- Filter by service type and date range
-- Sort by latest, oldest, status, or name
-- View full cost breakdowns for archived records
-
-## Deployment
-
-### Vercel (Recommended for Next.js)
-
-1. Push code to GitHub
-2. Go to https://vercel.com/new
-3. Import your repository
-4. Add environment variables
-5. Deploy
-
-### Other Platforms
-- Netlify
-- Railway
-- Render
-- DigitalOcean App Platform
-
-## Environment Variables
-
-All sensitive information should be stored in `.env.local` and never committed to version control. The file is automatically ignored by Git.
-
-**Note**: `.env.local` is in `.gitignore` - set environment variables directly in your hosting platform's dashboard.
-
-## Database Schema
-
-### appointments table
-- `id` (UUID) - Primary key
-- `tracking_code` (TEXT) - Unique tracking code
-- `name`, `email`, `phone` - Customer info
-- `vehicle_make`, `vehicle_model`, `vehicle_year`, `vehicle_plate` - Vehicle info
-- `service` - Service type
-- `preferred_date` - Appointment date
-- `message` - Additional notes
-- `status` - Appointment status (pending/contacted/completed)
-- `repair_status` - Current repair status
-- `current_repair_part` - Part being repaired
-- `costing` (JSONB) - Cost breakdown
-- `damage_images` (TEXT[]) - Image URLs
-- `created_at`, `updated_at` - Timestamps
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is open source and available under the MIT License.
-
-## Support
-
-For support, please open an issue on GitHub or contact the project maintainer.
-
-## About the Developer
-
-**Developer:** Javier Siliacay  
-**Program:** Autotronics from USTP
-
-## Roadmap
-
-- [ ] Email notifications for appointment updates
+## ✅ Roadmap
+- [x] Email notifications for appointment updates (Resend Integration)
+- [x] Required ORCR Attachment support
 - [ ] SMS notifications
-- [ ] Multi-language support
-- [ ] Staff scheduling
-- [ ] Invoice generation
-- [ ] Payment integration
-- [ ] Mobile app
+- [ ] Invoice PDF generation
+- [ ] Payment gateway integration
+- [ ] Multi-shop support
 
 ---
-
-**Built with ❤️ for efficient repair shop management**
+**Built with ❤️ for the future of Automotive Service Management.**
