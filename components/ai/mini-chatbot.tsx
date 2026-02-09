@@ -59,9 +59,9 @@ export function MiniChatbot() {
     }
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end max-w-[calc(100vw-2rem)]">
             {isOpen ? (
-                <Card className="w-[380px] h-[500px] flex flex-col shadow-2xl border-primary/20 animate-in slide-in-from-bottom-5 duration-300 overflow-hidden bg-background/95 backdrop-blur-md">
+                <Card className="w-[calc(100vw-2rem)] sm:w-[380px] h-[70vh] sm:h-[500px] flex flex-col shadow-2xl border-primary/20 animate-in slide-in-from-bottom-5 duration-300 overflow-hidden bg-background/95 backdrop-blur-md">
                     <CardHeader className="p-4 bg-primary text-primary-foreground flex flex-row items-center justify-between space-y-0">
                         <CardTitle className="text-base flex items-center gap-2 font-bold">
                             <div className="bg-white/20 p-1.5 rounded-lg">
