@@ -1,0 +1,19 @@
+{
+  "name": "demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.24.0",
+  "dependencies": {
+    "ai": "^6.0.77",
+    "dotenv": "^17.2.4",
+    "ollama-ai-provider": "^1.2.0",
+    "tsx": "^4.21.0"
+  }
+}

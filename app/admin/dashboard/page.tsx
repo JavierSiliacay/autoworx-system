@@ -36,6 +36,7 @@ import {
 import { VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
 import { getRepairStatusInfo } from "@/lib/appointment-tracking"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
+import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
 
 // Database response interface (snake_case from Supabase)
 interface AppointmentDB {
@@ -743,10 +744,13 @@ export default function AdminDashboard() {
                     {stats.pending} pending request{stats.pending !== 1 ? "s" : ""} waiting for your attention
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={loadAppointments} className="bg-transparent">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                  <AIAnalystDialog />
+                  <Button variant="outline" size="sm" onClick={loadAppointments} className="bg-transparent">
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Refresh
+                  </Button>
+                </div>
               </div>
 
               {/* Search Bar */}
