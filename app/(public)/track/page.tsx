@@ -130,13 +130,10 @@ export default function TrackingPage() {
   // Load pending appointments count
   const loadPendingCount = useCallback(async () => {
     try {
-      const response = await fetch("/api/appointments")
+      const response = await fetch("/api/appointments?count=true")
       if (response.ok) {
-        const data = await response.json() as AppointmentDB[]
-        const pending = data.filter(
-          (apt) => apt.repair_status === "pending_inspection" || !apt.repair_status
-        ).length
-        setPendingCount(pending)
+        const data = await response.json()
+        setPendingCount(data.count)
       }
     } catch (error) {
       console.error("Error loading pending count:", error)

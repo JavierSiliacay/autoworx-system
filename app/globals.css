@@ -86,22 +86,92 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
 }
 
-/* Custom nav link animations */
-@keyframes bounce-once {
-  0%, 100% {
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zoom-in-fade {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-down-fade {
+  animation: slide-down-fade 0.8s ease-out forwards;
+}
+
+.animate-zoom-in-fade {
+  animation: zoom-in-fade 0.6s ease-out forwards;
+}
+
+/* Base Nav Animation */
+@keyframes bounce-once {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
   25% {
     transform: translateY(-6px);
   }
+
   50% {
     transform: translateY(-3px);
   }
+
   75% {
     transform: translateY(-1px);
   }
@@ -112,6 +182,7 @@
     transform: scale(0);
     opacity: 0.5;
   }
+
   100% {
     transform: scale(2.5);
     opacity: 0;

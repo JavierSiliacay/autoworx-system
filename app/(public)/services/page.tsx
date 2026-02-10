@@ -145,15 +145,28 @@ export default function ServicesPage() {
   return (
     <>
       {/* Hero Section */}
-      <section className="pt-16 pb-24 bg-secondary/50">
-        <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto">
-            <span className="text-sm font-semibold uppercase tracking-wider text-primary">Our Services</span>
-            <h1 className="mt-2 font-serif text-4xl sm:text-5xl font-bold text-foreground text-balance">
-              Complete Automotive Care Solutions
+      <section className="relative pt-16 pb-24 overflow-hidden animate-fade-in">
+        {/* Background Image with Overlay */}
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-no-repeat transition-transform duration-700 hover:scale-105"
+          style={{
+            backgroundImage: "url('/servicebackground.jpg')",
+            backgroundPosition: "center 60%"
+          }}
+        />
+        <div className="absolute inset-0 z-10 bg-black/60" />
+
+        <div className="relative z-20 mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto animate-slide-up">
+            <span className="inline-block px-4 py-1.5 mb-6 text-xs font-bold uppercase tracking-[0.2em] text-white bg-primary/20 backdrop-blur-sm border border-white/10 rounded-full">
+              Our Services
+            </span>
+            <h1 className="mt-2 font-serif text-4xl sm:text-6xl font-black text-white text-balance tracking-tight leading-[1.1]">
+              Complete <span className="text-primary italic">Automotive</span> Care Solutions
             </h1>
-            <p className="mt-4 text-lg text-muted-foreground leading-relaxed">
-              From routine maintenance to major repairs, our certified technicians provide 
+            <div className="w-24 h-1.5 bg-primary mx-auto mt-8 mb-8 rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+            <p className="mt-4 text-xl text-white/80 leading-relaxed font-light max-w-2xl mx-auto">
+              From routine maintenance to major repairs, our certified technicians provide
               comprehensive services to keep your vehicle running at its best.
             </p>
           </div>
@@ -161,13 +174,13 @@ export default function ServicesPage() {
       </section>
 
       {/* Services Grid */}
-      <section className="py-24">
+      <section className="py-24 animate-fade-in [animation-delay:200ms]">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {services.map((service) => (
               <div
                 key={service.title}
-                className="group p-6 lg:p-8 bg-card rounded-xl border border-border hover:border-primary/50 transition-all duration-300"
+                className="group p-6 lg:p-8 bg-card rounded-xl border border-border hover:border-primary/50 transition-all duration-300 animate-slide-up"
               >
                 <div className="flex items-start gap-4 mb-6">
                   <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 text-primary shrink-0">
@@ -182,7 +195,7 @@ export default function ServicesPage() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   {service.features.map((feature) => (
                     <div key={feature} className="flex items-center gap-2">
@@ -198,14 +211,14 @@ export default function ServicesPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-secondary/50">
+      <section className="py-24 bg-secondary/50 animate-fade-in [animation-delay:400ms]">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto animate-slide-up">
             <h2 className="font-serif text-3xl sm:text-4xl font-bold text-foreground">
               Need a Service?
             </h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
-              Contact us today to schedule your appointment or get a quote. 
+              Contact us today to schedule your appointment or get a quote.
               Our team is ready to help with all your automotive needs.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">

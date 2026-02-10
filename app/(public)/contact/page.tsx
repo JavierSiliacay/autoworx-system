@@ -39,15 +39,28 @@ export default function ContactPage() {
   return (
     <>
       {/* Hero Section */}
-      <section className="pt-16 pb-24 bg-secondary/50">
-        <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto">
-            <span className="text-sm font-semibold uppercase tracking-wider text-primary">Contact Us</span>
-            <h1 className="mt-2 font-serif text-4xl sm:text-5xl font-bold text-foreground text-balance">
-              Book Your Appointment
+      <section className="relative pt-16 pb-24 overflow-hidden animate-fade-in">
+        {/* Background Image with Overlay */}
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-no-repeat"
+          style={{
+            backgroundImage: "url('/contactbackground.jpg')",
+            backgroundPosition: "center 37%"
+          }}
+        />
+        <div className="absolute inset-0 z-10 bg-black/70" />
+
+        <div className="relative z-20 mx-auto max-w-7xl px-4 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto animate-slide-up">
+            <span className="inline-block px-4 py-1.5 mb-6 text-xs font-bold uppercase tracking-[0.2em] text-white bg-primary/20 backdrop-blur-sm border border-white/10 rounded-full">
+              Contact Us
+            </span>
+            <h1 className="mt-2 font-serif text-4xl sm:text-6xl font-black text-white text-balance tracking-tight leading-[1.1]">
+              Book Your <span className="text-primary italic">Appointment</span>
             </h1>
-            <p className="mt-4 text-lg text-muted-foreground leading-relaxed">
-              Ready to get your vehicle serviced? Fill out the form below and we&apos;ll 
+            <div className="w-24 h-1.5 bg-primary mx-auto mt-8 mb-8 rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+            <p className="mt-4 text-xl text-white/80 leading-relaxed font-light max-w-2xl mx-auto">
+              Ready to get your vehicle serviced? Fill out the form below and we&apos;ll
               contact you within 24 hours to confirm your appointment.
             </p>
           </div>
@@ -55,16 +68,16 @@ export default function ContactPage() {
       </section>
 
       {/* Form & Contact Info Section */}
-      <section className="py-24">
+      <section className="py-24 animate-fade-in [animation-delay:200ms]">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
           <div className="grid lg:grid-cols-3 gap-12">
             {/* Booking Form */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 animate-slide-up">
               <BookingForm />
             </div>
 
             {/* Contact Information */}
-            <div className="space-y-6">
+            <div className="space-y-6 animate-slide-up [animation-delay:400ms]">
               <div className="p-6 bg-card rounded-xl border border-border">
                 <h3 className="font-semibold text-foreground mb-4">Contact Information</h3>
                 <div className="space-y-4">

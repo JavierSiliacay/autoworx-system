@@ -2,27 +2,27 @@ import Link from "next/link"
 
 export function TestimonialsSection() {
   return (
-    <section className="py-24 bg-secondary/50">
+    <section className="py-24 bg-secondary/50 animate-fade-in">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Logo Section - Left Side */}
-          <div className="flex justify-center md:justify-start">
+          <div className="flex justify-center md:justify-start animate-slide-up">
             <Link
               href="https://www.facebook.com/groups/2137901033113594"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:opacity-80 transition-opacity"
             ><center>
-              <img
-                src="/at_logo.png?v=1"
-                alt="Autotronics Logo"
-                className="h-70 w-auto object-contain"
-              /></center>
+                <img
+                  src="/at_logo.png?v=1"
+                  alt="Autotronics Logo"
+                  className="h-70 w-auto object-contain"
+                /></center>
             </Link>
           </div>
 
           {/* Special Thanks Text - Right Side */}
-          <div className="space-y-6">
+          <div className="space-y-6 animate-slide-up [animation-delay:200ms]">
             <div>
               <h2 className="font-serif text-3xl sm:text-4xl font-bold text-foreground mb-6">
                 Special Thanks

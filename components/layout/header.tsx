@@ -36,15 +36,14 @@ export function Header() {
   }, [])
 
   const handleNavClick = (href: string) => {
-    
+
     setClickedLink(href)
     setTimeout(() => setClickedLink(null), 500)
   }
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border transition-all duration-300 ${
-      isScrolled ? 'bg-background/95 shadow-lg' : 'bg-transparent'
-    }`}>
+    <header className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border transition-all duration-300 ${isScrolled ? 'bg-background/95 shadow-lg' : 'bg-transparent'
+      }`}>
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 lg:px-8">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
@@ -65,18 +64,15 @@ export function Header() {
               key={item.name}
               href={item.href}
               onClick={() => handleNavClick(item.href)}
-              className={`relative text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-200 group ${
-                clickedLink === item.href ? "scale-90 text-primary" : ""
-              }`}
+              className={`relative text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-200 group ${clickedLink === item.href ? "scale-90 text-primary" : ""
+                }`}
             >
-              <span className={`inline-block transition-transform duration-200 ${
-                clickedLink === item.href ? "animate-bounce-once" : "group-hover:-translate-y-0.5"
-              }`}>
+              <span className={`inline-block transition-transform duration-200 ${clickedLink === item.href ? "animate-bounce-once" : "group-hover:-translate-y-0.5"
+                }`}>
                 {item.name}
               </span>
-              <span className={`absolute -bottom-1 left-0 h-0.5 bg-primary transition-all duration-300 ${
-                clickedLink === item.href ? "w-full" : "w-0 group-hover:w-full"
-              }`} />
+              <span className={`absolute -bottom-1 left-0 h-0.5 bg-primary transition-all duration-300 ${clickedLink === item.href ? "w-full" : "w-0 group-hover:w-full"
+                }`} />
               {item.name === "Track" && pendingCount > 0 && (
                 <span className="absolute -top-2 -right-3 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-primary rounded-full animate-pulse">
                   {pendingCount}
@@ -94,7 +90,7 @@ export function Header() {
             <Phone className="w-4 h-4" />
             <span>0936-354-9603</span>
           </a>
-          <Button asChild>
+          <Button asChild className="hover:scale-105 transition-transform duration-300 shadow-md hover:shadow-primary/20">
             <Link href="/contact">Book Appointment</Link>
           </Button>
         </div>
@@ -124,22 +120,19 @@ export function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`relative block py-3 text-base font-medium text-foreground hover:text-primary transition-all duration-200 overflow-hidden ${
-                  clickedLink === item.href ? "scale-95" : ""
-                }`}
+                className={`relative block py-3 text-base font-medium text-foreground hover:text-primary transition-all duration-200 overflow-hidden ${clickedLink === item.href ? "scale-95" : ""
+                  }`}
                 style={{ animationDelay: `${index * 50}ms` }}
                 onClick={() => {
                   handleNavClick(item.href)
                   setMobileMenuOpen(false)
                 }}
               >
-                <div className={`flex items-center justify-between transition-all duration-200 ${
-                  clickedLink === item.href ? "translate-x-2 text-primary" : ""
-                }`}>
+                <div className={`flex items-center justify-between transition-all duration-200 ${clickedLink === item.href ? "translate-x-2 text-primary" : ""
+                  }`}>
                   <span className="flex items-center gap-2">
-                    <span className={`inline-block w-0 h-0.5 bg-primary transition-all duration-300 ${
-                      clickedLink === item.href ? "w-4" : ""
-                    }`} />
+                    <span className={`inline-block w-0 h-0.5 bg-primary transition-all duration-300 ${clickedLink === item.href ? "w-4" : ""
+                      }`} />
                     {item.name}
                   </span>
                   {item.name === "Track" && pendingCount > 0 && (

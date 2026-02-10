@@ -23,6 +23,21 @@ export async function GET(request: Request) {
     return NextResponse.json(data)
   }
 
+  const isCountRequest = searchParams.get("count") === "true"
+
+  if (isCountRequest) {
+    const { count, error } = await supabase
+      .from("appointments")
+      .select("*", { count: "exact", head: true })
+      .or("repair_status.eq.pending_inspection,repair_status.is.null")
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ count: count || 0 })
+  }
+
   // Get all appointments (admin only)
   const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
   if (!isAuthorizedAdminEmail(token?.email)) {
