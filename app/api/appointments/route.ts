@@ -10,14 +10,31 @@ export async function GET(request: Request) {
   const trackingCode = searchParams.get("trackingCode")
 
   if (trackingCode) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("appointments")
       .select("*")
       .eq("tracking_code", trackingCode)
       .single()
 
-    if (error) {
-      return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+    if (error || !data) {
+      // Try searching in history
+      const { data: historyData, error: historyError } = await supabase
+        .from("appointment_history")
+        .select("*")
+        .eq("tracking_code", trackingCode)
+        .single()
+
+      if (historyError) {
+        return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+      }
+
+      // Format history data to match appointment format
+      // Note: final_status in history maps to status in active
+      data = {
+        ...historyData,
+        status: historyData.final_status,
+        created_at: historyData.original_created_at
+      }
     }
 
     return NextResponse.json(data)
@@ -86,6 +103,7 @@ export async function POST(request: Request) {
         message: body.message,
         damage_images: body.damageImages || [],
         orcr_image: body.orcrImage || null,
+        insurance: body.insurance || null,
         status: "pending",
       })
       .select()
@@ -144,6 +162,7 @@ export async function PUT(request: Request) {
   if (updates.statusUpdatedAt !== undefined) dbUpdates.status_updated_at = updates.statusUpdatedAt
   if (updates.costing !== undefined) dbUpdates.costing = updates.costing
   if (updates.damageImages !== undefined) dbUpdates.damage_images = updates.damageImages
+  if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
 
   dbUpdates.updated_at = new Date().toISOString()
 

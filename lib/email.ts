@@ -158,7 +158,7 @@ export async function sendAppointmentEmail({
                     <p>&copy; ${new Date().getFullYear()} Autoworx Repairs & Gen. Merchandise</p>
                 </div>
             </div>
-        `;
+        `
     }
 
     console.log(`[Email Utility] Executing resend.emails.send for: ${email}`);

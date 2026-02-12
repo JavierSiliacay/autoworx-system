@@ -69,6 +69,7 @@ export async function POST(request: Request) {
       original_created_at: appointment.created_at,
       completed_at: appointment.status === "completed" ? new Date().toISOString() : null,
       archived_reason: reason || "Archived by admin",
+      insurance: appointment.insurance || null,
     })
 
   if (insertError) {

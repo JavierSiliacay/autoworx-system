@@ -46,6 +46,7 @@ export interface BookingFormData {
   preferredDate: string
   message: string
   orcrImage?: string
+  insurance?: string
 }
 
 export function BookingForm() {
@@ -65,6 +66,7 @@ export function BookingForm() {
     service: "",
     preferredDate: "",
     message: "",
+    insurance: "",
   })
   const [damageImages, setDamageImages] = useState<string[]>([])
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -381,6 +383,7 @@ export function BookingForm() {
                 service: "",
                 preferredDate: "",
                 message: "",
+                insurance: "",
               })
             }}
           >
@@ -611,6 +614,29 @@ export function BookingForm() {
               rows={4}
               className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
             />
+          </div>
+        </div>
+
+        {/* Insurance Information */}
+        <div className="animate-in fade-in slide-in-from-right-2 duration-500">
+          <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5" />
+            Insurance (Optional)
+          </h3>
+          <div className="space-y-4">
+            <div className="space-y-2 group">
+              <Label htmlFor="insurance" className="group-hover:text-primary transition-colors">Insurance Provider</Label>
+              <Input
+                id="insurance"
+                value={formData.insurance}
+                onChange={(e) => updateField("insurance", e.target.value)}
+                placeholder="e.g., Pioneer, Standard Insurance, etc."
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
+              />
+              <p className="text-xs text-muted-foreground">
+                Autoworx accepts insurance claims. Leave blank if not applicable.
+              </p>
+            </div>
           </div>
         </div>
 

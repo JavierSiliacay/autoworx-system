@@ -24,10 +24,14 @@ interface TrackingAppointment {
   currentRepairPart?: string
   statusUpdatedAt?: string
   costing?: CostingData
+  insurance?: string
 }
 
 export async function generateConfirmationPDF(options: PDFGeneratorOptions): Promise<string> {
   const { trackingCode, appointmentData } = options
+
+  // Use current origin if in browser, otherwise fallback to production URL
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -46,7 +50,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     body {
       font-family: Arial, sans-serif;
       font-size: 11px;
-      line-height: 1.3;
+      line-height: 1.4;
       color: #333;
       background: white;
       padding: 0.5in;
@@ -61,9 +65,6 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       body {
         padding: 0;
       }
-      .no-print {
-        display: none;
-      }
     }
     
     .container {
@@ -76,7 +77,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     .header {
       text-align: center;
       border-bottom: 2px solid #1a5f9c;
-      padding: 12px 0;
+      padding: 15px 0;
       margin-bottom: 12px;
       display: flex;
       justify-content: center;
@@ -93,8 +94,8 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     }
     
     .logo-container {
-      width: 45px;
-      height: 45px;
+      width: 50px;
+      height: 50px;
       flex-shrink: 0;
       z-index: 2;
     }
@@ -113,39 +114,41 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     
     .header h1 {
       color: #1a5f9c;
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
-      margin: 0 0 4px 0;
+      margin: 0 0 5px 0;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     
     .header p {
       color: #666;
-      font-size: 10px;
+      font-size: 11px;
       margin: 0;
       font-weight: 600;
     }
     
-    /* Tracking Section */
+    /* Tracking Code */
     .tracking-box {
       border: 2px solid #1a5f9c;
       background: #f0f7ff;
       border-radius: 4px;
-      padding: 8px;
-      margin-bottom: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
       text-align: center;
     }
     
     .tracking-box p {
-      font-size: 9px;
-      color: #666;
-      margin: 0;
+      color: #1a5f9c;
+      font-size: 10px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-transform: uppercase;
     }
     
     .tracking-code {
       font-family: 'Courier New', monospace;
-      font-size: 16px;
+      font-size: 20px;
       font-weight: bold;
       color: #1a5f9c;
       letter-spacing: 2px;
@@ -242,7 +245,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     <!-- QR Code Section -->
     <div style="text-align: center; margin-bottom: 12px; padding: 10px; border: 1px dashed #1a5f9c; border-radius: 4px;">
       <p style="font-size: 9px; color: #1a5f9c; font-weight: bold; margin-bottom: 6px;">SCAN TO TRACK STATUS</p>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://autoworx-system.vercel.app/track?code=${trackingCode}" alt="Tracking QR Code" style="width: 80px; height: 80px;" />
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${baseUrl}/track?code=${trackingCode}`)}" alt="Tracking QR Code" style="width: 80px; height: 80px;" />
       <p style="font-size: 8px; color: #666; margin-top: 4px;">Point your phone camera here to track live updates</p>
     </div>
     
@@ -296,6 +299,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
         <span class="value">${appointmentData.preferredDate || "Not specified"}</span>
       </div>
       ${appointmentData.message ? `<div style="margin-top: 3px; font-size: 10px;"><strong>Details:</strong> ${appointmentData.message.substring(0, 150)}</div>` : ""}
+      ${appointmentData.insurance ? `<div style="margin-top: 3px; font-size: 10px; color: #1a5f9c;"><strong>Insurance Provider:</strong> ${appointmentData.insurance}</div>` : ""}
     </div>
     
     <!-- Footer -->
@@ -308,7 +312,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
   </div>
 </body>
 </html>
-  `
+`
 
   return htmlContent
 }
@@ -339,6 +343,9 @@ function getAppointmentStatusLabel(status: string): string {
 export async function generateTrackingPDF(appointment: TrackingAppointment): Promise<string> {
   const repairStatus = getRepairStatusLabel(appointment.repairStatus)
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
+
+  // Use current origin if in browser, otherwise fallback to production URL
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
 
   // Calculate costing totals
   const hasCosting = appointment.costing && appointment.costing.items.length > 0
@@ -596,7 +603,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
     <!-- QR Code Section -->
     <div style="text-align: center; margin-bottom: 12px; padding: 10px; border: 1px dashed #1a5f9c; border-radius: 4px;">
       <p style="font-size: 9px; color: #1a5f9c; font-weight: bold; margin-bottom: 6px;">SCAN TO RE-TRACK LIVE</p>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://autoworx-system.vercel.app/track?code=${appointment.trackingCode}" alt="Tracking QR Code" style="width: 80px; height: 80px;" />
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${baseUrl}/track?code=${appointment.trackingCode}`)}" alt="Tracking QR Code" style="width: 80px; height: 80px;" />
       <p style="font-size: 8px; color: #666; margin-top: 4px;">Share this report - Anyone with the QR can track the status</p>
     </div>
     
@@ -646,6 +653,11 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
         <span class="label">Preferred Date:</span>
         <span class="value">${appointment.preferredDate || "Not specified"}</span>
       </div>
+      ${appointment.insurance ? `
+      <div class="info-row">
+        <span class="label">Insurance:</span>
+        <span class="value">${appointment.insurance}</span>
+      </div>` : ""}
     </div>
     
     ${hasCosting ? `
@@ -703,7 +715,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
   </div>
 </body>
 </html>
-  `
+`
 
   return htmlContent
 }

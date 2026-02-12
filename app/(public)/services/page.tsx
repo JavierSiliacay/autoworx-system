@@ -1,12 +1,9 @@
-import type { Metadata } from "next"
-import Link from "next/link"
-import { ArrowRight, Cog, Car, Thermometer, Paintbrush, Sparkles, Truck, Wrench, Settings, CheckCircle2, Shield, CalendarCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
+"use client"
 
-export const metadata: Metadata = {
-  title: "Services | Autoworx Repairs",
-  description: "Complete automotive repair and maintenance services including engine, transmission, AC, electrical, body repairs, detailing, and 24/7 towing.",
-}
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { Star, ArrowRight, Cog, Car, Thermometer, Paintbrush, Sparkles, Truck, Wrench, Settings, CheckCircle2, Shield, CalendarCheck } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const services = [
   {
@@ -63,7 +60,7 @@ const services = [
   },
   {
     icon: Thermometer,
-    title: "Air-conditioning & Electrical",
+    title: "AC & Electrical",
     description: "Keep cool and powered with our expert AC and electrical system diagnostics and repairs.",
     features: [
       "AC recharge & repair",
@@ -128,7 +125,7 @@ const services = [
   },
   {
     icon: Truck,
-    title: "24/7 Car Towing Services",
+    title: "24/7 Towing Service",
     description: "Round-the-clock emergency towing and roadside assistance whenever and wherever you need help.",
     features: [
       "Emergency towing",
@@ -142,6 +139,43 @@ const services = [
 ]
 
 export default function ServicesPage() {
+  const [feedback, setFeedback] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchFeedback() {
+      try {
+        const res = await fetch("/api/feedback")
+        if (res.ok) {
+          const data = await res.json()
+          setFeedback(data)
+        }
+      } catch (error) {
+        console.error("Error fetching feedback:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchFeedback()
+  }, [])
+
+  const getServiceRating = (serviceTitle: string) => {
+    // Some fuzzy matching might be needed if service names differ slightly
+    const serviceFeedback = feedback.filter(f =>
+      f.service === serviceTitle ||
+      serviceTitle.includes(f.service) ||
+      f.service.includes(serviceTitle)
+    )
+
+    if (serviceFeedback.length === 0) return null
+
+    const avg = serviceFeedback.reduce((acc, f) => acc + f.rating, 0) / serviceFeedback.length
+    return {
+      average: avg.toFixed(1),
+      count: serviceFeedback.length
+    }
+  }
+
   return (
     <>
       {/* Hero Section */}
@@ -187,9 +221,22 @@ export default function ServicesPage() {
                     <service.icon className="w-7 h-7" />
                   </div>
                   <div>
-                    <h2 className="font-serif text-xl font-bold text-foreground group-hover:text-primary transition-colors">
-                      {service.title}
-                    </h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-serif text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                        {service.title}
+                      </h2>
+                      {getServiceRating(service.title) && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-lg animate-in zoom-in duration-500">
+                          <Star className="w-3.5 h-3.5 text-primary fill-primary" />
+                          <span className="text-xs font-bold text-primary">
+                            {getServiceRating(service.title)?.average}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            ({getServiceRating(service.title)?.count})
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     <p className="mt-1 text-muted-foreground">
                       {service.description}
                     </p>

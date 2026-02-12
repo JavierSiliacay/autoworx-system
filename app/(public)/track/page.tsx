@@ -13,6 +13,8 @@ import {
   FileText,
   CheckCircle,
   Clock,
+  ImageIcon,
+  Search,
   AlertCircle,
   Settings2,
   RefreshCw,
@@ -22,11 +24,15 @@ import {
   Package,
   HardHat,
   Tag,
-  ImageIcon,
+  Download,
+  Star,
 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import {
   getStatusInfo,
   formatAppointmentDate,
@@ -36,7 +42,6 @@ import {
 import { COSTING_CONTACT, REPAIR_STATUS_OPTIONS, COST_ITEM_TYPES, type RepairStatus, type CostingData } from "@/lib/constants"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { generateTrackingPDF } from "@/lib/generate-pdf"
-import { Download } from "lucide-react"
 
 // Database response interface (snake_case from Supabase)
 interface AppointmentDB {
@@ -60,6 +65,7 @@ interface AppointmentDB {
   costing?: CostingData
   damage_images?: string[]
   orcr_image?: string
+  insurance?: string
 }
 
 // Helper to convert DB response to frontend format
@@ -85,6 +91,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     costing: apt.costing,
     damageImages: apt.damage_images,
     orcrImage: apt.orcr_image,
+    insurance: apt.insurance,
   }
 }
 
@@ -113,9 +120,13 @@ interface Appointment {
   damageImages?: string[]
   // ORCR image
   orcrImage?: string
+  // Insurance
+  insurance?: string
 }
 
-export default function TrackingPage() {
+import { Suspense } from "react"
+
+function TrackingContent() {
   const [trackingCode, setTrackingCode] = useState("")
   const [appointment, setAppointment] = useState<Appointment | null>(null)
   const [error, setError] = useState("")
@@ -125,7 +136,49 @@ export default function TrackingPage() {
   const [zoomModalOpen, setZoomModalOpen] = useState(false)
   const [zoomImages, setZoomImages] = useState<string[]>([])
   const [zoomInitialIndex, setZoomInitialIndex] = useState(0)
-  const [email, setEmail] = useState("") // Declare email state
+  const [hasSubmittedFeedback, setHasSubmittedFeedback] = useState(false)
+  const [feedbackRating, setFeedbackRating] = useState(5)
+  const [feedbackComment, setFeedbackComment] = useState("")
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
+  const searchParams = useSearchParams()
+
+  const performSearch = useCallback(async (code: string) => {
+    setError("")
+    setAppointment(null)
+    setIsSearching(true)
+
+    try {
+      const response = await fetch(`/api/appointments?trackingCode=${encodeURIComponent(code.toUpperCase())}`)
+      const data = await response.json()
+
+      if (data && !data.error) {
+        setAppointment(dbToFrontend(data))
+        // Check if feedback exists
+        const feedbackRes = await fetch(`/api/feedback?appointmentId=${data.id}`)
+        if (feedbackRes.ok) {
+          const feedbackData = await feedbackRes.json()
+          if (feedbackData.length > 0) {
+            setHasSubmittedFeedback(true)
+          }
+        }
+      } else {
+        setError("No appointment found. Please check your tracking code.")
+      }
+    } catch (error) {
+      console.error("Error searching appointment:", error)
+      setError("An error occurred. Please try again.")
+    }
+    setIsSearching(false)
+  }, [])
+
+  // Auto-search if code is in URL
+  useEffect(() => {
+    const code = searchParams.get("code")
+    if (code && !appointment && !isSearching) {
+      setTrackingCode(code.toUpperCase())
+      performSearch(code.toUpperCase())
+    }
+  }, [searchParams, appointment, isSearching, performSearch])
 
   // Load pending appointments count
   const loadPendingCount = useCallback(async () => {
@@ -174,30 +227,11 @@ export default function TrackingPage() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
-    setAppointment(null)
-
     if (!trackingCode) {
       setError("Please enter your tracking code")
       return
     }
-
-    setIsSearching(true)
-
-    try {
-      const response = await fetch(`/api/appointments?trackingCode=${encodeURIComponent(trackingCode.toUpperCase())}`)
-      const data = await response.json()
-
-      if (data && !data.error) {
-        setAppointment(dbToFrontend(data))
-      } else {
-        setError("No appointment found. Please check your tracking code.")
-      }
-    } catch (error) {
-      console.error("Error searching appointment:", error)
-      setError("An error occurred. Please try again.")
-    }
-    setIsSearching(false)
+    performSearch(trackingCode)
   }
 
   const getStatusIcon = (status: string) => {
@@ -469,6 +503,12 @@ export default function TrackingPage() {
                     <p className="text-xs text-muted-foreground mb-1">Service Requested</p>
                     <p className="text-foreground">{appointment.service}</p>
                   </div>
+                  {appointment.insurance && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Insurance Provider</p>
+                      <p className="text-emerald-500 font-semibold">{appointment.insurance}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -768,6 +808,89 @@ export default function TrackingPage() {
               </ul>
             </div>
 
+            {/* Customer Feedback Section */}
+            {appointment.status === "completed" && (
+              <div className="bg-primary/5 rounded-xl border border-primary/30 p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
+                    <Star className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Rate Our Service</h3>
+                    <p className="text-xs text-muted-foreground">Share your experience with Autoworx</p>
+                  </div>
+                </div>
+
+                {hasSubmittedFeedback ? (
+                  <div className="bg-background/50 p-4 rounded-lg border border-border text-center">
+                    <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-foreground">Thank you for your feedback!</p>
+                    <p className="text-xs text-muted-foreground mt-1">Your rating helps us improve our services.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex justify-center gap-2 py-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setFeedbackRating(star)}
+                          className={`transition-all ${feedbackRating >= star ? "text-primary scale-110" : "text-muted hover:text-primary/50"}`}
+                        >
+                          <Star className={`w-8 h-8 ${feedbackRating >= star ? "fill-current" : ""}`} />
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="feedback-comment" className="text-xs">Your Comments (Optional)</Label>
+                      <Textarea
+                        id="feedback-comment"
+                        value={feedbackComment}
+                        onChange={(e) => setFeedbackComment(e.target.value)}
+                        placeholder="Tell us what you liked or how we can improve..."
+                        rows={3}
+                        className="text-sm bg-background"
+                      />
+                    </div>
+
+                    <Button
+                      onClick={async () => {
+                        setIsSubmittingFeedback(true)
+                        try {
+                          const res = await fetch("/api/feedback", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              appointmentId: appointment.id,
+                              rating: feedbackRating,
+                              comment: feedbackComment,
+                              customerName: appointment.name,
+                              service: appointment.service
+                            })
+                          })
+                          if (res.ok) {
+                            setHasSubmittedFeedback(true)
+                          } else {
+                            const err = await res.json()
+                            alert(err.error || "Failed to submit feedback")
+                          }
+                        } catch (error) {
+                          console.error("Feedback error:", error)
+                          alert("An error occurred. Please try again.")
+                        }
+                        setIsSubmittingFeedback(false)
+                      }}
+                      className="w-full"
+                      disabled={isSubmittingFeedback}
+                    >
+                      {isSubmittingFeedback ? "Submitting..." : "Submit Review"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Support */}
             <div className="text-center pt-6 border-t border-border">
               <p className="text-muted-foreground mb-4">
@@ -802,5 +925,20 @@ export default function TrackingPage() {
         onClose={() => setZoomModalOpen(false)}
       />
     </main>
+  )
+}
+
+export default function TrackingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+          <p className="text-muted-foreground animate-pulse">Loading tracking information...</p>
+        </div>
+      </div>
+    }>
+      <TrackingContent />
+    </Suspense>
   )
 }

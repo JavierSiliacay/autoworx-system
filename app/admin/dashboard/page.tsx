@@ -21,11 +21,23 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowUpRight,
+  ShieldCheck,
+  Search,
+  X,
+  Plus,
+  DollarSign,
+  Receipt,
+  ImageIcon,
+  Archive,
+  History as HistoryIcon,
+  FileText,
+  Download,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, X, Plus, DollarSign, Receipt, ImageIcon, Archive, History, FileText, Download } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -60,6 +72,7 @@ interface AppointmentDB {
   costing?: CostingData
   damage_images?: string[]
   orcr_image?: string
+  insurance?: string
 }
 
 // Frontend interface (camelCase)
@@ -84,6 +97,7 @@ interface Appointment {
   costing?: CostingData
   damageImages?: string[]
   orcrImage?: string
+  insurance?: string
 }
 
 // History interface
@@ -134,6 +148,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     costing: apt.costing,
     damageImages: apt.damage_images,
     orcrImage: apt.orcr_image,
+    insurance: apt.insurance,
   }
 }
 
@@ -728,7 +743,7 @@ export default function AdminDashboard() {
               : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
           >
-            <History className="w-4 h-4 inline-block mr-2" />
+            <HistoryIcon className="w-4 h-4 inline-block mr-2" />
             History ({historyRecords.length})
           </button>
         </div>
@@ -1023,6 +1038,24 @@ export default function AdminDashboard() {
                                 <p className="text-[10px] text-muted-foreground mt-2 text-center">
                                   Click image to zoom or download for verification
                                 </p>
+                              </div>
+                            )}
+
+                            {/* Insurance Info */}
+                            {appointment.insurance && (
+                              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                                <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 mb-1">
+                                  <Badge className="w-4 h-4 p-0 flex items-center justify-center bg-emerald-500">
+                                    <ShieldCheck className="w-2.5 h-2.5" />
+                                  </Badge>
+                                  Insurance Information
+                                </div>
+                                <div className="mt-1">
+                                  <p className="text-xs text-muted-foreground">Provider</p>
+                                  <p className="text-sm font-semibold text-foreground italic">
+                                    {appointment.insurance}
+                                  </p>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1456,7 +1489,7 @@ export default function AdminDashboard() {
             {/* History Records */}
             {filteredAndSortedHistory.length === 0 ? (
               <div className="p-12 bg-card rounded-xl border border-border text-center">
-                <History className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <HistoryIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="font-semibold text-foreground">No history records found</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   {historyRecords.length === 0
