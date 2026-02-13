@@ -61,6 +61,22 @@ export function getRepairStatusInfo(status: RepairStatus | undefined) {
       borderColor: "border-orange-500/30",
       step: 2,
     },
+    waiting_for_insurance: {
+      label: "Waiting for Insurance Approval",
+      description: "We are waiting for your insurance provider to approve the repair quote",
+      color: "text-blue-600",
+      bgColor: "bg-blue-600/10",
+      borderColor: "border-blue-600/30",
+      step: 2,
+    },
+    insurance_approved: {
+      label: "Approved by Insurance",
+      description: "Insurance has approved the repairs. Starting work soon",
+      color: "text-emerald-500",
+      bgColor: "bg-emerald-500/10",
+      borderColor: "border-emerald-500/30",
+      step: 2,
+    },
     repair_in_progress: {
       label: "Repair in Progress",
       description: "Your vehicle is currently being repaired",
@@ -94,7 +110,7 @@ export function getRepairStatusInfo(status: RepairStatus | undefined) {
       step: 5,
     },
   }
-  
+
   if (!status) {
     return {
       label: "Not Started",
@@ -105,7 +121,7 @@ export function getRepairStatusInfo(status: RepairStatus | undefined) {
       step: 0,
     }
   }
-  
+
   return statusMap[status]
 }
 

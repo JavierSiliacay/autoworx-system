@@ -45,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
+import { VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
 import { getRepairStatusInfo } from "@/lib/appointment-tracking"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
@@ -61,6 +61,10 @@ interface AppointmentDB {
   vehicle_model: string
   vehicle_year: string
   vehicle_plate: string
+  vehicle_color: string
+  chassis_number: string
+  engine_number: string
+  assignee_driver: string
   service: string
   preferred_date: string
   message: string
@@ -86,6 +90,10 @@ interface Appointment {
   vehicleModel: string
   vehicleYear: string
   vehiclePlate: string
+  vehicleColor: string
+  chassisNumber: string
+  engineNumber: string
+  assigneeDriver: string
   service: string
   preferredDate: string
   message: string
@@ -137,6 +145,10 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     vehicleModel: apt.vehicle_model,
     vehicleYear: apt.vehicle_year,
     vehiclePlate: apt.vehicle_plate,
+    vehicleColor: apt.vehicle_color,
+    chassisNumber: apt.chassis_number,
+    engineNumber: apt.engine_number,
+    assigneeDriver: apt.assignee_driver,
     service: apt.service,
     preferredDate: apt.preferred_date,
     message: apt.message,
@@ -593,6 +605,7 @@ export default function AdminDashboard() {
     contacted: appointments.filter((apt) => apt.status === "contacted").length,
     completed: appointments.filter((apt) => apt.status === "completed").length,
     pendingInspection: appointments.filter((apt) => apt.repairStatus === "pending_inspection" || !apt.repairStatus).length,
+    waitingForApproval: appointments.filter((apt) => apt.repairStatus === "waiting_for_insurance").length,
   }
 
   // History filtering and sorting
@@ -694,26 +707,30 @@ export default function AdminDashboard() {
 
       <main className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <div className="p-4 bg-card rounded-xl border border-border">
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-            <div className="text-sm text-muted-foreground">Total Requests</div>
+            <div className="text-sm text-muted-foreground font-medium">Total Requests</div>
           </div>
           <div className="p-4 bg-card rounded-xl border border-border">
             <div className="text-2xl font-bold text-yellow-500">{stats.pending}</div>
-            <div className="text-sm text-muted-foreground">Pending</div>
+            <div className="text-sm text-muted-foreground font-medium">Pending</div>
           </div>
           <div className="p-4 bg-card rounded-xl border border-border">
             <div className="text-2xl font-bold text-blue-500">{stats.contacted}</div>
-            <div className="text-sm text-muted-foreground">Contacted</div>
+            <div className="text-sm text-muted-foreground font-medium">Contacted</div>
           </div>
           <div className="p-4 bg-card rounded-xl border border-border">
             <div className="text-2xl font-bold text-green-500">{stats.completed}</div>
-            <div className="text-sm text-muted-foreground">Completed</div>
+            <div className="text-sm text-muted-foreground font-medium">Completed</div>
           </div>
-          <div className="p-4 bg-card rounded-xl border border-orange-500/30 col-span-2 lg:col-span-1">
+          <div className="p-4 bg-card rounded-xl border border-border">
             <div className="text-2xl font-bold text-orange-500">{stats.pendingInspection}</div>
-            <div className="text-sm text-muted-foreground">Pending Inspection</div>
+            <div className="text-sm text-muted-foreground font-medium">Pending Inspection</div>
+          </div>
+          <div className="p-4 bg-card rounded-xl border border-primary/30">
+            <div className="text-2xl font-bold text-primary">{stats.waitingForApproval}</div>
+            <div className="text-sm text-muted-foreground font-medium">Waiting for Approval</div>
           </div>
         </div>
 
@@ -910,10 +927,38 @@ export default function AdminDashboard() {
                                   {appointment.vehicleModel}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 text-muted-foreground">
+                              <div className="flex items-center gap-2 text-muted-foreground whitespace-nowrap">
                                 <span className="font-mono font-semibold text-foreground">{appointment.vehiclePlate}</span>
+                                {appointment.vehicleColor && (
+                                  <span className="text-xs bg-secondary px-1.5 py-0.5 rounded">
+                                    {appointment.vehicleColor}
+                                  </span>
+                                )}
                               </div>
                             </div>
+
+                            {(appointment.chassisNumber || appointment.engineNumber || appointment.assigneeDriver) && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-4 text-xs border-l-2 border-primary/20 pl-3">
+                                {appointment.chassisNumber && (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-muted-foreground">Chassis:</span>
+                                    <span className="font-medium">{appointment.chassisNumber}</span>
+                                  </div>
+                                )}
+                                {appointment.engineNumber && (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-muted-foreground">Engine:</span>
+                                    <span className="font-medium">{appointment.engineNumber}</span>
+                                  </div>
+                                )}
+                                {appointment.assigneeDriver && (
+                                  <div className="flex items-center gap-1.5 sm:col-span-2">
+                                    <span className="text-muted-foreground">Assignee/Driver:</span>
+                                    <span className="font-medium">{appointment.assigneeDriver}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
 
                             <div className="flex flex-wrap items-center gap-4 text-sm">
                               <div className="flex items-center gap-2">
@@ -1271,7 +1316,23 @@ export default function AdminDashboard() {
                                   {appointment.costing.items.map((item) => (
                                     <div key={item.id} className="p-3 bg-background rounded-lg border border-border">
                                       <div className="flex items-start gap-3">
-                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-5 gap-3">
+                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-6 gap-3">
+                                          <div className="sm:col-span-1">
+                                            <label className="text-xs text-muted-foreground mb-1 block">Category</label>
+                                            <Select
+                                              value={item.category || "Others"}
+                                              onValueChange={(value) => updateCostItem(appointment.id, item.id, { category: value })}
+                                            >
+                                              <SelectTrigger className="h-8 text-[11px] px-2">
+                                                <SelectValue placeholder="Category" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {COST_ITEM_CATEGORIES.map((cat) => (
+                                                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
                                           <div className="sm:col-span-2">
                                             <label className="text-xs text-muted-foreground mb-1 block">
                                               {COST_ITEM_TYPES.find(t => t.value === item.type)?.label} Description

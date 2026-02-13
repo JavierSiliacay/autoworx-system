@@ -24,6 +24,8 @@ export const SERVICE_CATEGORIES = [
 export const REPAIR_STATUS_OPTIONS = [
   { value: "pending_inspection", label: "Pending Inspection" },
   { value: "under_diagnosis", label: "Under Diagnosis" },
+  { value: "waiting_for_insurance", label: "Waiting for Insurance Approval" },
+  { value: "insurance_approved", label: "Approved by Insurance" },
   { value: "repair_in_progress", label: "Repair in Progress" },
   { value: "waiting_for_parts", label: "Waiting for Parts" },
   { value: "testing_quality_check", label: "Testing / Quality Check" },
@@ -57,11 +59,21 @@ export const COST_ITEM_TYPES = [
   { value: "custom", label: "Custom" },
 ] as const
 
+export const COST_ITEM_CATEGORIES = [
+  "Tinsmith",
+  "Alignment",
+  "Glassworks",
+  "Detailing",
+  "Painting",
+  "Others"
+] as const
+
 export type CostItemType = typeof COST_ITEM_TYPES[number]["value"]
 
 export interface CostItem {
   id: string
   type: CostItemType
+  category?: string
   description: string
   quantity: number
   unitPrice: number

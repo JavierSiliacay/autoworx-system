@@ -15,6 +15,10 @@ interface TrackingAppointment {
   vehicleModel: string
   vehicleYear: string
   vehiclePlate: string
+  vehicleColor?: string
+  chassisNumber?: string
+  engineNumber?: string
+  assigneeDriver?: string
   service: string
   preferredDate: string
   message?: string
@@ -41,192 +45,56 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Appointment Confirmation</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: Arial, sans-serif; 
+      font-size: 10px; 
+      line-height: 1.15; 
+      color: #333; 
+      background: white; 
+      padding: 0.25in; 
     }
-    
-    body {
-      font-family: Arial, sans-serif;
-      font-size: 11px;
-      line-height: 1.4;
-      color: #333;
-      background: white;
-      padding: 0.5in;
+    @page { 
+      size: A4; 
+      margin: 0; 
     }
-    
-    @page {
-      size: A4;
-      margin: 0.5in;
-    }
-    
-    @media print {
-      body {
-        padding: 0;
-      }
-    }
-    
-    .container {
-      max-width: 7.5in;
-      margin: 0 auto;
-      background: white;
-    }
-    
-    /* Header */
-    .header {
-      text-align: center;
-      border-bottom: 2px solid #1a5f9c;
-      padding: 15px 0;
-      margin-bottom: 12px;
+    .container { 
+      max-width: 7.9in; 
+      margin: 0 auto; 
+      height: 10.7in;
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
     }
+    .header { text-align: center; border-bottom: 2px solid #1a5f9c; padding: 10px 0; margin-bottom: 10px; display: flex; justify-content: center; align-items: center; }
+    .header-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 0 auto; }
+    .logo-container img { width: 70px; height: 70px; }
+    .header h1 { color: #1a5f9c; font-size: 16px; font-weight: bold; margin: 0; text-transform: uppercase; }
+    .header p { color: #666; font-size: 10px; margin: 0; font-weight: 600; }
     
-    .header-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      margin: 0 auto;
-      max-width: 500px;
-    }
+    .tracking-box { border: 2px solid #1a5f9c; background: #f0f7ff; border-radius: 4px; padding: 10px; margin-bottom: 12px; text-align: center; }
+    .tracking-code { font-family: 'Courier New', monospace; font-size: 20px; font-weight: bold; color: #1a5f9c; letter-spacing: 2px; }
     
-    .logo-container {
-      width: 50px;
-      height: 50px;
-      flex-shrink: 0;
-      z-index: 2;
-    }
+    .section-title { background: #f4f4f4; color: #000; font-size: 11px; font-weight: bold; border: 1px solid #ddd; padding: 4px 8px; margin-bottom: 0; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; table-layout: fixed; }
+    .info-table td { border: 1px solid #ddd; padding: 6px; vertical-align: middle; font-size: 10px; }
+    .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc; }
+    .info-table td.value-cell { width: 28%; }
     
-    .logo-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
+    .qr-section { text-align: center; margin: 15px 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     
-    .header-content {
-      text-align: left;
-      z-index: 1;
-      flex: 1;
-    }
+    .footer-layout { margin-top: auto; padding-top: 10px; border-top: 1px solid #eee; }
+    .terms-box { border: 1.5px solid #999; padding: 10px; font-size: 9px; line-height: 1.3; margin-bottom: 15px; }
+    .terms-box ol { padding-left: 14px; }
+    .terms-box li { margin-bottom: 5px; }
     
-    .header h1 {
-      color: #1a5f9c;
-      font-size: 18px;
-      font-weight: bold;
-      margin: 0 0 5px 0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .header p {
-      color: #666;
-      font-size: 11px;
-      margin: 0;
-      font-weight: 600;
-    }
-    
-    /* Tracking Code */
-    .tracking-box {
-      border: 2px solid #1a5f9c;
-      background: #f0f7ff;
-      border-radius: 4px;
-      padding: 10px;
-      margin-bottom: 12px;
-      text-align: center;
-    }
-    
-    .tracking-box p {
-      color: #1a5f9c;
-      font-size: 10px;
-      font-weight: bold;
-      margin-bottom: 8px;
-      text-transform: uppercase;
-    }
-    
-    .tracking-code {
-      font-family: 'Courier New', monospace;
-      font-size: 20px;
-      font-weight: bold;
-      color: #1a5f9c;
-      letter-spacing: 2px;
-      margin: 5px 0;
-    }
-    
-    .status-badge {
-      display: inline-block;
-      background: #fff3cd;
-      color: #856404;
-      padding: 3px 8px;
-      border-radius: 3px;
-      font-size: 9px;
-      font-weight: bold;
-      margin-top: 4px;
-    }
-    
-    /* Sections */
-    .section {
-      margin-bottom: 8px;
-    }
-    
-    .section-title {
-      color: #1a5f9c;
-      font-size: 12px;
-      font-weight: bold;
-      border-bottom: 1px solid #1a5f9c;
-      padding-bottom: 3px;
-      margin-bottom: 5px;
-    }
-    
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 3px 0;
-      border-bottom: 1px solid #e0e0e0;
-      font-size: 10px;
-    }
-    
-    .info-row:last-child {
-      border-bottom: none;
-    }
-    
-    .label {
-      font-weight: bold;
-      color: #1a5f9c;
-      width: 35%;
-    }
-    
-    .value {
-      text-align: right;
-      width: 65%;
-      word-break: break-word;
-    }
-    
-    /* Footer */
-    .footer {
-      border-top: 1px solid #e0e0e0;
-      margin-top: 8px;
-      padding-top: 6px;
-      text-align: center;
-      font-size: 9px;
-      color: #999;
-    }
-    
-    .footer p {
-      margin: 2px 0;
-    }
+    .contact-info { text-align: center; font-size: 8px; color: #777; margin-top: 10px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Header -->
     <div class="header">
       <div class="header-container">
-        <div class="logo-container">
-          <img src="/autoworxlogo.png" alt="Autoworx Logo" />
-        </div>
+        <div class="logo-container"><img src="/autoworxlogo.png" alt="Logo" /></div>
         <div class="header-content">
           <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
           <p>Appointment Request Confirmation</p>
@@ -234,94 +102,95 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       </div>
     </div>
     
-    <!-- Tracking Code -->
     <div class="tracking-box">
-      <p>Your Tracking Code</p>
+      <p style="font-size: 9px; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; color: #666;">YOUR TRACKING CODE</p>
       <div class="tracking-code">${trackingCode}</div>
-      <p>Use this code to track your appointment status</p>
-      <div class="status-badge">PENDING - Awaiting Confirmation</div>
+      <p style="font-size: 9px; margin-top: 5px; color: #1a5f9c; font-weight: 600;">Use this code to track your appointment status online</p>
     </div>
 
-    <!-- QR Code Section -->
-    <div style="text-align: center; margin-bottom: 12px; padding: 10px; border: 1px dashed #1a5f9c; border-radius: 4px;">
-      <p style="font-size: 9px; color: #1a5f9c; font-weight: bold; margin-bottom: 6px;">SCAN TO TRACK STATUS</p>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${baseUrl}/track?code=${trackingCode}`)}" alt="Tracking QR Code" style="width: 80px; height: 80px;" />
-      <p style="font-size: 8px; color: #666; margin-top: 4px;">Point your phone camera here to track live updates</p>
+    <div class="section-title">Customer & Vehicle Information</div>
+    <table class="info-table">
+      <tr>
+        <td class="label-cell">NAME/CLIENT:</td>
+        <td class="value-cell">${appointmentData.name}</td>
+        <td class="label-cell">Assignee/Driver:</td>
+        <td class="value-cell">${appointmentData.assigneeDriver || "N/A"}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">UNIT/MODEL:</td>
+        <td class="value-cell">${appointmentData.vehicleYear} ${appointmentData.vehicleMake} ${appointmentData.vehicleModel}</td>
+        <td class="label-cell">CONTACT #:</td>
+        <td class="value-cell">${appointmentData.phone}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">PLATE #:</td>
+        <td class="value-cell"><strong>${appointmentData.vehiclePlate}</strong></td>
+        <td class="label-cell">EMAIL ADD:</td>
+        <td class="value-cell">${appointmentData.email}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">COLOR:</td>
+        <td class="value-cell">${appointmentData.vehicleColor || "N/A"}</td>
+        <td class="label-cell">DATE:</td>
+        <td class="value-cell">${appointmentData.preferredDate || "Not specified"}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">INSURANCE:</td>
+        <td class="value-cell">${appointmentData.insurance || "N/A"}</td>
+        <td class="label-cell">SERVICE:</td>
+        <td class="value-cell">${appointmentData.service}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">CHASSIS:</td>
+        <td class="value-cell">${appointmentData.chassisNumber || "N/A"}</td>
+        <td class="label-cell" rowspan="2" style="text-align: center; font-size: 8px; vertical-align: bottom;">SCAN TO TRACK:</td>
+        <td class="value-cell" rowspan="2" style="text-align: center;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(`${baseUrl}/track?code=${trackingCode}`)}" style="width: 55px; height: 55px;" />
+        </td>
+      </tr>
+      <tr>
+        <td class="label-cell">ENGINE:</td>
+        <td class="value-cell">${appointmentData.engineNumber || "N/A"}</td>
+      </tr>
+    </table>
+
+    <div class="qr-section">
+      <p style="font-size: 11px; font-weight: bold; color: #1a5f9c; margin-bottom: 10px;">Thank you for your appointment request!</p>
+      <p style="font-size: 10px; color: #555; max-width: 80%;">We have received your details. Our team will review your request and contact you via phone or email for final confirmation within 24 hours.</p>
     </div>
     
-    <!-- Customer Information -->
-    <div class="section">
-      <div class="section-title">Customer Information</div>
-      <div class="info-row">
-        <span class="label">Full Name:</span>
-        <span class="value">${appointmentData.name}</span>
+    <div class="footer-layout">
+      <div class="terms-box">
+        <p style="font-weight: bold; margin-bottom: 6px; text-decoration: underline;">TERMS AND CONDITIONS:</p>
+        <ol>
+          <li>Price Quoted is subject to change w/o prior notice and is good for <strong style="color: red;">15 days</strong> only</li>
+          <li>Any hidden defects found while in the course of repairs is deemed excluded and shall be charged accordingly</li>
+          <li>Not valid as court evidence</li>
+          <li>Waste parts/materials not claim within <strong style="color: red;">15 days</strong> upon release of unit are to be disposed accordingly.</li>
+          <li>It is also understood that AUTOWORX REPAIR & GEN MDSE. CO., LTD., assumes no responsibility for the loss or personal belonging left inside the unit by theft or damage cause by fire or any fortetious events to vehicles which placed within our premises for the purpose of repair or Storage.</li>
+          <li>Autoworx is only given for at least <strong style="color: red;">15 days</strong> free of charge for storage fees if the unit is already done for repair or the unit is stored for quotation purposes only. ( Rates range in P250-500 per day)</li>
+          <li>Outside parts supply have corkage of 25% from autoworx price</li>
+        </ol>
       </div>
-      <div class="info-row">
-        <span class="label">Email:</span>
-        <span class="value">${appointmentData.email}</span>
+      
+      <div class="contact-info">
+        <p>Phone: 0936-354-9603 | Email: autoworxcagayan2025@gmail.com</p>
+        <p>Generated on ${new Date().toLocaleString("en-PH")}</p>
       </div>
-      <div class="info-row">
-        <span class="label">Phone:</span>
-        <span class="value">${appointmentData.phone}</span>
-      </div>
-    </div>
-    
-    <!-- Vehicle Information -->
-    <div class="section">
-      <div class="section-title">Vehicle Information</div>
-      <div class="info-row">
-        <span class="label">Make:</span>
-        <span class="value">${appointmentData.vehicleMake}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Model:</span>
-        <span class="value">${appointmentData.vehicleModel}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Year:</span>
-        <span class="value">${appointmentData.vehicleYear}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Plate Number:</span>
-        <span class="value"><strong>${appointmentData.vehiclePlate}</strong></span>
-      </div>
-    </div>
-    
-    <!-- Service Request -->
-    <div class="section">
-      <div class="section-title">Service Request</div>
-      <div class="info-row">
-        <span class="label">Service:</span>
-        <span class="value">${appointmentData.service}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Date:</span>
-        <span class="value">${appointmentData.preferredDate || "Not specified"}</span>
-      </div>
-      ${appointmentData.message ? `<div style="margin-top: 3px; font-size: 10px;"><strong>Details:</strong> ${appointmentData.message.substring(0, 150)}</div>` : ""}
-      ${appointmentData.insurance ? `<div style="margin-top: 3px; font-size: 10px; color: #1a5f9c;"><strong>Insurance Provider:</strong> ${appointmentData.insurance}</div>` : ""}
-    </div>
-    
-    <!-- Footer -->
-    <div class="footer">
-      <p>We will contact you within 24 hours to confirm your appointment.</p>
-      <p>Thank you for choosing Autoworx Repairs & Gen. Merchandise!</p>
-      <p>Phone: 0936-354-9603 | Email: autoworxcagayan2025@gmail.com</p>
-      <p>Generated on ${new Date().toLocaleString("en-PH")}</p>
     </div>
   </div>
 </body>
 </html>
 `
-
   return htmlContent
 }
 
-// Helper function to get repair status label
 function getRepairStatusLabel(status?: RepairStatus): string {
   const statusMap: Record<string, string> = {
     pending_inspection: "Pending Inspection",
     under_diagnosis: "Under Diagnosis",
+    waiting_for_insurance: "Waiting for Insurance Approval",
+    insurance_approved: "Approved by Insurance",
     repair_in_progress: "Repair in Progress",
     waiting_for_parts: "Waiting for Parts",
     testing_quality_check: "Testing / Quality Check",
@@ -330,12 +199,9 @@ function getRepairStatusLabel(status?: RepairStatus): string {
   return status ? statusMap[status] || "Unknown" : "Not Started"
 }
 
-// Helper function to get appointment status label
 function getAppointmentStatusLabel(status: string): string {
   const statusMap: Record<string, string> = {
-    pending: "Pending - Awaiting Confirmation",
-    contacted: "Contacted - In Communication",
-    completed: "Completed - Service Done",
+    pending: "Pending", contacted: "Contacted", completed: "Completed",
   }
   return statusMap[status] || status
 }
@@ -343,12 +209,34 @@ function getAppointmentStatusLabel(status: string): string {
 export async function generateTrackingPDF(appointment: TrackingAppointment): Promise<string> {
   const repairStatus = getRepairStatusLabel(appointment.repairStatus)
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
-
-  // Use current origin if in browser, otherwise fallback to production URL
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
 
-  // Calculate costing totals
   const hasCosting = appointment.costing && appointment.costing.items.length > 0
+  const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
+  const laborTotal = appointment.costing?.items.filter(item => item.type === 'service' || item.type === 'labor').reduce((sum, item) => sum + item.total, 0) || 0
+  const otherTotal = appointment.costing?.items.filter(item => item.type === 'custom').reduce((sum, item) => sum + item.total, 0) || 0
+
+  // Dynamic Categorization logic
+  const categorized = (appointment.costing?.items || []).reduce((acc, item) => {
+    // If a specific work category is selected and it's not "Others", use it
+    // Otherwise, fall back to the billing type label (Service, Parts, etc.)
+    let group = item.category && item.category !== "Others" ? item.category : "";
+
+    if (!group) {
+      if (item.type === 'parts') group = "Parts";
+      else if (item.type === 'service') group = "Service";
+      else if (item.type === 'labor') group = "Labor";
+      else group = "Custom / Others";
+    }
+
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc
+  }, {} as Record<string, any[]>)
+
+  const activeCategories = Object.keys(categorized);
+  const totalRows = (appointment.costing?.items.length || 0) + activeCategories.length
+  const shouldScale = totalRows > 12
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -356,366 +244,249 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Appointment Status Report - ${appointment.trackingCode}</title>
+  <title>Status Report - ${appointment.trackingCode}</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: Arial, sans-serif; 
+      font-size: ${shouldScale ? (totalRows > 20 ? '8.5px' : '9px') : '10px'}; 
+      line-height: 1.15; 
+      color: #333; 
+      background: white; 
+      padding: ${shouldScale ? (totalRows > 20 ? '0.1in' : '0.15in') : '0.25in'}; 
     }
-    
-    body {
-      font-family: Arial, sans-serif;
-      font-size: 11px;
-      line-height: 1.3;
-      color: #333;
-      background: white;
-      padding: 0.5in;
+    @page { 
+      size: A4; 
+      margin: 0; 
     }
-    
-    @page {
-      size: A4;
-      margin: 0.5in;
-    }
-    
-    @media print {
-      body {
-        padding: 0;
-      }
-    }
-    
-    .container {
-      max-width: 7.5in;
-      margin: 0 auto;
-      background: white;
-    }
-    
-    /* Header */
-    .header {
-      text-align: center;
-      border-bottom: 2px solid #1a5f9c;
-      padding: 12px 0;
-      margin-bottom: 12px;
+    .container { 
+      max-width: 7.9in; 
+      margin: 0 auto; 
+      height: 10.7in; /* Slightly less than A4 height (11.69in) to ensure margin safety */
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
     }
+    .header { text-align: center; border-bottom: 2px solid #1a5f9c; padding-bottom: 6px; margin-bottom: 6px; display: flex; justify-content: center; align-items: center; }
+    .header-container { display: flex; align-items: center; gap: 12px; }
+    .logo-container img { width: 65px; height: 65px; }
+    .header h1 { color: #1a5f9c; font-size: 16px; font-weight: bold; text-transform: uppercase; margin: 0; }
+    .header p { color: #666; font-size: 10px; margin: 0; font-weight: 600; }
     
-    .header-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      margin: 0 auto;
-      max-width: 500px;
-    }
+    .tracking-code-header { font-weight: bold; text-align: center; margin-bottom: 6px; border: 1.5px solid #1a5f9c; background: #f0f7ff; padding: 6px; border-radius: 4px; font-size: 14px; }
     
-    .logo-container {
-      width: 45px;
-      height: 45px;
-      flex-shrink: 0;
-      z-index: 2;
-    }
+    .status-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+    .status-box { border: 1.5px solid #ddd; padding: 8px; text-align: center; border-radius: 4px; }
+    .status-box.repair { border-color: #28a745; background: #f4faf6; }
+    .status-box.appointment { border-color: #ffc107; background: #fffcf0; }
     
-    .logo-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
+    .section-title { background: #f4f4f4; font-weight: bold; border: 1px solid #ddd; padding: 4px 8px; font-size: 11px; margin-top: 2px; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
+    .info-table td { border: 1px solid #ddd; padding: 4px 6px; vertical-align: middle; word-wrap: break-word; font-size: 10px; }
+    .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc; }
+    .info-table td.value-cell { width: 28%; }
     
-    .header-content {
-      text-align: left;
-      z-index: 1;
-      flex: 1;
-    }
+    .costing-section { flex-grow: 1; min-height: 50px; overflow: hidden; }
+    .costing-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+    .costing-table th, .costing-table td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; font-size: 10px; }
+    .costing-table th { background: #f9f9f9; font-weight: bold; }
+    .amount { text-align: right; }
     
-    .header h1 {
-      color: #1a5f9c;
-      font-size: 16px;
-      font-weight: bold;
-      margin: 0 0 4px 0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+    .delivery-date { color: red; font-weight: bold; margin: 8px 0; font-size: 12px; }
     
-    .header p {
-      color: #666;
-      font-size: 10px;
-      margin: 0;
-      font-weight: 600;
-    }
+    .footer-layout { display: flex; justify-content: space-between; gap: 15px; margin-top: auto; padding-top: 8px; border-top: 1px solid #eee; }
+    .terms-box { border: 1.5px solid #999; padding: 8px; font-size: 9px; line-height: 1.25; flex: 1.5; }
+    .terms-box ol { padding-left: 14px; }
+    .terms-box li { margin-bottom: 4px; }
     
-    .tracking-box {
-      border: 2px solid #1a5f9c;
-      background: #f0f7ff;
-      border-radius: 4px;
-      padding: 10px;
-      margin-bottom: 12px;
-      text-align: center;
-    }
+    .signatures-totals-container { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .totals-summary { width: 100%; font-size: 11px; border: 1.5px solid #eee; padding: 6px; border-radius: 4px; background: #fafafa; }
+    .totals-summary-row { display: flex; justify-content: space-between; padding: 2px 0; }
+    .totals-summary-row.bold { font-weight: bold; border-top: 2px solid #333; margin-top: 4px; padding-top: 4px; font-size: 13px; }
     
-    .tracking-code {
-      font-family: 'Courier New', monospace;
-      font-size: 16px;
-      font-weight: bold;
-      color: #1a5f9c;
-      letter-spacing: 2px;
-    }
-    
-    .status-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-    
-    .status-box {
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      padding: 10px;
-      text-align: center;
-    }
-    
-    .status-box.repair {
-      border-color: #28a745;
-      background: #f0fff4;
-    }
-    
-    .status-box.appointment {
-      border-color: #ffc107;
-      background: #fffdf0;
-    }
-    
-    .status-label {
-      font-size: 9px;
-      color: #666;
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-    
-    .status-value {
-      font-size: 12px;
-      font-weight: bold;
-      color: #333;
-    }
-    
-    .section {
-      margin-bottom: 10px;
-    }
-    
-    .section-title {
-      color: #1a5f9c;
-      font-size: 12px;
-      font-weight: bold;
-      border-bottom: 1px solid #1a5f9c;
-      padding-bottom: 3px;
-      margin-bottom: 6px;
-    }
-    
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 0;
-      border-bottom: 1px solid #e0e0e0;
-      font-size: 10px;
-    }
-    
-    .info-row:last-child {
-      border-bottom: none;
-    }
-    
-    .label {
-      font-weight: bold;
-      color: #555;
-      width: 35%;
-    }
-    
-    .value {
-      text-align: right;
-      width: 65%;
-    }
-    
-    .costing-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 9px;
-      margin-top: 6px;
-    }
-    
-    .costing-table th,
-    .costing-table td {
-      border: 1px solid #ddd;
-      padding: 4px 6px;
-      text-align: left;
-    }
-    
-    .costing-table th {
-      background: #f5f5f5;
-      font-weight: bold;
-    }
-    
-    .costing-table .amount {
-      text-align: right;
-    }
-    
-    .total-row {
-      font-weight: bold;
-      background: #f0f7ff;
-    }
-    
-    .footer {
-      border-top: 1px solid #e0e0e0;
-      margin-top: 12px;
-      padding-top: 8px;
-      text-align: center;
-      font-size: 9px;
-      color: #999;
-    }
-    
-    .current-part {
-      background: #e8f5e9;
-      padding: 6px;
-      border-radius: 4px;
-      margin-top: 6px;
-      font-size: 10px;
-    }
+    .signatures-section { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .signature-group { text-align: left; position: relative; }
+    .signature-name { font-weight: bold; text-decoration: underline; font-size: 11px; margin-top: 22px !important; display: block; }
+    .signature-title { font-size: 9px; color: #666; font-weight: 600; }
+    .noted-by-section { display: flex; gap: 20px; }
+    .conforme-section { margin-top: 10px; font-weight: bold; font-size: 10px; }
+    .conforme-line { border-bottom: 1.5px solid #333; display: inline-block; width: 180px; height: 14px; }
+    .signature-img { width: 70px; height: auto; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); z-index: 10; pointer-events: none; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <div class="header-container">
-        <div class="logo-container">
-          <img src="/autoworxlogo.png" alt="Autoworx Logo" />
-        </div>
+        <div class="logo-container"><img src="/autoworxlogo.png" alt="Logo" /></div>
         <div class="header-content">
           <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
-          <p>Appointment Status Report</p>
+          <p>Appointment Status Report - ${appointment.trackingCode}</p>
         </div>
       </div>
     </div>
     
-    <div class="tracking-box">
-      <p style="font-size: 9px; color: #666; margin-bottom: 4px;">Tracking Code</p>
-      <div class="tracking-code">${appointment.trackingCode}</div>
-    </div>
+    <div class="tracking-code-header">TRACKING CODE: ${appointment.trackingCode}</div>
 
-    <!-- QR Code Section -->
-    <div style="text-align: center; margin-bottom: 12px; padding: 10px; border: 1px dashed #1a5f9c; border-radius: 4px;">
-      <p style="font-size: 9px; color: #1a5f9c; font-weight: bold; margin-bottom: 6px;">SCAN TO RE-TRACK LIVE</p>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${baseUrl}/track?code=${appointment.trackingCode}`)}" alt="Tracking QR Code" style="width: 80px; height: 80px;" />
-      <p style="font-size: 8px; color: #666; margin-top: 4px;">Share this report - Anyone with the QR can track the status</p>
-    </div>
-    
-    <div class="status-grid">
+    <div class="status-summary">
       <div class="status-box repair">
-        <div class="status-label">Repair Status</div>
-        <div class="status-value">${repairStatus}</div>
-        ${appointment.currentRepairPart ? `<div class="current-part">Currently: ${appointment.currentRepairPart}</div>` : ""}
+        <p style="font-size: 8px; color: #666; margin-bottom: 3px; font-weight: bold; text-transform: uppercase;">REPAIR STATUS</p>
+        <p style="font-weight: bold; color: #28a745; font-size: 12px;">${repairStatus}</p>
+        ${appointment.currentRepairPart ? `<p style="font-size: 10px; color: #28a745; margin-top: 4px; font-style: italic;">Working on: ${appointment.currentRepairPart}</p>` : ""}
       </div>
       <div class="status-box appointment">
-        <div class="status-label">Appointment Status</div>
-        <div class="status-value">${appointmentStatus}</div>
+        <p style="font-size: 8px; color: #666; margin-bottom: 3px; font-weight: bold; text-transform: uppercase;">APPOINTMENT</p>
+        <p style="font-weight: bold; color: #856404; font-size: 12px;">${appointmentStatus}</p>
       </div>
     </div>
-    
-    <div class="section">
-      <div class="section-title">Customer Information</div>
-      <div class="info-row">
-        <span class="label">Full Name:</span>
-        <span class="value">${appointment.name}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Email:</span>
-        <span class="value">${appointment.email}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Phone:</span>
-        <span class="value">${appointment.phone}</span>
-      </div>
-    </div>
-    
-    <div class="section">
-      <div class="section-title">Vehicle Information</div>
-      <div class="info-row">
-        <span class="label">Vehicle:</span>
-        <span class="value">${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Plate Number:</span>
-        <span class="value"><strong>${appointment.vehiclePlate}</strong></span>
-      </div>
-      <div class="info-row">
-        <span class="label">Service:</span>
-        <span class="value">${appointment.service}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">Preferred Date:</span>
-        <span class="value">${appointment.preferredDate || "Not specified"}</span>
-      </div>
-      ${appointment.insurance ? `
-      <div class="info-row">
-        <span class="label">Insurance:</span>
-        <span class="value">${appointment.insurance}</span>
-      </div>` : ""}
-    </div>
-    
+
+    <div class="section-title">Customer & Vehicle Information</div>
+    <table class="info-table">
+      <tr>
+        <td class="label-cell">NAME/CLIENT:</td>
+        <td class="value-cell">${appointment.name}</td>
+        <td class="label-cell">Assignee/Driver:</td>
+        <td class="value-cell">${appointment.assigneeDriver || "N/A"}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">UNIT/MODEL:</td>
+        <td class="value-cell">${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}</td>
+        <td class="label-cell">CONTACT #:</td>
+        <td class="value-cell">${appointment.phone}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">PLATE #:</td>
+        <td class="value-cell"><strong>${appointment.vehiclePlate}</strong></td>
+        <td class="label-cell">EMAIL ADD:</td>
+        <td class="value-cell">${appointment.email}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">COLOR:</td>
+        <td class="value-cell">${appointment.vehicleColor || "N/A"}</td>
+        <td class="label-cell">DATE:</td>
+        <td class="value-cell">${appointment.preferredDate || "Not specified"}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">INSURANCE:</td>
+        <td class="value-cell">${appointment.insurance || "N/A"}</td>
+        <td class="label-cell">SERVICE:</td>
+        <td class="value-cell">${appointment.service}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">CHASSIS:</td>
+        <td class="value-cell">${appointment.chassisNumber || "N/A"}</td>
+        <td class="label-cell" rowspan="2" style="text-align: center; font-size: 8px; vertical-align: bottom;">QR TRACK:</td>
+        <td class="value-cell" rowspan="2" style="text-align: center;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=65x65&data=${encodeURIComponent(`${baseUrl}/track?code=${appointment.trackingCode}`)}" style="width: 50px; height: 50px;" />
+        </td>
+      </tr>
+      <tr>
+        <td class="label-cell">ENGINE:</td>
+        <td class="value-cell">${appointment.engineNumber || "N/A"}</td>
+      </tr>
+    </table>
+
     ${hasCosting ? `
-    <div class="section">
-      <div class="section-title">Cost Estimation</div>
+    <div class="section-title">Cost Estimation</div>
+    <div class="costing-section" style="${shouldScale ? 'font-size: ' + (totalRows > 18 ? '8.5px' : '9px') : ''}">
       <table class="costing-table">
         <thead>
           <tr>
-            <th>Description</th>
-            <th style="width: 50px;">Qty</th>
-            <th style="width: 70px;" class="amount">Unit Price</th>
-            <th style="width: 70px;" class="amount">Total</th>
+            <th style="width: 55%;">Description</th>
+            <th style="width: 10%;">Qty</th>
+            <th style="width: 17.5%;" class="amount">Unit Piece</th>
+            <th style="width: 17.5%;" class="amount">Total</th>
           </tr>
         </thead>
         <tbody>
-          ${appointment.costing!.items.map(item => `
-          <tr>
-            <td>${item.description}</td>
-            <td>${item.quantity}</td>
-            <td class="amount">₱${item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-            <td class="amount">₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          </tr>
-          `).join("")}
-          <tr>
-            <td colspan="3" class="amount"><strong>Subtotal:</strong></td>
-            <td class="amount">₱${appointment.costing!.subtotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          </tr>
-          ${appointment.costing!.discount > 0 ? `
-          <tr>
-            <td colspan="3" class="amount"><strong>Discount${appointment.costing!.discountType === "percentage" ? ` (${appointment.costing!.discount}%)` : ""}:</strong></td>
-            <td class="amount">-₱${(appointment.costing!.discountType === "percentage" ? (appointment.costing!.subtotal * appointment.costing!.discount / 100) : appointment.costing!.discount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          </tr>
-          ` : ""}
-          ${appointment.costing!.vatEnabled ? `
-          <tr>
-            <td colspan="3" class="amount"><strong>VAT (12%):</strong></td>
-            <td class="amount">₱${appointment.costing!.vatAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          </tr>
-          ` : ""}
-          <tr class="total-row">
-            <td colspan="3" class="amount"><strong>TOTAL:</strong></td>
-            <td class="amount"><strong>₱${appointment.costing!.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</strong></td>
-          </tr>
+          ${activeCategories.sort((a, b) => {
+    const order = ["Tinsmith", "Alignment", "Glassworks", "Detailing", "Painting", "Parts", "Service", "Labor"];
+    const indexA = order.indexOf(a);
+    const indexB = order.indexOf(b);
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return a.localeCompare(b);
+  }).map(cat => {
+    const items = categorized[cat];
+    return `
+              <tr>
+                <td colspan="4" style="background: #fdfdfd; font-weight: bold; font-size: 1.15em; border-bottom: 1.5px solid #eee; padding-top: 6px;">
+                  ${cat}
+                </td>
+              </tr>
+              ${items.map(item => `
+                <tr>
+                  <td style="padding-left: 12px;">${item.description}</td>
+                  <td>${item.quantity}</td>
+                  <td class="amount">₱${item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+                  <td class="amount">₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+                </tr>
+              `).join("")}
+            `;
+  }).join("")}
         </tbody>
       </table>
-      ${appointment.costing!.notes ? `<p style="margin-top: 6px; font-size: 9px; color: #666;">Note: ${appointment.costing!.notes}</p>` : ""}
     </div>
     ` : ""}
+
+    <div class="delivery-date">DELIVERY DATE: ________ working days</div>
+
+    <div class="footer-layout">
+      <div class="terms-box">
+        <p style="font-weight: bold; margin-bottom: 5px; text-decoration: underline;">TERMS AND CONDITIONS:</p>
+        <ol>
+          <li>Price Quoted is subject to change w/o prior notice and is good for <strong style="color: red;">15 days</strong> only</li>
+          <li>Any hidden defects found while in the course of repairs is deemed excluded and shall be charged accordingly</li>
+          <li>Not valid as court evidence</li>
+          <li>Waste parts/materials not claim within <strong style="color: red;">15 days</strong> upon release of unit are to be disposed accordingly.</li>
+          <li>It is also understood that AUTOWORX REPAIR & GEN MDSE. CO., LTD., assumes no responsibility for the loss or personal belonging left inside the unit by theft or damage cause by fire or any fortetious events to vehicles which placed within our premises for the purpose of repair or Storage.</li>
+          <li>Autoworx is only given for at least <strong style="color: red;">15 days</strong> free of charge for storage fees if the unit is already done for repair or the unit is stored for quotation purposes only. ( Rates range in P250-500 per day)</li>
+          <li>Outside parts supply have corkage of 25% from autoworx price</li>
+        </ol>
+        <div class="conforme-section">Conforme: <span class="conforme-line"></span></div>
+        <p style="margin-top: 6px; font-style: italic; font-size: 8px;">We also accept all other brands</p>
+      </div>
+
+      <div class="signatures-totals-container">
+        ${hasCosting ? `
+        <div class="totals-summary">
+          <div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+          <div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+          ${otherTotal > 0 ? `<div class="totals-summary-row"><span>Other Total</span><span>₱${otherTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          ${appointment.costing!.vatEnabled ? `<div class="totals-summary-row" style="color: #666; font-size: 9px;"><span>VAT 12%</span><span>₱${appointment.costing!.vatAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          <div class="totals-summary-row bold"><span>TOTAL</span><span>₱${appointment.costing!.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+        </div>
+        ` : ""}
+
+        <div class="signatures-section">
+          <div class="signature-group">
+            <p style="font-size: 9px; font-weight: bold;">Prepared by:</p>
+            <span class="signature-name">Ryan Christopher D. Quintos</span>
+            <p class="signature-title">Service Advisor</p>
+          </div>
+          
+          <p style="font-size: 9px; font-weight: bold; margin-top: 4px;">Noted by:</p>
+          <div class="noted-by-section">
+            <div style="flex: 1; position: relative;">
+              <span class="signature-name" style="margin-top: 22px;">Paul D. Suazo</span>
+              <p class="signature-title">Service Manager</p>
+            </div>
+            <div style="flex: 1; text-align: center; position: relative;">
+              <img src="/signature_alfred.png" alt="" class="signature-img" onerror="this.style.display='none'" />
+              <span class="signature-name" style="margin-top: 22px;">Alfred N. Agbong</span>
+              <p class="signature-title">Gen. & Op. Manager</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     
-    <div class="footer">
-      <p>This report was generated on ${new Date().toLocaleString("en-PH")}</p>
-      <p>For inquiries, contact: 0936-354-9603 | autoworxcagayan2025@gmail.com</p>
-      <p>Thank you for choosing Autoworx Repairs & Gen. Merchandise!</p>
+    <div style="margin-top: 8px; text-align: center; font-size: 8px; color: #888; border-top: 1px dashed #ddd; padding-top: 5px;">
+      Generated: ${new Date().toLocaleString("en-PH")} | Contact: 0936-354-9603 | autoworxcagayan2025@gmail.com
     </div>
   </div>
 </body>
 </html>
 `
-
   return htmlContent
 }

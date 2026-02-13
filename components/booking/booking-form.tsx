@@ -42,6 +42,10 @@ export interface BookingFormData {
   vehicleModel: string
   vehicleYear: string
   vehiclePlate: string
+  vehicleColor: string
+  chassisNumber: string
+  engineNumber: string
+  assigneeDriver: string
   service: string
   preferredDate: string
   message: string
@@ -63,6 +67,10 @@ export function BookingForm() {
     vehicleModel: "",
     vehicleYear: "",
     vehiclePlate: "",
+    vehicleColor: "",
+    chassisNumber: "",
+    engineNumber: "",
+    assigneeDriver: "",
     service: "",
     preferredDate: "",
     message: "",
@@ -429,7 +437,7 @@ export function BookingForm() {
                 <p className="text-xs text-red-500 animate-in slide-in-from-left-1 duration-300">Please enter a valid Philippine phone number (09XX-XXX-XXXX)</p>
               )}
             </div>
-            <div className="space-y-2 sm:col-span-2 group">
+            <div className="space-y-2 group">
               <Label htmlFor="email" className="group-hover:text-primary transition-colors">Email Address *</Label>
               <Input
                 id="email"
@@ -438,6 +446,16 @@ export function BookingForm() {
                 onChange={(e) => updateField("email", e.target.value)}
                 placeholder="john@example.com"
                 required
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
+              />
+            </div>
+            <div className="space-y-2 group">
+              <Label htmlFor="assigneeDriver" className="group-hover:text-primary transition-colors">Assignee / Driver</Label>
+              <Input
+                id="assigneeDriver"
+                value={formData.assigneeDriver}
+                onChange={(e) => updateField("assigneeDriver", e.target.value)}
+                placeholder="Person processing the document"
                 className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
               />
             </div>
@@ -530,20 +548,55 @@ export function BookingForm() {
               </Select>
             </div>
           </div>
-          <div className="mt-4 space-y-2 group">
-            <Label htmlFor="vehiclePlate" className="group-hover:text-primary transition-colors">Vehicle Plate Number * (MUST ALL BIG LETTERS)</Label>
-            <Input
-              id="vehiclePlate"
-              value={formData.vehiclePlate}
-              onChange={(e) => updateField("vehiclePlate", e.target.value)}
-              placeholder="ABC-1234 or ABC1234"
-              required
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck="false"
-              maxLength={10}
-              className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="space-y-2 group">
+              <Label htmlFor="vehiclePlate" className="group-hover:text-primary transition-colors">Vehicle Plate Number * (MUST ALL BIG LETTERS)</Label>
+              <Input
+                id="vehiclePlate"
+                value={formData.vehiclePlate}
+                onChange={(e) => updateField("vehiclePlate", e.target.value)}
+                placeholder="ABC-1234 or ABC1234"
+                required
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+                maxLength={10}
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
+              />
+            </div>
+            <div className="space-y-2 group">
+              <Label htmlFor="vehicleColor" className="group-hover:text-primary transition-colors">Vehicle Color *</Label>
+              <Input
+                id="vehicleColor"
+                value={formData.vehicleColor}
+                onChange={(e) => updateField("vehicleColor", e.target.value)}
+                placeholder="e.g. Red, Metallic Gray"
+                required
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="space-y-2 group">
+              <Label htmlFor="chassisNumber" className="group-hover:text-primary transition-colors">Chassis Number</Label>
+              <Input
+                id="chassisNumber"
+                value={formData.chassisNumber}
+                onChange={(e) => updateField("chassisNumber", e.target.value)}
+                placeholder="Enter Chassis #"
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
+              />
+            </div>
+            <div className="space-y-2 group">
+              <Label htmlFor="engineNumber" className="group-hover:text-primary transition-colors">Engine Number</Label>
+              <Input
+                id="engineNumber"
+                value={formData.engineNumber}
+                onChange={(e) => updateField("engineNumber", e.target.value)}
+                placeholder="Enter Engine #"
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
+              />
+            </div>
           </div>
         </div>
 

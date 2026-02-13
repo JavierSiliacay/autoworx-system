@@ -31,7 +31,7 @@ export async function chatWithAI(messages: { role: string; content: string }[]) 
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    "model": "openrouter/pony-alpha",
+                    "model": "arcee-ai/trinity-large-preview:free",
                     "messages": messages
                 })
             });
@@ -75,42 +75,71 @@ export async function chatWithAI(messages: { role: string; content: string }[]) 
 }
 
 /**
- * Specific function for generating business reports
+ * Specific function for generating business reports (keeps markdown for the dashboard)
  */
 export async function generateAIReport(dataString: string) {
     const prompt = `
-    You are the Senior Sales Analyst for Autoworx Repairs.
-    Provide a DIRECT, DATA-DRIVEN, and CONCISE monthly sales report. 
-    Focus strictly on performance metrics and numbers.
+    You are the Senior Business Intelligence Analyst for Autoworx Repairs.
+    This system was developed by Javier Siliacay, an Autotronics student from the University of Science and Technology of Southern Philippines (USTP).
+    Provide a professional, executive-level business analysis report.
     
     Data:
     ${dataString}
     
-    REQUIRED STRUCTURE (Strictly follow this):
+    Use the following exact structure:
+    ### FINANCIAL PERFORMANCE
+    Provide a professional breakdown of revenue.
+    - **Gross Revenue**: [Amount]
+    - **Labor Total**: [Amount]
+    - **Parts Total**: [Amount]
+    - **Average Transaction**: [Amount]
     
-    FINANCIAL SUMMARY
-    - Total Gross Revenue: [₱ amount]
-    - Total Labor Income: [₱ amount]
-    - Total Parts/Materials Sales: [₱ amount]
-    - Average Revenue Per Job: [₱ amount]
+    ### SERVICE ANALYSIS
+    List the top performing services. Show job counts.
     
-    SERVICE PERFORMANCE
-    - Most Profitable Service: [Service Name]
-    - Top 3 Highly Requested Services (with booking counts)
+    ### STRATEGIC INSIGHTS
+    Provide 3 high-level business recommendations.
     
-    OPERATIONAL TRENDS
-    - Peak Business Day: [Day of week]
-    - Total Jobs Completed: [Count]
-    
-    STRATEGIC INSIGHTS
-    - Provide 3 bullet-point business recommendations based strictly on the numbers.
+    ### DATA_BLOCK
+    At the very end, provide a JSON block with this exact structure for my charting engine (no other text in this section):
+    [
+      {"name": "Labor", "value": [number]},
+      {"name": "Parts", "value": [number]},
+      {"name": "Custom", "value": [number]}
+    ]
     
     CRITICAL RULES:
-    1. No markdown symbols (No #, no **, no *).
-    2. All currency must be in Philippine Peso (₱).
-    3. Be brief. Do not use conversational filler like "I hope this helps" or "Here is your report".
-    4. Direct to the point.
+    1. USE MARKDOWN (### for headers, ** for bold).
+    2. USE 'PHP' for all currency. No Peso symbols.
+    3. NO EMOJIS in the text.
+    4. Provide the DATA_BLOCK JSON accurately.
+    5. Professional, objective tone.
     `;
+
+    if (OPENROUTER_API_KEY) {
+        try {
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                    "HTTP-Referer": "http://localhost:3000",
+                    "X-Title": "Autoworx System",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    "model": "arcee-ai/trinity-large-preview:free",
+                    "messages": [{ role: "user", content: prompt }]
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.choices[0].message.content;
+            }
+        } catch (error) {
+            console.error("OpenRouter Report Error:", error);
+        }
+    }
 
     return chatWithAI([{ role: "user", content: prompt }]);
 }
