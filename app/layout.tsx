@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Providers } from "@/app/providers"
+import { Analytics } from "@vercel/analytics/react"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({
       {/* Avoid build-time Google Fonts fetch (works offline/CI). */}
       <body className="font-sans">
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   )
