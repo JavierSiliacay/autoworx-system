@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
+import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 import {
   Wrench,
   LogOut,
@@ -164,6 +166,12 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
   }
 }
 
+// Helper to normalize strings for search (remove whitespace, casing, and separators)
+const normalizeString = (str: string) => {
+  if (!str) return ""
+  return str.toLowerCase().replace(/[\s\-\.\/\,]/g, "")
+}
+
 const statusConfig = {
   pending: {
     label: "Pending",
@@ -194,6 +202,7 @@ const vehicleBrands = VEHICLE_BRANDS
 export default function AdminDashboard() {
   const router = useRouter()
   const { status, data: session } = useSession()
+  const { toast } = useToast()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [filter, setFilter] = useState<"all" | "pending" | "contacted" | "completed">("all")
   const [vehicleBrandFilter, setVehicleBrandFilter] = useState<string>("all")
@@ -260,6 +269,52 @@ export default function AdminDashboard() {
 
     if (status === "authenticated") loadAppointments()
   }, [router, loadAppointments, status, session?.user?.role])
+
+  // Real-time updates subscription
+  useEffect(() => {
+    if (status !== "authenticated" || session?.user?.role !== "admin") return
+
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('admin-dashboard-realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'appointments' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newApt = dbToFrontend(payload.new as AppointmentDB)
+
+            // Audio Notification
+            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3")
+            audio.play().catch(e => console.log("Audio notification blocked by browser settings", e))
+
+            // Toast Notification
+            toast({
+              title: "New Booking Received! 🚗",
+              description: `${newApt.name} just booked a ${newApt.service} service.`,
+              className: "bg-primary text-primary-foreground border-none",
+            })
+
+            setAppointments((prev) => [newApt, ...prev])
+          }
+          else if (payload.eventType === 'UPDATE') {
+            const updatedApt = dbToFrontend(payload.new as AppointmentDB)
+            setAppointments((prev) =>
+              prev.map(apt => apt.id === updatedApt.id ? updatedApt : apt)
+            )
+          }
+          else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id
+            setAppointments((prev) => prev.filter(apt => apt.id !== deletedId))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [status, session?.user?.role, toast])
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/admin" })
@@ -587,14 +642,18 @@ export default function AdminDashboard() {
     if (!isInDateRange(apt.createdAt, dateRangeFilter)) return false
     // Search filter
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      const matchesName = apt.name.toLowerCase().includes(query)
-      const matchesEmail = apt.email.toLowerCase().includes(query)
-      const matchesPhone = apt.phone.includes(query)
-      const matchesPlate = apt.vehiclePlate.toLowerCase().includes(query)
-      const matchesBrand = apt.vehicleMake.toLowerCase().includes(query)
-      const matchesTrackingCode = apt.trackingCode.toLowerCase().includes(query)
-      if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesTrackingCode) return false
+      const normalizedQuery = normalizeString(searchQuery)
+
+      const matchesName = normalizeString(apt.name).includes(normalizedQuery)
+      const matchesEmail = normalizeString(apt.email).includes(normalizedQuery)
+      const matchesPhone = normalizeString(apt.phone).includes(normalizedQuery)
+      const matchesPlate = normalizeString(apt.vehiclePlate).includes(normalizedQuery)
+      const matchesBrand = normalizeString(apt.vehicleMake).includes(normalizedQuery)
+      const matchesModel = normalizeString(apt.vehicleModel).includes(normalizedQuery)
+      const matchesTrackingCode = normalizeString(apt.trackingCode).includes(normalizedQuery)
+      const matchesMessage = normalizeString(apt.message).includes(normalizedQuery)
+
+      if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesModel && !matchesTrackingCode && !matchesMessage) return false
     }
     return true
   })
@@ -619,14 +678,15 @@ export default function AdminDashboard() {
 
       // Search filter
       if (historySearchQuery.trim()) {
-        const query = historySearchQuery.toLowerCase()
-        const matchesTrackingCode = record.tracking_code?.toLowerCase().includes(query)
-        const matchesName = record.name?.toLowerCase().includes(query)
-        const matchesEmail = record.email?.toLowerCase().includes(query)
-        const matchesPhone = record.phone?.includes(query)
-        const matchesPlate = record.vehicle_plate?.toLowerCase().includes(query)
-        const matchesMake = record.vehicle_make?.toLowerCase().includes(query)
-        const matchesModel = record.vehicle_model?.toLowerCase().includes(query)
+        const normalizedQuery = normalizeString(historySearchQuery)
+
+        const matchesTrackingCode = normalizeString(record.tracking_code).includes(normalizedQuery)
+        const matchesName = normalizeString(record.name).includes(normalizedQuery)
+        const matchesEmail = normalizeString(record.email).includes(normalizedQuery)
+        const matchesPhone = normalizeString(record.phone).includes(normalizedQuery)
+        const matchesPlate = normalizeString(record.vehicle_plate).includes(normalizedQuery)
+        const matchesMake = normalizeString(record.vehicle_make).includes(normalizedQuery)
+        const matchesModel = normalizeString(record.vehicle_model).includes(normalizedQuery)
 
         if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel) {
           return false
