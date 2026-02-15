@@ -6,10 +6,14 @@ Built by **Javier Siliacay** (Autotronics Student, USTP).
 
 ---
 
-## 🌟 Key Features (Latest Updates)
+## 🌟 Key Features
+
+### 🤖 **AI Integration (The Future of Repair)**
+- **AI Mini-Chatbot**: A 24/7 intelligent assistant on the landing page that helps customers with booking, explains repair services, and answers common vehicle maintenance questions.
+- **Business Analyst AI**: A specialized dashboard for Admins that analyzes workshop performance, identifies revenue trends, and provides data-driven recommendations for business growth.
 
 ### ⚡ **Real-time Admin Dashboard**
-The command center now features **live data synchronization** powered by Supabase Realtime.
+The command center features **live data synchronization** powered by Supabase Realtime.
 - **Instant Updates**: New bookings appear automatically without page refreshes.
 - **Audio Notifications**: A professional "ding" sound alert for immediate shop awareness.
 - **Heads-up Toasts**: Floating notifications for new appointments and status changes.
@@ -17,29 +21,29 @@ The command center now features **live data synchronization** powered by Supabas
 ### 🔍 **Advanced Intelligent Search**
 Finding customer records is now faster and more forgiving than ever.
 - **Normalized Matching**: Ignores spaces, casing, and common separators (e.g., `ASD3156` matches `ASD-3156`).
-- **Flexible Search**: Works across names, emails, phone numbers, plate numbers, vehicle models, and even customer messages.
-- **Partial Support**: Find records even if you only remember a fragment of the input.
+- **Flexible Search**: Works across names, emails, phone numbers, plate numbers, and vehicle models.
 
 ### 🛡️ **Premium Booking Experience**
 A re-engineered form validation system to ensure high-quality data.
 - **Visual Validation**: Required fields highlight in red with helpful inline messages.
 - **Smart Scrolling**: Automatically scrolls to the first error if a submission fails.
-- **Required Documentation**: Mandatory ORCR (Official Receipt/Certificate of Registration) upload to verify vehicle ownership.
+- **Document Verification**: Mandatory ORCR attachment for secure vehicle identity.
 
 ---
 
-## �️ Features
+## 🛠️ Features
 
 ### **For Vehicle Owners**
-- **Sleek Booking Form**: Mobile-optimized interface for scheduling repairs.
-- **Photo Attachments**: Upload up to 5 damage photos + ORCR document.
+- **AI-Powered Support**: Instant answers to common repair questions while booking.
+- **Sleek Booking Form**: Mobile-optimized interface with photo management.
 - **Instant Tracking**: Check repair status anytime using a unique tracking code.
 - **Automated Alerts**: Professional confirmation emails sent via **Resend**.
 - **PDF Confirmation**: Download a formatted summary of your appointment.
 
 ### **For Admin & Staff**
+- **Business Analyst AI**: Get insights on your busiest days and most popular services.
 - **Command Center**: Manage appointments, update repair progress (Parts, Labor), and set estimated costs.
-- **Automated Billing**: Itemized costing with automatic VAT (12%) and discount calculations.
+- **Automated Billing**: Itemized costing with automatic VAT (12%) calculations.
 - **History Archiving**: Seamlessly move completed jobs to a searchable history database.
 - **Analytics**: Built-in **Vercel Analytics** to track site traffic and customer behavior.
 
@@ -48,6 +52,7 @@ A re-engineered form validation system to ensure high-quality data.
 ## 💻 Tech Stack
 
 - **Framework**: [Next.js 16](https://nextjs.org/) (React 19, TypeScript)
+- **AI Models**: Integration for intelligent chat and business analysis.
 - **Database & Realtime**: [Supabase](https://supabase.com/) (PostgreSQL + WebSockets)
 - **Styling**: Tailwind CSS + shadcn/ui + Vanilla CSS Animations
 - **Email**: [Resend](https://resend.com/)
@@ -97,26 +102,10 @@ A re-engineered form validation system to ensure high-quality data.
 
 ---
 
-## � Architecture
-```
-autoworx-system/
-├── app/            # Next.js App Router (Admin, Public, API)
-├── components/     # UI Components (Booking, Dashboard, AI)
-├── lib/            # Utilities (Email, PDF, Auth, Phone Formatting)
-├── public/         # Static assets (Logo, Notification sounds)
-└── scripts/        # Database migration SQL files
-```
-
----
-
-## ✅ Project Roadmap
-- [x] Real-time Admin Dashboard
-- [x] Advanced Search Filtering
-- [x] Enhanced Form Validation
-- [x] Vercel Analytics Integration
-- [ ] PWA Support (Add to Home Screen)
-- [ ] AI-Powered Vehicle Damage Assessment (Vision)
-- [ ] SMS Gateway for Appointment Updates
+## 👨‍💻 About the Developer
+**Javier Siliacay**  
+*Autotronics Student from USTP*  
+This system was built to combine automotive expertise with modern software engineering, creating a more efficient and data-driven repair shop experience.
 
 ---
 **Built with ❤️ for the future of Automotive Service Management.**  
