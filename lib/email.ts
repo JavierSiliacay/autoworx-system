@@ -150,7 +150,7 @@ export async function sendAppointmentEmail({
                                 <td style="padding: 6px 0; color: #666;">Services Availed:</td>
                                 <td style="padding: 6px 0; color: #1a1a1a;">${services}</td>
                             </tr>
-                            ${assigneeDriver ? `<tr><td style="padding: 6px 0; color: #666;">Assignee/Driver:</td><td style="padding: 6px 0; color: #1a1a1a;">${assigneeDriver}</td></tr>` : ''}
+                            ${assigneeDriver ? `<tr><td style="padding: 6px 0; color: #666;">ASSIGNEE/DRIVER:</td><td style="padding: 6px 0; color: #1a1a1a;">${assigneeDriver}</td></tr>` : ''}
                             ${chassisNumber ? `<tr><td style="padding: 6px 0; color: #666;">Chassis #:</td><td style="padding: 6px 0; color: #1a1a1a;">${chassisNumber}</td></tr>` : ''}
                             ${engineNumber ? `<tr><td style="padding: 6px 0; color: #666;">Engine #:</td><td style="padding: 6px 0; color: #1a1a1a;">${engineNumber}</td></tr>` : ''}
                             <tr>
@@ -167,13 +167,13 @@ export async function sendAppointmentEmail({
                     </div>
 
                     <div style="background-color: #f0f7ff; padding: 15px; border-left: 4px solid #1a5f9c; margin-bottom: 25px;">
-                        <p style="margin: 0; font-size: 14px;"><strong>Note:</strong> Sir Ryan (Service Advisor) or Sir Paul (HR Supervisor) will call you to assess your appointment.</p>
+                        <p style="margin: 0; font-size: 14px;"><strong>Note:</strong> Sir Ryan (Service Advisor) or Sir Paul (Service Manager) will call you to assess your appointment.</p>
                     </div>
                     
                     <div style="margin: 30px 0; border-top: 1px solid #eeeeee; padding-top: 20px;">
                         <p style="margin-bottom: 10px; font-weight: bold;">We highly recommend contacting:</p>
                         <p style="margin: 5px 0;"><strong>Sir Ryan:</strong> 0965-918-3394 (For inquiries)</p>
-                        <p style="margin: 5px 0;"><strong>Sir Paul:</strong> 0936-354-9603</p>
+                        <p style="margin: 5px 0;"><strong>Sir Paul (Service Manager):</strong> 0936-354-9603</p>
                     </div>
 
                     <div style="text-align: center; margin-top: 30px;">

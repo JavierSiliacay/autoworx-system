@@ -97,9 +97,9 @@ const team = [
   },
   {
     name: "Paul Suazo",
-    role: "HR Supervisor",
+    role: "Service Manager",
     experience: "14+ years",
-    specialty: "Human Resources",
+    specialty: "Service Management",
   },
 ]
 
@@ -303,7 +303,7 @@ export default function AboutPage() {
 
           <div className="mt-12 p-6 bg-card rounded-xl border border-border text-center max-w-2xl mx-auto animate-slide-up">
             <p className="text-muted-foreground">
-              For more concerns or inquiries, kindly look for <span className="font-semibold text-foreground">Paul Suazo</span> (HR Supervisor).
+              For more concerns or inquiries, kindly look for <span className="font-semibold text-foreground">Paul Suazo</span> (Service Manager).
             </p>
           </div>
         </div>

@@ -123,7 +123,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       <tr>
         <td class="label-cell">NAME/CLIENT:</td>
         <td class="value-cell">${appointmentData.name}</td>
-        <td class="label-cell">Assignee/Driver:</td>
+        <td class="label-cell">ASSIGNEE/DRIVER:</td>
         <td class="value-cell">${appointmentData.assigneeDriver || "N/A"}</td>
       </tr>
       <tr>
@@ -354,7 +354,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       <tr>
         <td class="label-cell">NAME/CLIENT:</td>
         <td class="value-cell">${appointment.name}</td>
-        <td class="label-cell">Assignee/Driver:</td>
+        <td class="label-cell">ASSIGNEE/DRIVER:</td>
         <td class="value-cell">${appointment.assigneeDriver || "N/A"}</td>
       </tr>
       <tr>
@@ -511,7 +511,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
               <p class="signature-title">Service Manager</p>
             </div>
             <div style="flex: 1; text-align: center; position: relative;">
-              ${baseUrl.includes('localhost') ? '' : `<img src="/signature_alfred.png" alt="" class="signature-img" onerror="this.style.display='none'" />`}
+              <img src="/signature_alfred.png" alt="" class="signature-img" onerror="this.style.display='none'" />
               <span class="signature-name" style="margin-top: 22px;">Alfred N. Agbong</span>
               <p class="signature-title">Gen. & Op. Manager</p>
             </div>
