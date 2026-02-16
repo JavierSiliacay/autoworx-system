@@ -65,11 +65,17 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       display: flex;
       flex-direction: column;
     }
-    .header { text-align: center; border-bottom: 2px solid #1a5f9c; padding: 10px 0; margin-bottom: 10px; display: flex; justify-content: center; align-items: center; }
-    .header-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 0 auto; }
-    .logo-container img { width: 70px; height: 70px; }
-    .header h1 { color: #1a5f9c; font-size: 16px; font-weight: bold; margin: 0; text-transform: uppercase; }
-    .header p { color: #666; font-size: 10px; margin: 0; font-weight: 600; }
+    .header { border-bottom: none; padding-bottom: 0; margin-bottom: 0; position: relative; }
+    .header-container { display: flex; align-items: center; justify-content: space-between; gap: 15px; width: 100%; padding-bottom: 3px; }
+    .logo-container { width: 130px; }
+    .logo-container img { width: 130px; height: auto; }
+    .header-content { flex-grow: 1; text-align: left; padding-top: 5px; }
+    .header h1 { color: #2e74b5; font-size: 24px; font-weight: bold; margin-bottom: 2px; font-family: "Times New Roman", Times, serif; }
+    .header .address { color: #000; font-size: 10px; margin-bottom: 2px; font-weight: 500; }
+    .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
+    .header .email { color: #000; font-size: 10px; }
+    
+    .estimate-bar { background: #d9e1f2; color: #000; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: 0; margin-bottom: 10px; border: 1px solid #000; text-transform: uppercase; letter-spacing: 1px; }
     
     .tracking-box { border: 2px solid #1a5f9c; background: #f0f7ff; border-radius: 4px; padding: 10px; margin-bottom: 12px; text-align: center; }
     .tracking-code { font-family: 'Courier New', monospace; font-size: 20px; font-weight: bold; color: #1a5f9c; letter-spacing: 2px; }
@@ -83,7 +89,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     .qr-section { text-align: center; margin: 15px 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     
     .footer-layout { margin-top: auto; padding-top: 10px; border-top: 1px solid #eee; }
-    .terms-box { border: 1.5px solid #999; padding: 10px; font-size: 9px; line-height: 1.3; margin-bottom: 15px; }
+    .terms-box { border: 1.5px solid #999; padding: 10px; font-size: 8px; line-height: 1.3; margin-bottom: 15px; }
     .terms-box ol { padding-left: 14px; }
     .terms-box li { margin-bottom: 5px; }
     
@@ -96,11 +102,15 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       <div class="header-container">
         <div class="logo-container"><img src="/autoworxlogo.png" alt="Logo" /></div>
         <div class="header-content">
-          <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
-          <p>Appointment Request Confirmation</p>
+          <h1>Autoworx Repair and General Mdse. Co. Ltd.</h1>
+          <p class="address">Zone 7 Sepulvida Street, Kauswagan Highway, Cagayan de Oro City</p>
+          <p class="contact">Telefax /Landline: (088) 880-4825 Mobile: (Paul- 09363549603 ) (0965-918-3394 Reception)</p>
+          <p class="email">Email add: alfred_autoworks@yahoo.com / paulsuazo64@gmail.com / autoworxcagayan2025@gmail.com</p>
         </div>
       </div>
     </div>
+    
+    <div class="estimate-bar" style="margin-top: -5px;">APPOINTMENT CONFIRMATION</div>
     
     <div class="tracking-box">
       <p style="font-size: 9px; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; color: #666;">YOUR TRACKING CODE</p>
@@ -131,7 +141,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       <tr>
         <td class="label-cell">COLOR:</td>
         <td class="value-cell">${appointmentData.vehicleColor || "N/A"}</td>
-        <td class="label-cell">DATE:</td>
+        <td class="label-cell">PREFERRED DATE:</td>
         <td class="value-cell">${appointmentData.preferredDate || "Not specified"}</td>
       </tr>
       <tr>
@@ -143,9 +153,10 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       <tr>
         <td class="label-cell">CHASSIS:</td>
         <td class="value-cell">${appointmentData.chassisNumber || "N/A"}</td>
-        <td class="label-cell" rowspan="2" style="text-align: center; font-size: 8px; vertical-align: bottom;">SCAN TO TRACK:</td>
-        <td class="value-cell" rowspan="2" style="text-align: center;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(`${baseUrl}/track?code=${trackingCode}`)}" style="width: 55px; height: 55px;" />
+        <td class="label-cell" rowspan="2" style="text-align: center; font-size: 8px; vertical-align: middle; text-transform: uppercase;">SCAN TO TRACK:</td>
+        <td class="value-cell" rowspan="2" style="text-align: center; padding: 5px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/track?code=${trackingCode}`)}" style="width: 65px; height: 65px;" />
+          <p style="font-size: 7px; margin-top: 4px; color: #666;">Scan to track the unit status</p>
         </td>
       </tr>
       <tr>
@@ -155,8 +166,8 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     </table>
 
     <div class="qr-section">
-      <p style="font-size: 11px; font-weight: bold; color: #1a5f9c; margin-bottom: 10px;">Thank you for your appointment request!</p>
-      <p style="font-size: 10px; color: #555; max-width: 80%;">We have received your details. Our team will review your request and contact you via phone or email for final confirmation within 24 hours.</p>
+      <p style="font-size: 14px; font-weight: bold; color: #2e74b5; margin-bottom: 8px;">Thank you for your appointment request!</p>
+      <p style="font-size: 10px; color: #666; max-width: 85%; line-height: 1.4;">We have received your details. Our team will review your request and contact you via phone or email for final confirmation within 24 hours.</p>
     </div>
     
     <div class="footer-layout">
@@ -266,13 +277,19 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       display: flex;
       flex-direction: column;
     }
-    .header { text-align: center; border-bottom: 2px solid #1a5f9c; padding-bottom: 6px; margin-bottom: 6px; display: flex; justify-content: center; align-items: center; }
-    .header-container { display: flex; align-items: center; gap: 12px; }
-    .logo-container img { width: 65px; height: 65px; }
-    .header h1 { color: #1a5f9c; font-size: 16px; font-weight: bold; text-transform: uppercase; margin: 0; }
-    .header p { color: #666; font-size: 10px; margin: 0; font-weight: 600; }
+    .header { border-bottom: none; padding-bottom: 0; margin-bottom: 0; position: relative; }
+    .header-container { display: flex; align-items: center; justify-content: space-between; gap: 15px; width: 100%; padding-bottom: 3px; }
+    .logo-container { width: 130px; }
+    .logo-container img { width: 130px; height: auto; }
+    .header-content { flex-grow: 1; text-align: left; padding-top: 5px; }
+    .header h1 { color: #2e74b5; font-size: 24px; font-weight: bold; margin-bottom: 2px; font-family: "Times New Roman", Times, serif; }
+    .header .address { color: #000; font-size: 10px; margin-bottom: 2px; font-weight: 500; }
+    .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
+    .header .email { color: #000; font-size: 10px; }
     
-    .tracking-code-header { font-weight: bold; text-align: center; margin-bottom: 6px; border: 1.5px solid #1a5f9c; background: #f0f7ff; padding: 6px; border-radius: 4px; font-size: 14px; }
+    .estimate-bar { background: #d9e1f2; color: #000; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: -5px; margin-bottom: 10px; border: 1px solid #000; text-transform: uppercase; letter-spacing: 1px; }
+    
+    .tracking-code-header { font-weight: bold; text-align: right; margin-bottom: 10px; padding: 4px; font-size: 12px; color: #666; }
     
     .status-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
     .status-box { border: 1.5px solid #ddd; padding: 8px; text-align: center; border-radius: 4px; }
@@ -285,23 +302,24 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
     .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc; }
     .info-table td.value-cell { width: 28%; }
     
-    .costing-section { flex-grow: 1; min-height: 50px; overflow: hidden; }
-    .costing-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-    .costing-table th, .costing-table td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; font-size: 10px; }
-    .costing-table th { background: #f9f9f9; font-weight: bold; }
+    .costing-section { margin-top: 5px; }
+    .costing-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; page-break-inside: auto; }
+    .costing-table tr { page-break-inside: avoid; page-break-after: auto; }
+    .costing-table th, .costing-table td { border: 1px solid #000; padding: 4px 8px; text-align: left; font-size: 10px; }
+    .costing-table th { background: #d9e1f2; font-weight: bold; border: 1px solid #000; }
     .amount { text-align: right; }
     
     .delivery-date { color: red; font-weight: bold; margin: 8px 0; font-size: 12px; }
     
-    .footer-layout { display: flex; justify-content: space-between; gap: 15px; margin-top: auto; padding-top: 8px; border-top: 1px solid #eee; }
-    .terms-box { border: 1.5px solid #999; padding: 8px; font-size: 9px; line-height: 1.25; flex: 1.5; }
+    .footer-layout { display: flex; justify-content: space-between; gap: 15px; padding-top: 8px; border-top: 1px solid #eee; page-break-inside: avoid; }
+    .terms-box { border: 1.5px solid #999; padding: 8px; font-size: 8px; line-height: 1.25; flex: 1.5; }
     .terms-box ol { padding-left: 14px; }
-    .terms-box li { margin-bottom: 4px; }
+    .terms-box li { margin-bottom: 3px; }
     
     .signatures-totals-container { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-    .totals-summary { width: 100%; font-size: 11px; border: 1.5px solid #eee; padding: 6px; border-radius: 4px; background: #fafafa; }
+    .totals-summary { width: 100%; font-size: 11px; border: 1.5px solid #000; padding: 6px; border-radius: 0; background: #fff; }
     .totals-summary-row { display: flex; justify-content: space-between; padding: 2px 0; }
-    .totals-summary-row.bold { font-weight: bold; border-top: 2px solid #333; margin-top: 4px; padding-top: 4px; font-size: 13px; }
+    .totals-summary-row.bold { font-weight: bold; border-top: 1px solid #000; margin-top: 4px; padding-top: 4px; font-size: 13px; }
     
     .signatures-section { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .signature-group { text-align: left; position: relative; }
@@ -319,25 +337,17 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       <div class="header-container">
         <div class="logo-container"><img src="/autoworxlogo.png" alt="Logo" /></div>
         <div class="header-content">
-          <h1>AUTOWORX REPAIRS AND GEN. MERCHANDISE</h1>
-          <p>Appointment Status Report - ${appointment.trackingCode}</p>
+          <h1>Autoworx Repair and General Mdse. Co. Ltd.</h1>
+          <p class="address">Zone 7 Sepulvida Street, Kauswagan Highway, Cagayan de Oro City</p>
+          <p class="contact">Telefax /Landline: (088) 880-4825 Mobile: (Paul- 09363549603 ) (0965-918-3394 Reception)</p>
+          <p class="email">Email add: alfred_autoworks@yahoo.com / paulsuazo64@gmail.com / autoworxcagayan2025@gmail.com</p>
         </div>
       </div>
     </div>
     
+    <div class="estimate-bar">REPAIR ESTIMATE</div>
+    
     <div class="tracking-code-header">TRACKING CODE: ${appointment.trackingCode}</div>
-
-    <div class="status-summary">
-      <div class="status-box repair">
-        <p style="font-size: 8px; color: #666; margin-bottom: 3px; font-weight: bold; text-transform: uppercase;">REPAIR STATUS</p>
-        <p style="font-weight: bold; color: #28a745; font-size: 12px;">${repairStatus}</p>
-        ${appointment.currentRepairPart ? `<p style="font-size: 10px; color: #28a745; margin-top: 4px; font-style: italic;">Working on: ${appointment.currentRepairPart}</p>` : ""}
-      </div>
-      <div class="status-box appointment">
-        <p style="font-size: 8px; color: #666; margin-bottom: 3px; font-weight: bold; text-transform: uppercase;">APPOINTMENT</p>
-        <p style="font-weight: bold; color: #856404; font-size: 12px;">${appointmentStatus}</p>
-      </div>
-    </div>
 
     <div class="section-title">Customer & Vehicle Information</div>
     <table class="info-table">
@@ -362,7 +372,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       <tr>
         <td class="label-cell">COLOR:</td>
         <td class="value-cell">${appointment.vehicleColor || "N/A"}</td>
-        <td class="label-cell">DATE:</td>
+        <td class="label-cell">PREFERRED DATE:</td>
         <td class="value-cell">${appointment.preferredDate || "Not specified"}</td>
       </tr>
       <tr>
@@ -374,9 +384,10 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       <tr>
         <td class="label-cell">CHASSIS:</td>
         <td class="value-cell">${appointment.chassisNumber || "N/A"}</td>
-        <td class="label-cell" rowspan="2" style="text-align: center; font-size: 8px; vertical-align: bottom;">QR TRACK:</td>
-        <td class="value-cell" rowspan="2" style="text-align: center;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=65x65&data=${encodeURIComponent(`${baseUrl}/track?code=${appointment.trackingCode}`)}" style="width: 50px; height: 50px;" />
+        <td class="label-cell" rowspan="2" style="text-align: center; font-size: 8px; vertical-align: middle; text-transform: uppercase;">SCAN TO TRACK:</td>
+        <td class="value-cell" rowspan="2" style="text-align: center; padding: 5px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/track?code=${appointment.trackingCode}`)}" style="width: 65px; height: 65px;" />
+          <p style="font-size: 7px; margin-top: 4px; color: #666;">Scan to track the unit status</p>
         </td>
       </tr>
       <tr>
@@ -385,9 +396,27 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       </tr>
     </table>
 
+    ${appointment.status === 'pending' ? `
+    <div style="text-align: center; margin: 40px 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <p style="font-size: 14px; font-weight: bold; color: #2e74b5; margin-bottom: 8px;">Thank you for your appointment request!</p>
+      <p style="font-size: 10px; color: #666; max-width: 85%; line-height: 1.4;">We have received your details. Our team will review your request and contact you via phone or email for final confirmation within 24 hours.</p>
+    </div>
+    ` : `
+    <div class="status-summary">
+      <div class="status-box repair">
+        <p style="font-size: 8px; color: #666; margin-bottom: 3px; font-weight: bold; text-transform: uppercase;">REPAIR STATUS</p>
+        <p style="font-weight: bold; color: #28a745; font-size: 11px;">${repairStatus}</p>
+        ${appointment.currentRepairPart ? `<p style="font-size: 9px; color: #28a745; margin-top: 2px; font-style: italic;">Working on: ${appointment.currentRepairPart}</p>` : ""}
+      </div>
+      <div class="status-box appointment">
+        <p style="font-size: 8px; color: #666; margin-bottom: 3px; font-weight: bold; text-transform: uppercase;">APPOINTMENT</p>
+        <p style="font-weight: bold; color: #856404; font-size: 11px;">${appointmentStatus}</p>
+      </div>
+    </div>
+
     ${hasCosting ? `
     <div class="section-title">Cost Estimation</div>
-    <div class="costing-section" style="${shouldScale ? 'font-size: ' + (totalRows > 18 ? '8.5px' : '9px') : ''}">
+    <div class="costing-section">
       <table class="costing-table">
         <thead>
           <tr>
@@ -410,7 +439,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
     const items = categorized[cat];
     return `
               <tr>
-                <td colspan="4" style="background: #fdfdfd; font-weight: bold; font-size: 1.15em; border-bottom: 1.5px solid #eee; padding-top: 6px;">
+                <td colspan="4" style="background: #fdfdfd; font-weight: bold; font-size: 1.1em; border-bottom: 1px solid #000; padding-top: 4px;">
                   ${cat}
                 </td>
               </tr>
@@ -430,10 +459,11 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
     ` : ""}
 
     <div class="delivery-date">DELIVERY DATE: ________ working days</div>
+    `}
 
     <div class="footer-layout">
       <div class="terms-box">
-        <p style="font-weight: bold; margin-bottom: 5px; text-decoration: underline;">TERMS AND CONDITIONS:</p>
+        <p style="font-weight: bold; margin-bottom: 4px; text-decoration: underline;">TERMS AND CONDITIONS:</p>
         <ol>
           <li>Price Quoted is subject to change w/o prior notice and is good for <strong style="color: red;">15 days</strong> only</li>
           <li>Any hidden defects found while in the course of repairs is deemed excluded and shall be charged accordingly</li>
@@ -444,7 +474,6 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
           <li>Outside parts supply have corkage of 25% from autoworx price</li>
         </ol>
         <div class="conforme-section">Conforme: <span class="conforme-line"></span></div>
-        <p style="margin-top: 6px; font-style: italic; font-size: 8px;">We also accept all other brands</p>
       </div>
 
       <div class="signatures-totals-container">
@@ -453,6 +482,16 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
           <div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
           <div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
           ${otherTotal > 0 ? `<div class="totals-summary-row"><span>Other Total</span><span>₱${otherTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          <div class="totals-summary-row" style="border-top: 1px dashed #ddd; margin-top: 4px; padding-top: 4px; font-weight: 600;">
+            <span>Subtotal</span><span>₱${appointment.costing!.subtotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+          </div>
+          ${appointment.costing!.discount > 0 ? `
+          <div class="totals-summary-row" style="color: #f97316;">
+            <span>Discount (${appointment.costing!.discountType === "percentage" ? `${appointment.costing!.discount}%` : "Fixed"})</span>
+            <span>-₱${(appointment.costing!.discountType === "percentage"
+          ? (appointment.costing!.subtotal * appointment.costing!.discount) / 100
+          : appointment.costing!.discount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+          </div>` : ""}
           ${appointment.costing!.vatEnabled ? `<div class="totals-summary-row" style="color: #666; font-size: 9px;"><span>VAT 12%</span><span>₱${appointment.costing!.vatAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
           <div class="totals-summary-row bold"><span>TOTAL</span><span>₱${appointment.costing!.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
         </div>
@@ -472,7 +511,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
               <p class="signature-title">Service Manager</p>
             </div>
             <div style="flex: 1; text-align: center; position: relative;">
-              <img src="/signature_alfred.png" alt="" class="signature-img" onerror="this.style.display='none'" />
+              ${baseUrl.includes('localhost') ? '' : `<img src="/signature_alfred.png" alt="" class="signature-img" onerror="this.style.display='none'" />`}
               <span class="signature-name" style="margin-top: 22px;">Alfred N. Agbong</span>
               <p class="signature-title">Gen. & Op. Manager</p>
             </div>
@@ -481,7 +520,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       </div>
     </div>
     
-    <div style="margin-top: 8px; text-align: center; font-size: 8px; color: #888; border-top: 1px dashed #ddd; padding-top: 5px;">
+    <div style="margin-top: 10px; text-align: center; font-size: 8px; color: #888; border-top: 1px dashed #ddd; padding-top: 5px;">
       Generated: ${new Date().toLocaleString("en-PH")} | Contact: 0936-354-9603 | autoworxcagayan2025@gmail.com
     </div>
   </div>

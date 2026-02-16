@@ -128,8 +128,16 @@ export async function POST(request: Request) {
         email: data.email,
         trackingCode: data.tracking_code,
         vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
+        plateNumber: data.vehicle_plate,
+        color: data.vehicle_color,
+        insurance: data.insurance,
+        preferredDate: data.preferred_date,
         services: data.service,
-        status: 'Pending'
+        message: data.message,
+        status: 'Pending',
+        chassisNumber: data.chassis_number,
+        engineNumber: data.engine_number,
+        assigneeDriver: data.assignee_driver
       });
       console.log(`Confirmation email sent to ${data.email}`);
     } catch (emailError) {
@@ -168,6 +176,22 @@ export async function PUT(request: Request) {
   if (updates.damageImages !== undefined) dbUpdates.damage_images = updates.damageImages
   if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
 
+  // New editable fields
+  if (updates.name !== undefined) dbUpdates.name = updates.name
+  if (updates.email !== undefined) dbUpdates.email = updates.email
+  if (updates.phone !== undefined) dbUpdates.phone = updates.phone
+  if (updates.vehicleMake !== undefined) dbUpdates.vehicle_make = updates.vehicleMake
+  if (updates.vehicleModel !== undefined) dbUpdates.vehicle_model = updates.vehicleModel
+  if (updates.vehicleYear !== undefined) dbUpdates.vehicle_year = updates.vehicleYear
+  if (updates.vehiclePlate !== undefined) dbUpdates.vehicle_plate = updates.vehiclePlate
+  if (updates.vehicleColor !== undefined) dbUpdates.vehicle_color = updates.vehicleColor
+  if (updates.chassisNumber !== undefined) dbUpdates.chassis_number = updates.chassisNumber
+  if (updates.engineNumber !== undefined) dbUpdates.engine_number = updates.engineNumber
+  if (updates.assigneeDriver !== undefined) dbUpdates.assignee_driver = updates.assigneeDriver
+  if (updates.service !== undefined) dbUpdates.service = updates.service
+  if (updates.preferredDate !== undefined) dbUpdates.preferred_date = updates.preferredDate
+  if (updates.message !== undefined) dbUpdates.message = updates.message
+
   dbUpdates.updated_at = new Date().toISOString()
 
   const { data, error } = await supabase
@@ -192,6 +216,7 @@ export async function PUT(request: Request) {
         email: data.email,
         trackingCode: data.tracking_code,
         vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
+        plateNumber: data.vehicle_plate,
         services: data.service,
         status: 'Completed'
       });

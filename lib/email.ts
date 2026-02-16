@@ -8,8 +8,16 @@ interface EmailParams {
     email: string;
     trackingCode: string;
     vehicleDetails: string;
+    plateNumber?: string;
+    color?: string;
+    insurance?: string;
+    preferredDate?: string;
     services: string;
+    message?: string;
     status: string;
+    chassisNumber?: string;
+    engineNumber?: string;
+    assigneeDriver?: string;
 }
 
 export async function sendAppointmentEmail({
@@ -18,8 +26,16 @@ export async function sendAppointmentEmail({
     email,
     trackingCode,
     vehicleDetails,
+    plateNumber,
+    color,
+    insurance,
+    preferredDate,
     services,
-    status
+    message,
+    status,
+    chassisNumber,
+    engineNumber,
+    assigneeDriver
 }: EmailParams) {
     console.log(`[Email Utility] Preparing to send ${type} email to: ${email}`);
 
@@ -51,20 +67,21 @@ export async function sendAppointmentEmail({
                         <h3 style="margin-top: 0; color: #1a1a1a; border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 16px;">Appointment Details</h3>
                         <table style="width: 100%; border-collapse: collapse;">
                             <tr>
-                                <td style="padding: 8px 0; color: #666; width: 140px;">Tracking Code:</td>
-                                <td style="padding: 8px 0; font-weight: bold; color: #1a1a1a;">${trackingCode}</td>
+                                <td style="padding: 6px 0; color: #666; width: 140px;">Tracking Code:</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #1a1a1a;">${trackingCode}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 8px 0; color: #666;">Vehicle Details:</td>
-                                <td style="padding: 8px 0; color: #1a1a1a;">${vehicleDetails}</td>
+                                <td style="padding: 6px 0; color: #666;">Vehicle:</td>
+                                <td style="padding: 6px 0; color: #1a1a1a;">${vehicleDetails}</td>
+                            </tr>
+                            ${plateNumber ? `<tr><td style="padding: 6px 0; color: #666;">Plate Number:</td><td style="padding: 6px 0; color: #1a1a1a;">${plateNumber}</td></tr>` : ''}
+                            <tr>
+                                <td style="padding: 6px 0; color: #666;">Services Availed:</td>
+                                <td style="padding: 6px 0; color: #1a1a1a;">${services}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 8px 0; color: #666;">Services Availed:</td>
-                                <td style="padding: 8px 0; color: #1a1a1a;">${services}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 8px 0; color: #666;">Status:</td>
-                                <td style="padding: 8px 0; color: #2e7d32; font-weight: bold;">Completed ✅</td>
+                                <td style="padding: 6px 0; color: #666;">Status:</td>
+                                <td style="padding: 6px 0; color: #2e7d32; font-weight: bold;">Completed ✅</td>
                             </tr>
                         </table>
                     </div>
@@ -73,13 +90,15 @@ export async function sendAppointmentEmail({
                         <p style="margin: 0; font-weight: bold; color: #1b5e20;">You can pick up your unit at:</p>
                         <p style="margin: 5px 0 0 0; color: #1b5e20;">Zone 7 Sepulvida Street, Kauswagan Highway, Cagayan De Oro City.</p>
                     </div>
-                    
-                    <p>We hope you're satisfied with our service! Please make sure to check your vehicle and feel free to reach out if you have any questions or concerns. Your feedback helps us improve.</p>
+
+                    <div style="margin-bottom: 25px; padding: 15px; background-color: #f0f7ff; border-radius: 8px; color: #1a5f9c; font-size: 15px;">
+                        <p style="margin: 0;">We hope you're satisfied with our service! Please make sure to check your vehicle and feel free to reach out if you have any questions or concerns. Your feedback helps us improve.</p>
+                    </div>
                     
                     <div style="margin: 30px 0; border-top: 1px solid #eeeeee; padding-top: 20px;">
                         <p style="margin-bottom: 10px; font-weight: bold;">Contact for inquiries:</p>
-                        <p style="margin: 5px 0;"><strong>Sir Ryan (Service Advisor, recommended):</strong> 0965-918-3394</p>
-                        <p style="margin: 5px 0;"><strong>Sir Paul (HR Supervisor):</strong> 0936-354-9603</p>
+                        <p style="margin: 5px 0;"><strong>Sir Ryan (Service Advisor):</strong> 0965-918-3394</p>
+                        <p style="margin: 5px 0;"><strong>Sir Paul (Service Manager):</strong> 0936-354-9603</p>
                     </div>
 
                     <div style="text-align: center; margin-top: 30px;">
@@ -116,22 +135,35 @@ export async function sendAppointmentEmail({
                         <h3 style="margin-top: 0; color: #1a1a1a; border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 16px;">Appointment Details</h3>
                         <table style="width: 100%; border-collapse: collapse;">
                             <tr>
-                                <td style="padding: 8px 0; color: #666; width: 140px;">Tracking Code:</td>
-                                <td style="padding: 8px 0; font-weight: bold; color: #1a1a1a;">${trackingCode}</td>
+                                <td style="padding: 6px 0; color: #666; width: 140px;">Tracking Code:</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #1a1a1a;">${trackingCode}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 8px 0; color: #666;">Vehicle Details:</td>
-                                <td style="padding: 8px 0; color: #1a1a1a;">${vehicleDetails}</td>
+                                <td style="padding: 6px 0; color: #666;">Vehicle:</td>
+                                <td style="padding: 6px 0; color: #1a1a1a;">${vehicleDetails}</td>
                             </tr>
+                            ${plateNumber ? `<tr><td style="padding: 6px 0; color: #666;">Plate Number:</td><td style="padding: 6px 0; color: #1a1a1a;">${plateNumber}</td></tr>` : ''}
+                            ${color ? `<tr><td style="padding: 6px 0; color: #666;">Color:</td><td style="padding: 6px 0; color: #1a1a1a;">${color}</td></tr>` : ''}
+                            ${insurance ? `<tr><td style="padding: 6px 0; color: #666;">Insurance:</td><td style="padding: 6px 0; color: #1a1a1a;">${insurance}</td></tr>` : ''}
+                            ${preferredDate ? `<tr><td style="padding: 6px 0; color: #666;">Preferred Date:</td><td style="padding: 6px 0; color: #1a1a1a;">${preferredDate}</td></tr>` : ''}
                             <tr>
-                                <td style="padding: 8px 0; color: #666;">Services Availed:</td>
-                                <td style="padding: 8px 0; color: #1a1a1a;">${services}</td>
+                                <td style="padding: 6px 0; color: #666;">Services Availed:</td>
+                                <td style="padding: 6px 0; color: #1a1a1a;">${services}</td>
                             </tr>
+                            ${assigneeDriver ? `<tr><td style="padding: 6px 0; color: #666;">Assignee/Driver:</td><td style="padding: 6px 0; color: #1a1a1a;">${assigneeDriver}</td></tr>` : ''}
+                            ${chassisNumber ? `<tr><td style="padding: 6px 0; color: #666;">Chassis #:</td><td style="padding: 6px 0; color: #1a1a1a;">${chassisNumber}</td></tr>` : ''}
+                            ${engineNumber ? `<tr><td style="padding: 6px 0; color: #666;">Engine #:</td><td style="padding: 6px 0; color: #1a1a1a;">${engineNumber}</td></tr>` : ''}
                             <tr>
-                                <td style="padding: 8px 0; color: #666;">Status:</td>
-                                <td style="padding: 8px 0; color: #fb8c00; font-weight: bold;">${displayStatus}</td>
+                                <td style="padding: 6px 0; color: #666;">Status:</td>
+                                <td style="padding: 6px 0; color: #fb8c00; font-weight: bold;">${displayStatus}</td>
                             </tr>
                         </table>
+                        ${message ? `
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                            <p style="margin: 0; color: #666; font-size: 12px; font-weight: bold;">Your Message:</p>
+                            <p style="margin: 5px 0 0 0; font-style: italic; font-size: 14px; color: #333;">"${message}"</p>
+                        </div>
+                        ` : ''}
                     </div>
 
                     <div style="background-color: #f0f7ff; padding: 15px; border-left: 4px solid #1a5f9c; margin-bottom: 25px;">

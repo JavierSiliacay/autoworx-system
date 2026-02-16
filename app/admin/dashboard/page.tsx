@@ -51,6 +51,16 @@ import { VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, C
 import { getRepairStatusInfo } from "@/lib/appointment-tracking"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 // Database response interface (snake_case from Supabase)
 interface AppointmentDB {
@@ -228,6 +238,10 @@ export default function AdminDashboard() {
 
   // Custom repair part input states
   const [useCustomRepairPart, setUseCustomRepairPart] = useState<Record<string, boolean>>({})
+
+  // Appointment Editing states
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -460,7 +474,60 @@ export default function AdminDashboard() {
     })
   }
 
-  const addCostItem = (appointmentId: string, type: CostItemType) => {
+  const handleEditAppointment = (appointment: Appointment) => {
+    setEditingAppointment({ ...appointment })
+    setIsEditModalOpen(true)
+  }
+
+  const saveEditedAppointment = async () => {
+    if (!editingAppointment) return
+
+    try {
+      const response = await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingAppointment.id,
+          name: editingAppointment.name,
+          email: editingAppointment.email,
+          phone: editingAppointment.phone,
+          vehicleMake: editingAppointment.vehicleMake,
+          vehicleModel: editingAppointment.vehicleModel,
+          vehicleYear: editingAppointment.vehicleYear,
+          vehiclePlate: editingAppointment.vehiclePlate,
+          vehicleColor: editingAppointment.vehicleColor,
+          chassisNumber: editingAppointment.chassisNumber,
+          engineNumber: editingAppointment.engineNumber,
+          assigneeDriver: editingAppointment.assigneeDriver,
+          service: editingAppointment.service,
+          preferredDate: editingAppointment.preferredDate,
+          message: editingAppointment.message,
+          insurance: editingAppointment.insurance,
+        }),
+      })
+
+      if (response.ok) {
+        setAppointments((prev) =>
+          prev.map((apt) => (apt.id === editingAppointment.id ? editingAppointment : apt))
+        )
+        setIsEditModalOpen(false)
+        setEditingAppointment(null)
+        toast({
+          title: "Appointment Updated",
+          description: "Customer details have been successfully updated.",
+        })
+      }
+    } catch (error) {
+      console.error("Error saving appointment:", error)
+      toast({
+        title: "Update Failed",
+        description: "There was an error saving the changes.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const addCostItem = (appointmentId: string, type: CostItemType, category?: string) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
     const currentCosting = appointment?.costing || {
       items: [],
@@ -478,6 +545,7 @@ export default function AdminDashboard() {
     const newItem: CostItem = {
       id: `item-${Date.now()}`,
       type,
+      category: category || "Others",
       description: "",
       quantity: 1,
       unitPrice: 0,
@@ -1197,6 +1265,15 @@ export default function AdminDashboard() {
                             <Button
                               size="sm"
                               variant="outline"
+                              className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border-blue-500/30 bg-transparent"
+                              onClick={() => handleEditAppointment(appointment)}
+                            >
+                              <Settings2 className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 bg-transparent"
                               onClick={() => openArchiveModal(appointment.id)}
                             >
@@ -1383,7 +1460,15 @@ export default function AdminDashboard() {
                                               value={item.category || "Others"}
                                               onValueChange={(value) => updateCostItem(appointment.id, item.id, { category: value })}
                                             >
-                                              <SelectTrigger className="h-8 text-[11px] px-2">
+                                              <SelectTrigger
+                                                className="h-8 text-[11px] px-2"
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    e.preventDefault()
+                                                    addCostItem(appointment.id, item.type, item.category)
+                                                  }
+                                                }}
+                                              >
                                                 <SelectValue placeholder="Category" />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -1400,6 +1485,12 @@ export default function AdminDashboard() {
                                             <Input
                                               value={item.description}
                                               onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault()
+                                                  addCostItem(appointment.id, item.type, item.category)
+                                                }
+                                              }}
                                               placeholder="Enter description..."
                                               className="h-8 text-sm"
                                             />
@@ -1422,6 +1513,12 @@ export default function AdminDashboard() {
                                               step="0.01"
                                               value={item.unitPrice}
                                               onChange={(e) => updateCostItem(appointment.id, item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault()
+                                                  addCostItem(appointment.id, item.type, item.category)
+                                                }
+                                              }}
                                               className="h-8 text-sm"
                                             />
                                           </div>
@@ -1441,6 +1538,12 @@ export default function AdminDashboard() {
                                               <X className="w-4 h-4" />
                                             </Button>
                                           </div>
+                                        </div>
+                                        {/* Keyboard Shortcut Hint */}
+                                        <div className="mt-1 flex justify-end">
+                                          <p className="text-[10px] text-muted-foreground italic">
+                                            Press <kbd className="bg-muted px-1 rounded font-sans not-italic">Enter</kbd> to add another item of same category
+                                          </p>
                                         </div>
                                       </div>
                                     </div>
@@ -1844,6 +1947,144 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      {/* Edit Appointment Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Appointment Details</DialogTitle>
+            <DialogDescription>
+              Update the customer or vehicle information for this appointment.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingAppointment && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Customer Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editingAppointment.name}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone Number</Label>
+                <Input
+                  id="edit-phone"
+                  value={editingAppointment.phone}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, phone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input
+                  id="edit-email"
+                  value={editingAppointment.email}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-plate">Plate Number</Label>
+                <Input
+                  id="edit-plate"
+                  value={editingAppointment.vehiclePlate}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, vehiclePlate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-make">Vehicle Make</Label>
+                <Input
+                  id="edit-make"
+                  value={editingAppointment.vehicleMake}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, vehicleMake: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-model">Vehicle Model</Label>
+                <Input
+                  id="edit-model"
+                  value={editingAppointment.vehicleModel}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, vehicleModel: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-year">Vehicle Year</Label>
+                <Input
+                  id="edit-year"
+                  value={editingAppointment.vehicleYear}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, vehicleYear: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-color">Vehicle Color</Label>
+                <Input
+                  id="edit-color"
+                  value={editingAppointment.vehicleColor || ""}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, vehicleColor: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-chassis">Chassis Number</Label>
+                <Input
+                  id="edit-chassis"
+                  value={editingAppointment.chassisNumber || ""}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, chassisNumber: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-engine">Engine Number</Label>
+                <Input
+                  id="edit-engine"
+                  value={editingAppointment.engineNumber || ""}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, engineNumber: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-assignee">Assignee/Driver</Label>
+                <Input
+                  id="edit-assignee"
+                  value={editingAppointment.assigneeDriver || ""}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, assigneeDriver: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-insurance">Insurance</Label>
+                <Input
+                  id="edit-insurance"
+                  value={editingAppointment.insurance || ""}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, insurance: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="edit-service">Service Type</Label>
+                <Input
+                  id="edit-service"
+                  value={editingAppointment.service}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, service: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="edit-message">Customer Message</Label>
+                <Textarea
+                  id="edit-message"
+                  value={editingAppointment.message || ""}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, message: e.target.value })}
+                  className="min-h-[100px]"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveEditedAppointment}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
