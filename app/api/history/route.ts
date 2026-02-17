@@ -75,6 +75,7 @@ export async function POST(request: Request) {
       archived_reason: reason || "Archived by admin",
       insurance: appointment.insurance || null,
       estimate_number: appointment.estimate_number || null,
+      paul_notes: appointment.paul_notes || null,
     })
 
   if (insertError) {

@@ -212,6 +212,7 @@ export async function PUT(request: Request) {
   if (updates.costing !== undefined) dbUpdates.costing = updates.costing
   if (updates.damageImages !== undefined) dbUpdates.damage_images = updates.damageImages
   if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
+  if (updates.paulNotes !== undefined) dbUpdates.paul_notes = updates.paulNotes
 
   // New editable fields
   if (updates.name !== undefined) dbUpdates.name = updates.name

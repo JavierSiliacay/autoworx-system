@@ -39,6 +39,8 @@ import {
   Download,
   ChevronRight,
   ChevronLeft,
+  Megaphone,
+  Send,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -94,6 +96,7 @@ interface AppointmentDB {
   orcr_image?: string
   insurance?: string
   estimate_number?: string
+  paul_notes?: string
 }
 
 // Frontend interface (camelCase)
@@ -123,6 +126,7 @@ interface Appointment {
   orcrImage?: string
   insurance?: string
   estimateNumber?: string
+  paulNotes?: string
 }
 
 // History interface
@@ -150,6 +154,15 @@ interface HistoryRecord {
   archived_reason: string
   insurance?: string
   estimate_number?: string
+  paul_notes?: string
+}
+
+interface Announcement {
+  id: string
+  content: string
+  author_name: string
+  author_email: string
+  created_at: string
 }
 
 // Helper to convert DB response to frontend format
@@ -180,6 +193,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     orcrImage: apt.orcr_image,
     insurance: apt.insurance,
     estimateNumber: apt.estimate_number,
+    paulNotes: apt.paul_notes,
   }
 }
 
@@ -251,6 +265,12 @@ export default function AdminDashboard() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
 
+  // Announcement states
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false)
+  const [newAnnouncement, setNewAnnouncement] = useState("")
+  const [isPostingAnnouncement, setIsPostingAnnouncement] = useState(false)
+
   // Refs for stabilizing typing and real-time updates
   const costingDebounceRef = useRef<Record<string, any>>({})
   const lastStateUpdateRef = useRef<Record<string, number>>({})
@@ -283,6 +303,18 @@ export default function AdminDashboard() {
     setIsLoadingHistory(false)
   }, [])
 
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      const response = await fetch("/api/announcements")
+      if (response.ok) {
+        const data = await response.json()
+        setAnnouncements(data)
+      }
+    } catch (error) {
+      console.error("Error loading announcements:", error)
+    }
+  }, [])
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/admin")
@@ -293,8 +325,11 @@ export default function AdminDashboard() {
       return
     }
 
-    if (status === "authenticated") loadAppointments()
-  }, [router, loadAppointments, status, session?.user?.role])
+    if (status === "authenticated") {
+      loadAppointments()
+      loadAnnouncements()
+    }
+  }, [router, loadAppointments, loadAnnouncements, status, session?.user?.role])
 
   // Real-time updates subscription
   useEffect(() => {
@@ -862,6 +897,34 @@ export default function AdminDashboard() {
     }, false)
   }
 
+  const updatePaulNotes = (appointmentId: string, notes: string) => {
+    // Track that we are manually updating this record
+    lastStateUpdateRef.current[appointmentId] = Date.now()
+
+    // 1. Update local state immediately
+    setAppointments((prev) =>
+      prev.map((apt) => (apt.id === appointmentId ? { ...apt, paulNotes: notes } : apt))
+    )
+
+    // 2. Sync with backend (debounced)
+    const syncWithBackend = async () => {
+      try {
+        await fetch("/api/appointments", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: appointmentId, paulNotes: notes }),
+        })
+      } catch (error) {
+        console.error("Failed to sync Paul's notes:", error)
+      }
+    }
+
+    if (costingDebounceRef.current[`paul-${appointmentId}`]) {
+      clearTimeout(costingDebounceRef.current[`paul-${appointmentId}`])
+    }
+    costingDebounceRef.current[`paul-${appointmentId}`] = setTimeout(syncWithBackend, 1000)
+  }
+
   const toggleCardExpanded = (id: string) => {
     setExpandedCards((prev) => {
       const newSet = new Set(prev)
@@ -1058,6 +1121,81 @@ export default function AdminDashboard() {
             <div className="text-sm text-muted-foreground font-medium">Waiting for Approval</div>
           </div>
         </div>
+
+        {/* Announcements Section */}
+        {announcements.length > 0 && (
+          <div className="mb-8 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary">
+                <Megaphone className="w-5 h-5 fill-primary/10" />
+                <h2 className="font-serif text-xl font-bold">Admin Announcements</h2>
+              </div>
+              {session?.user?.email === "paulsuazo64@gmail.com" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAnnouncementModalOpen(true)}
+                  className="h-8 gap-2 border-primary/20 hover:bg-primary/5"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Announcement
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {announcements.map((ann) => (
+                <div
+                  key={ann.id}
+                  className="p-4 bg-primary/5 border border-primary/10 rounded-xl relative overflow-hidden group"
+                >
+                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/30" />
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary/60">
+                      From: {ann.author_name}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {formatDate(ann.created_at)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground line-clamp-3 leading-relaxed">
+                    {ann.content}
+                  </p>
+                  {session?.user?.email === "paulsuazo64@gmail.com" && (
+                    <button
+                      onClick={async () => {
+                        if (confirm("Delete this announcement?")) {
+                          await fetch(`/api/announcements?id=${ann.id}`, { method: "DELETE" })
+                          loadAnnouncements()
+                        }
+                      }}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-red-500 hover:bg-red-500/10 rounded"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {announcements.length === 0 && session?.user?.email === "paulsuazo64@gmail.com" && (
+          <div className="mb-8 p-6 bg-primary/5 border border-dashed border-primary/20 rounded-xl text-center">
+            <Megaphone className="w-8 h-8 mx-auto text-primary/40 mb-3" />
+            <h3 className="font-semibold text-primary/80">No current announcements</h3>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">
+              Use this section to broadcast messages to all administrators.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => setIsAnnouncementModalOpen(true)}
+              className="gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Post First Announcement
+            </Button>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="mb-6 flex gap-2 border-b border-border">
@@ -1639,6 +1777,37 @@ export default function AdminDashboard() {
                                 </p>
                               </div>
                             )}
+
+                            {/* Sir Paul's Notes */}
+                            <div className="pt-4 border-t border-border space-y-2">
+                              <div className="flex items-center gap-2 text-primary">
+                                <Megaphone className="w-4 h-4" />
+                                <h4 className="font-semibold text-foreground">Sir Paul&apos;s Notes</h4>
+                              </div>
+                              {session?.user?.email === "paulsuazo64@gmail.com" ? (
+                                <Textarea
+                                  value={appointment.paulNotes || ""}
+                                  onChange={(e) => updatePaulNotes(appointment.id, e.target.value)}
+                                  placeholder="Type notes or special instructions for this unit..."
+                                  className="min-h-[80px] text-sm bg-primary/5 border-primary/20 focus-visible:ring-primary resize-none"
+                                />
+                              ) : (
+                                <div className="p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                                  {appointment.paulNotes ? (
+                                    <p className="text-sm text-foreground italic whitespace-pre-wrap">
+                                      &ldquo;{appointment.paulNotes}&rdquo;
+                                    </p>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground italic">
+                                      No specific notes from Sir Paul yet.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                              <p className="text-[10px] text-muted-foreground">
+                                * Visible to all administrators. Only Sir Paul can edit this field.
+                              </p>
+                            </div>
 
                             {/* Costing Section */}
                             <div className="pt-4 border-t border-border">
@@ -2297,6 +2466,85 @@ export default function AdminDashboard() {
             </Button>
             <Button onClick={saveEditedAppointment}>
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Announcement Modal */}
+      <Dialog open={isAnnouncementModalOpen} onOpenChange={setIsAnnouncementModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Megaphone className="w-5 h-5" />
+              Post Board Announcement
+            </DialogTitle>
+            <DialogDescription>
+              This message will be visible to all admins on their dashboard.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="announcement-content">Message Content</Label>
+              <Textarea
+                id="announcement-content"
+                placeholder="Type your announcement here..."
+                value={newAnnouncement}
+                onChange={(e) => setNewAnnouncement(e.target.value)}
+                className="min-h-[120px] resize-none focus-visible:ring-primary"
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground italic">
+              Posted as: <span className="font-semibold text-primary">Sir Paul (Service Manager)</span>
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAnnouncementModalOpen(false)}
+              disabled={isPostingAnnouncement}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!newAnnouncement.trim()) return
+                setIsPostingAnnouncement(true)
+                try {
+                  const response = await fetch("/api/announcements", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      content: newAnnouncement,
+                      authorName: "Sir Paul"
+                    })
+                  })
+                  if (response.ok) {
+                    setNewAnnouncement("")
+                    setIsAnnouncementModalOpen(false)
+                    loadAnnouncements()
+                    toast({
+                      title: "Announcement Posted! 📣",
+                      description: "Your message is now live for all admins.",
+                    })
+                  }
+                } catch (error) {
+                  console.error("Error posting announcement:", error)
+                } finally {
+                  setIsPostingAnnouncement(false)
+                }
+              }}
+              disabled={isPostingAnnouncement || !newAnnouncement.trim()}
+              className="gap-2"
+            >
+              {isPostingAnnouncement ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Post Announcement
             </Button>
           </DialogFooter>
         </DialogContent>
