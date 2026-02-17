@@ -653,144 +653,16 @@ function TrackingContent() {
             </div>
 
             {/* Cost Breakdown - Only show if costing data exists */}
-            {/* Cost Breakdown - Only show if costing data exists (Admin only) */}
-            {appointment.costing && appointment.costing.items.length > 0 ? (
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
-                <div className="p-6 border-b border-border bg-green-500/5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 bg-green-500/10 rounded-lg">
-                      <Receipt className="w-5 h-5 text-green-500" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">Cost Breakdown</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Last updated: {new Date(appointment.costing.updatedAt).toLocaleDateString("en-US", {
-                          month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit"
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-4">
-                  {COST_ITEM_TYPES.map((type) => {
-                    const items = appointment.costing?.items.filter(item => item.type === type.value) || []
-                    if (items.length === 0) return null
-
-                    const typeIcon = {
-                      service: <Wrench className="w-4 h-4" />,
-                      parts: <Package className="w-4 h-4" />,
-                      labor: <HardHat className="w-4 h-4" />,
-                      custom: <Tag className="w-4 h-4" />,
-                    }[type.value]
-
-                    const typeColor = {
-                      service: "text-blue-500 bg-blue-500/10",
-                      parts: "text-orange-500 bg-orange-500/10",
-                      labor: "text-purple-500 bg-purple-500/10",
-                      custom: "text-cyan-500 bg-cyan-500/10",
-                    }[type.value]
-
-                    return (
-                      <div key={type.value} className="space-y-2">
-                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${typeColor}`}>
-                          {typeIcon}
-                          {type.label}
-                        </div>
-                        <div className="bg-secondary/50 rounded-lg overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="border-b border-border">
-                                <th className="text-left p-3 text-muted-foreground font-medium">Description</th>
-                                <th className="text-center p-3 text-muted-foreground font-medium w-16">Qty</th>
-                                <th className="text-right p-3 text-muted-foreground font-medium w-24">Unit Price</th>
-                                <th className="text-right p-3 text-muted-foreground font-medium w-28">Total</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {items.map((item) => (
-                                <tr key={item.id} className="border-b border-border/50 last:border-0">
-                                  <td className="p-3 text-foreground">{item.description || "-"}</td>
-                                  <td className="p-3 text-center text-foreground">{item.quantity}</td>
-                                  <td className="p-3 text-right font-mono text-foreground">
-                                    P{item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                  </td>
-                                  <td className="p-3 text-right font-mono font-semibold text-foreground">
-                                    P{item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )
-                  })}
-
-                  {/* Summary */}
-                  <div className="pt-4 border-t border-border space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-mono text-foreground">
-                        P{appointment.costing.subtotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    {appointment.costing.discount > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          Discount {appointment.costing.discountType === "percentage" ? `(${appointment.costing.discount}%)` : ""}
-                        </span>
-                        <span className="font-mono text-red-500">
-                          -{appointment.costing.discountType === "percentage"
-                            ? `P${((appointment.costing.subtotal * appointment.costing.discount) / 100).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
-                            : `P${appointment.costing.discount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
-                          }
-                        </span>
-                      </div>
-                    )}
-                    {appointment.costing.vatEnabled && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">VAT (12%)</span>
-                        <span className="font-mono text-foreground">
-                          +P{(appointment.costing.vatAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center pt-2 border-t border-border">
-                      <div>
-                        <span className="font-semibold text-foreground text-lg">Total Amount</span>
-                        {appointment.costing.vatEnabled && (
-                          <span className="text-xs text-muted-foreground ml-2">(VAT inclusive)</span>
-                        )}
-                      </div>
-                      <span className="font-mono text-2xl font-bold text-green-500">
-                        P{appointment.costing.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  {appointment.costing.notes && (
-                    <div className="pt-4 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-2">Notes from the shop:</p>
-                      <p className="text-sm text-foreground bg-secondary/50 p-3 rounded-lg whitespace-pre-wrap">
-                        {appointment.costing.notes}
-                      </p>
-                    </div>
-                  )}
-                </div>
+            {/* Contact for Cost estimation - Strictly hidden from public view */}
+            <div className="bg-card rounded-xl border border-border p-8 text-center bg-blue-500/5">
+              <div className="flex items-center justify-center w-12 h-12 bg-blue-500/10 rounded-full mx-auto mb-4">
+                <Receipt className="w-6 h-6 text-blue-500" />
               </div>
-            ) : (
-              <div className="bg-card rounded-xl border border-border p-8 text-center bg-blue-500/5">
-                <div className="flex items-center justify-center w-12 h-12 bg-blue-500/10 rounded-full mx-auto mb-4">
-                  <Receipt className="w-6 h-6 text-blue-500" />
-                </div>
-                <p className="text-sm font-semibold text-foreground max-w-sm mx-auto">
-                  For complete cost estimation information, please reach out to Sir Ryan or Sir Paul.
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">Thank you</p>
-              </div>
-            )}
+              <p className="text-sm font-semibold text-foreground max-w-sm mx-auto">
+                For complete cost estimation information, please reach out to Sir Ryan or Sir Paul.
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">Thank you</p>
+            </div>
 
             {/* Next Steps */}
             <div className="bg-secondary/50 rounded-xl border border-border p-6">
