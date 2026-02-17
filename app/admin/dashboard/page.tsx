@@ -638,10 +638,10 @@ export default function AdminDashboard() {
       return;
     }
 
-    // 3. Show a nice loading state in the new window
+    // 3. Open window with organization-friendly title
     printWindow.document.write(`
       <html>
-        <head><title>Repair Estimate - ${appointment.name}</title></head>
+        <head><title>${filename}</title></head>
         <body style="font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f9fafb;">
           <div style="text-align: center; padding: 40px; border-radius: 12px; background: white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
             <div style="width: 40px; height: 40px; border: 4px solid #1a5f9c; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
@@ -672,11 +672,11 @@ export default function AdminDashboard() {
         }
       }
 
-      // 5. Generate high-quality HTML content with a professional TITLE
+      // 5. Generate high-quality HTML content using the organizational filename
       const htmlContent = await generateTrackingPDF(
         { ...appointment, estimateNumber: finalEstimateNumber },
         'admin',
-        `Repair Estimate - ${appointment.name}`
+        filename
       );
 
       // 6. Write to the new window and trigger print
