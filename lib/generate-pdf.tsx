@@ -224,7 +224,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
 
-  const hasCosting = isAdmin && appointment.costing && appointment.costing.items.length > 0
+  const hasCosting = appointment.costing && appointment.costing.items.length > 0
   const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
   const laborTotal = appointment.costing?.items.filter(item => item.type === 'labor').reduce((sum, item) => sum + item.total, 0) || 0
   const serviceAndOtherTotal = appointment.costing?.items.filter(item => item.type === 'service' || item.type === 'custom').reduce((sum, item) => sum + item.total, 0) || 0
@@ -423,7 +423,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       </div>
     </div>
 
-    ${hasCosting ? `
+    ${isAdmin && hasCosting ? `
     <div class="section-title">Cost Estimation</div>
     <div class="costing-section">
       <table class="costing-table">
@@ -470,13 +470,13 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <strong>Notes:</strong> ${appointment.costing.notes}
     </div>
     ` : ""}
-    ` : `
+    ` : isAdmin ? `
     <div style="margin: 20px 0; padding: 15px; border: 1px dashed #ccc; text-align: center; background: #fafafa; border-radius: 4px;">
       <p style="font-size: 11px; font-weight: bold; color: #1a5f9c; margin: 0;">
         For complete cost estimation information, please reach out to Sir Ryan or Sir Paul. Thank you
       </p>
     </div>
-    `}
+    ` : ""}
 
     <div class="delivery-date">DELIVERY DATE: ________ working days</div>
     `}
@@ -501,7 +501,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       </div>
 
       <div class="signatures-totals-container">
-        ${hasCosting ? `
+        ${isAdmin && hasCosting ? `
         <div class="totals-summary">
           <div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
           <div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
