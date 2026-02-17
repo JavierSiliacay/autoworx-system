@@ -109,7 +109,6 @@ interface Appointment {
   engineNumber: string
   assigneeDriver: string
   service: string
-  preferredDate: string
   message: string
   status: "pending" | "contacted" | "completed"
   createdAt: string
@@ -165,7 +164,6 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     engineNumber: apt.engine_number,
     assigneeDriver: apt.assignee_driver,
     service: apt.service,
-    preferredDate: apt.preferred_date,
     message: apt.message,
     status: apt.status,
     createdAt: apt.created_at,
@@ -504,7 +502,6 @@ export default function AdminDashboard() {
           engineNumber: editingAppointment.engineNumber,
           assigneeDriver: editingAppointment.assigneeDriver,
           service: editingAppointment.service,
-          preferredDate: editingAppointment.preferredDate,
           message: editingAppointment.message,
           insurance: editingAppointment.insurance,
         }),

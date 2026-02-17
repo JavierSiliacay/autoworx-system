@@ -178,10 +178,6 @@ export async function generateAppointmentPDF(options: PDFOptions): Promise<Blob>
             <span class="info-label">Service Type:</span>
             <span class="info-value">${appointmentData.service}</span>
           </div>
-          <div class="info-row">
-            <span class="info-label">Preferred Date:</span>
-            <span class="info-value">${appointmentData.preferredDate || "Not specified"}</span>
-          </div>
           <div class="info-row" style="border-bottom: none;">
             <span class="info-label">Additional Details:</span>
           </div>

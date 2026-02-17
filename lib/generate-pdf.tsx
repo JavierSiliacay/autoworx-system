@@ -20,7 +20,6 @@ interface TrackingAppointment {
   engineNumber?: string
   assigneeDriver?: string
   service: string
-  preferredDate: string
   message?: string
   status: string
   createdAt: string

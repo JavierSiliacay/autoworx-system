@@ -55,7 +55,6 @@ interface AppointmentDB {
   vehicle_year: string
   vehicle_plate: string
   service: string
-  preferred_date: string
   message: string
   status: "pending" | "contacted" | "completed"
   created_at: string
@@ -82,7 +81,6 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     vehicleYear: apt.vehicle_year,
     vehiclePlate: apt.vehicle_plate,
     service: apt.service,
-    preferredDate: apt.preferred_date,
     message: apt.message,
     status: apt.status,
     createdAt: apt.created_at,
@@ -108,7 +106,6 @@ interface Appointment {
   vehicleYear: string
   vehiclePlate: string
   service: string
-  preferredDate: string
   message: string
   status: "pending" | "contacted" | "completed"
   createdAt: string
