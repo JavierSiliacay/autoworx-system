@@ -52,18 +52,17 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       line-height: 1.15; 
       color: #333; 
       background: white; 
-      padding: 0.25in; 
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     @page { 
       size: A4; 
-      margin: 0; 
+      margin: 0.4in 0.3in; 
     }
     .container { 
-      max-width: 7.9in; 
+      width: 100%; 
       margin: 0 auto; 
-      height: 10.7in;
+      min-height: 10in;
       display: flex;
       flex-direction: column;
     }
@@ -266,18 +265,17 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       line-height: 1.15; 
       color: #333; 
       background: white; 
-      padding: ${shouldScale ? (totalRows > 20 ? '0.1in' : '0.15in') : '0.25in'}; 
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     @page { 
       size: A4; 
-      margin: 0; 
+      margin: 0.4in 0.3in; 
     }
     .container { 
-      max-width: 7.9in; 
+      width: 100%; 
       margin: 0 auto; 
-      height: 10.7in; /* Slightly less than A4 height (11.69in) to ensure margin safety */
+      min-height: 10.2in;
       display: flex;
       flex-direction: column;
     }
