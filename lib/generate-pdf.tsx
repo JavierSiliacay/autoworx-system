@@ -224,10 +224,14 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
 
-  const hasCosting = appointment.costing && appointment.costing.items.length > 0
+  const laborCategories = ["Painting", "Detailing", "Service", "Labor", "Glassworks", "Alignment", "Tinsmith"]
+  const hasCosting = !!appointment.costing && (appointment.costing.items || []).length > 0
   const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
-  const laborTotal = appointment.costing?.items.filter(item => item.type === 'labor').reduce((sum, item) => sum + item.total, 0) || 0
-  const serviceAndOtherTotal = appointment.costing?.items.filter(item => item.type === 'service' || item.type === 'custom').reduce((sum, item) => sum + item.total, 0) || 0
+  const laborTotal = appointment.costing?.items.filter(item =>
+    item.type === 'labor' ||
+    item.type === 'service' ||
+    (item.category && laborCategories.includes(item.category))
+  ).reduce((sum, item) => sum + item.total, 0) || 0
 
   // Dynamic Categorization logic
   const categorized = (appointment.costing?.items || []).reduce((acc, item) => {
@@ -239,7 +243,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       if (item.type === 'parts') group = "Parts";
       else if (item.type === 'service') group = "Service";
       else if (item.type === 'labor') group = "Labor";
-      else group = "Custom / Others";
+      else group = "Others";
     }
 
     if (!acc[group]) acc[group] = [];
@@ -503,21 +507,20 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <div class="signatures-totals-container">
         ${isAdmin && hasCosting ? `
         <div class="totals-summary">
-          <div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
-          <div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
-          ${serviceAndOtherTotal > 0 ? `<div class="totals-summary-row"><span>Other Total</span><span>₱${serviceAndOtherTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          ${partsTotal > 0 ? `<div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          ${laborTotal > 0 ? `<div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
           <div class="totals-summary-row" style="border-top: 1px dashed #ddd; margin-top: 4px; padding-top: 4px; font-weight: 600;">
-            <span>Subtotal</span><span>₱${appointment.costing!.subtotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+            <span>Subtotal</span><span>₱${(appointment.costing?.subtotal || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
           </div>
-          ${appointment.costing!.discount > 0 ? `
+          ${(appointment.costing?.discount || 0) > 0 ? `
           <div class="totals-summary-row" style="color: #f97316;">
             <span>Discount (${appointment.costing!.discountType === "percentage" ? `${appointment.costing!.discount}%` : "Fixed"})</span>
             <span>-₱${(appointment.costing!.discountType === "percentage"
           ? (appointment.costing!.subtotal * appointment.costing!.discount) / 100
           : appointment.costing!.discount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
           </div>` : ""}
-          ${appointment.costing!.vatEnabled ? `<div class="totals-summary-row" style="color: #666; font-size: 9px;"><span>VAT 12%</span><span>₱${appointment.costing!.vatAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
-          <div class="totals-summary-row bold"><span>TOTAL</span><span>₱${appointment.costing!.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+          ${appointment.costing?.vatEnabled ? `<div class="totals-summary-row" style="color: #666; font-size: 9px;"><span>VAT 12%</span><span>₱${(appointment.costing?.vatAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          <div class="totals-summary-row bold"><span>TOTAL</span><span>₱${(appointment.costing?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
         </div>
         ` : ""}
 

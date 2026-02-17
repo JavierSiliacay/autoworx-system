@@ -148,6 +148,8 @@ interface HistoryRecord {
   completed_at: string
   archived_at: string
   archived_reason: string
+  insurance?: string
+  estimate_number?: string
 }
 
 // Helper to convert DB response to frontend format
@@ -910,7 +912,10 @@ export default function AdminDashboard() {
       const matchesTrackingCode = normalizeString(apt.trackingCode).includes(normalizedQuery)
       const matchesMessage = normalizeString(apt.message).includes(normalizedQuery)
 
-      if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesModel && !matchesTrackingCode && !matchesMessage) return false
+      const matchesEstimateNumber = normalizeString(apt.estimateNumber || "").includes(normalizedQuery)
+      const matchesInsurance = normalizeString(apt.insurance || "").includes(normalizedQuery)
+
+      if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesModel && !matchesTrackingCode && !matchesMessage && !matchesEstimateNumber && !matchesInsurance) return false
     }
     return true
   })
@@ -945,7 +950,10 @@ export default function AdminDashboard() {
         const matchesMake = normalizeString(record.vehicle_make).includes(normalizedQuery)
         const matchesModel = normalizeString(record.vehicle_model).includes(normalizedQuery)
 
-        if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel) {
+        const matchesInsurance = normalizeString(record.insurance || "").includes(normalizedQuery)
+        const matchesEstimateNumber = normalizeString(record.estimate_number || "").includes(normalizedQuery)
+
+        if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel && !matchesInsurance && !matchesEstimateNumber) {
           return false
         }
       }
@@ -1106,7 +1114,7 @@ export default function AdminDashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, email, phone, plate, brand, or tracking code..."
+                  placeholder="Search by name, email, phone, plate, brand, tracking code, insurance, or estimate #..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 pr-10 w-full"
@@ -1853,7 +1861,7 @@ export default function AdminDashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by tracking code, name, email, phone, plate, or vehicle..."
+                  placeholder="Search by tracking code, name, email, phone, plate, vehicle, insurance, or estimate #..."
                   value={historySearchQuery}
                   onChange={(e) => setHistorySearchQuery(e.target.value)}
                   className="pl-10 pr-10 w-full"
