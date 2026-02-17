@@ -50,7 +50,7 @@ export async function sendAppointmentEmail({
     const displayStatus = status || 'Pending';
 
     if (type === 'completed') {
-        subject = 'Your Vehicle Service is Completed ✅';
+        subject = 'Your Vehicle Service is Completed';
         htmlContent = `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; line-height: 1.6;">
                 <div style="background-color: #1a1a1a; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
@@ -61,7 +61,7 @@ export async function sendAppointmentEmail({
                 <div style="padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; background-color: #ffffff;">
                     <p style="font-size: 16px;">Hello <strong>${name}</strong>,</p>
                     
-                    <p style="font-size: 16px;">Your vehicle service with <strong>Autoworx Repairs and Gen. Merchandise</strong> is now <strong>Completed ✅</strong>. Thank you for choosing our service!</p>
+                    <p style="font-size: 16px;">Your vehicle service with <strong>Autoworx Repairs and Gen. Merchandise</strong> is now <strong>Completed</strong>. Thank you for choosing our service!</p>
                     
                     <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 25px 0;">
                         <h3 style="margin-top: 0; color: #1a1a1a; border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 16px;">Appointment Details</h3>
@@ -81,7 +81,7 @@ export async function sendAppointmentEmail({
                             </tr>
                             <tr>
                                 <td style="padding: 6px 0; color: #666;">Status:</td>
-                                <td style="padding: 6px 0; color: #2e7d32; font-weight: bold;">Completed ✅</td>
+                                <td style="padding: 6px 0; color: #2e7d32; font-weight: bold;">Completed</td>
                             </tr>
                         </table>
                     </div>

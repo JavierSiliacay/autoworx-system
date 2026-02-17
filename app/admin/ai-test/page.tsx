@@ -72,7 +72,7 @@ export default function AITestPage() {
 
             {error && (
                 <div className="p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-center font-medium animate-in fade-in slide-in-from-top-2 duration-300">
-                    ❌ {error}
+                    {error}
                     {error.includes("No data found") && (
                         <p className="text-sm mt-1 opacity-80">Make sure you have archived some appointments in February 2026 first!</p>
                     )}

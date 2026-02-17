@@ -24,6 +24,7 @@ export const SERVICE_CATEGORIES = [
 export const REPAIR_STATUS_OPTIONS = [
   { value: "pending_inspection", label: "Pending Inspection" },
   { value: "under_diagnosis", label: "Under Diagnosis" },
+  { value: "waiting_for_client_approval", label: "Waiting for Client Approval" },
   { value: "waiting_for_insurance", label: "Waiting for Insurance Approval" },
   { value: "insurance_approved", label: "Approved by Insurance" },
   { value: "repair_in_progress", label: "Repair in Progress" },

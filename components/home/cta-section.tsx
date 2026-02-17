@@ -1,6 +1,9 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowRight, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { playORCRReminder } from "@/lib/notifications"
 
 export function CTASection() {
   return (
@@ -20,7 +23,7 @@ export function CTASection() {
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" variant="secondary" asChild className="w-full sm:w-auto text-base">
+              <Button size="lg" variant="secondary" asChild onClick={playORCRReminder} className="w-full sm:w-auto text-base">
                 <Link href="/contact">
                   Book Appointment
                   <ArrowRight className="ml-2 h-5 w-5" />

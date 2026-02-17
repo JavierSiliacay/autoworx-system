@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Phone, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
+import { playORCRReminder } from "@/lib/notifications"
 
 export function HeroSection() {
   return (
@@ -39,7 +40,7 @@ export function HeroSection() {
 
           {/* CTA buttons with entrance animation */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up [animation-delay:400ms]">
-            <Button size="lg" asChild className="w-full sm:w-auto text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 shadow-lg transition-all duration-300 hover:scale-105">
+            <Button size="lg" asChild onClick={playORCRReminder} className="w-full sm:w-auto text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/20 shadow-lg transition-all duration-300 hover:scale-105">
               <Link href="/contact">
                 Book Appointment
                 <ArrowRight className="ml-2 h-5 w-5" />

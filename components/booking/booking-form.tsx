@@ -544,7 +544,7 @@ export function BookingForm() {
                       </SelectItem>
                     ))}
                     <SelectItem value="custom">
-                      ✏️ Enter custom make
+                      Enter custom make
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -874,10 +874,10 @@ export function BookingForm() {
                       {!errors.orcrImage && (
                         <div className="mt-2 space-y-1">
                           <p className="text-[10px] text-muted-foreground">
-                            📸 Tip: Place document on a flat surface with good lighting
+                            Tip: Place document on a flat surface with good lighting
                           </p>
                           <p className="text-[10px] text-muted-foreground">
-                            🔍 Tip: Ensure all text and the plate number are clearly readable
+                            Tip: Ensure all text and the plate number are clearly readable
                           </p>
                           <p className="text-[10px] text-primary italic">
                             Required for appointment processing

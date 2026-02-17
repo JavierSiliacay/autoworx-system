@@ -201,6 +201,7 @@ function getRepairStatusLabel(status?: RepairStatus): string {
   const statusMap: Record<string, string> = {
     pending_inspection: "Pending Inspection",
     under_diagnosis: "Under Diagnosis",
+    waiting_for_client_approval: "Waiting for Client Approval",
     waiting_for_insurance: "Waiting for Insurance Approval",
     insurance_approved: "Approved by Insurance",
     repair_in_progress: "Repair in Progress",
@@ -225,9 +226,9 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
 
   const laborCategories = ["Painting", "Detailing", "Service", "Labor", "Glassworks", "Alignment", "Tinsmith"]
-  const hasCosting = !!appointment.costing && (appointment.costing.items || []).length > 0
-  const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
-  const laborTotal = appointment.costing?.items.filter(item =>
+  const hasCosting = !!appointment.costing
+  const partsTotal = (appointment.costing?.items || []).filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
+  const laborTotal = (appointment.costing?.items || []).filter(item =>
     item.type === 'labor' ||
     item.type === 'service' ||
     (item.category && laborCategories.includes(item.category))
@@ -507,8 +508,8 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <div class="signatures-totals-container">
         ${isAdmin && hasCosting ? `
         <div class="totals-summary">
-          ${partsTotal > 0 ? `<div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
-          ${laborTotal > 0 ? `<div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          <div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+          <div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
           <div class="totals-summary-row" style="border-top: 1px dashed #ddd; margin-top: 4px; padding-top: 4px; font-weight: 600;">
             <span>Subtotal</span><span>₱${(appointment.costing?.subtotal || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
           </div>

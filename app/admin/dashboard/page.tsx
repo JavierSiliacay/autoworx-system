@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
 import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/hooks/use-toast"
+import { useToast, toast } from "@/hooks/use-toast"
+import { ToastAction } from "@/components/ui/toast"
 import {
   Wrench,
   LogOut,
@@ -350,10 +351,15 @@ export default function AdminDashboard() {
             audio.play().catch(e => console.log("Audio notification blocked by browser settings", e))
 
             // Toast Notification
-            toast({
-              title: "New Booking Received! 🚗",
+            const { dismiss } = toast({
+              title: "New Booking Received!",
               description: `${newApt.name} just booked a ${newApt.service} service.`,
               className: "bg-primary text-primary-foreground border-none",
+              action: (
+                <ToastAction altText="Dismiss" className="border-white/20 hover:bg-white/10 text-white" onClick={() => dismiss()}>
+                  OK
+                </ToastAction>
+              ),
             })
 
             setAppointments((prev) => [newApt, ...prev])
@@ -582,17 +588,27 @@ export default function AdminDashboard() {
         )
         setIsEditModalOpen(false)
         setEditingAppointment(null)
-        toast({
+        const { dismiss } = toast({
           title: "Appointment Updated",
           description: "Customer details have been successfully updated.",
+          action: (
+            <ToastAction altText="Dismiss" onClick={() => dismiss()}>
+              OK
+            </ToastAction>
+          ),
         })
       }
     } catch (error) {
       console.error("Error saving appointment:", error)
-      toast({
+      const { dismiss } = toast({
         title: "Update Failed",
         description: "There was an error saving the changes.",
         variant: "destructive",
+        action: (
+          <ToastAction altText="Dismiss" onClick={() => dismiss()}>
+            OK
+          </ToastAction>
+        ),
       })
     }
   }
@@ -695,15 +711,25 @@ export default function AdminDashboard() {
       // 6. Trigger Browser Download
       pdf.save(`${filename}.pdf`)
 
-      toast({
-        title: "PDF Ready! 📄",
+      const { dismiss } = toast({
+        title: "PDF Ready!",
         description: "Your browser will now prompt you to save the file.",
+        action: (
+          <ToastAction altText="Dismiss" onClick={() => dismiss()}>
+            OK
+          </ToastAction>
+        ),
       })
     } catch (error: any) {
-      toast({
+      const { dismiss } = toast({
         title: "Generation Failed",
         description: error.message,
         variant: "destructive",
+        action: (
+          <ToastAction altText="Dismiss" onClick={() => dismiss()}>
+            OK
+          </ToastAction>
+        ),
       })
     } finally {
       setSavingIds(prev => {
@@ -1716,7 +1742,7 @@ export default function AdminDashboard() {
                                         </SelectItem>
                                       ))}
                                       <SelectItem value="custom">
-                                        ✏️ Enter custom part
+                                        Enter custom part
                                       </SelectItem>
                                     </SelectContent>
                                   </Select>
@@ -2525,9 +2551,14 @@ export default function AdminDashboard() {
                     setNewAnnouncement("")
                     setIsAnnouncementModalOpen(false)
                     loadAnnouncements()
-                    toast({
-                      title: "Announcement Posted! 📣",
+                    const { dismiss } = toast({
+                      title: "Announcement Posted!",
                       description: "Your message is now live for all admins.",
+                      action: (
+                        <ToastAction altText="Dismiss" onClick={() => dismiss()}>
+                          OK
+                        </ToastAction>
+                      ),
                     })
                   }
                 } catch (error) {

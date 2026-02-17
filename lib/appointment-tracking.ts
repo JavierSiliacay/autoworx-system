@@ -61,6 +61,14 @@ export function getRepairStatusInfo(status: RepairStatus | undefined) {
       borderColor: "border-orange-500/30",
       step: 2,
     },
+    waiting_for_client_approval: {
+      label: "Waiting for Client Approval",
+      description: "We are waiting for your approval to proceed with the repairs",
+      color: "text-indigo-500",
+      bgColor: "bg-indigo-500/10",
+      borderColor: "border-indigo-500/30",
+      step: 2,
+    },
     waiting_for_insurance: {
       label: "Waiting for Insurance Approval",
       description: "We are waiting for your insurance provider to approve the repair quote",

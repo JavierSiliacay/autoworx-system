@@ -416,22 +416,14 @@ function BusinessReportView({ report }: { report: string }) {
     }
 
     const sections = writtenPart.split(/### (.*?)\n/).filter(Boolean)
-    const parsedSections: { title: string; content: string; icon: any }[] = []
-
-    const iconMap: Record<string, string> = {
-        "FINANCIAL PERFORMANCE": "📊",
-        "SERVICE ANALYSIS": "🛠️",
-        "OPERATIONAL TRENDS": "📈",
-        "STRATEGIC INSIGHTS": "💡"
-    }
+    const parsedSections: { title: string; content: string }[] = []
 
     for (let i = 0; i < sections.length; i += 2) {
         if (sections[i] && sections[i + 1]) {
             const title = sections[i].trim();
             parsedSections.push({
                 title: title,
-                content: sections[i + 1].trim(),
-                icon: iconMap[title] || "📋"
+                content: sections[i + 1].trim()
             })
         }
     }
@@ -469,7 +461,6 @@ function BusinessReportView({ report }: { report: string }) {
                     <div key={idx} className="space-y-6">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-3">
-                                <span className="text-xl">{section.icon}</span>
                                 <h3 className="text-lg font-bold text-foreground uppercase tracking-tight">
                                     {section.title}
                                 </h3>

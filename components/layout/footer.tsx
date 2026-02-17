@@ -1,5 +1,8 @@
+"use client"
+
 import Link from "next/link"
 import { Phone, Mail, MapPin, Clock, Wrench } from "lucide-react"
+import { playORCRReminder } from "@/lib/notifications"
 
 const services = [
   "Engine & Transmission",
@@ -63,6 +66,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     href={link.href}
+                    onClick={() => link.href === "/contact" && playORCRReminder()}
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     {link.name}

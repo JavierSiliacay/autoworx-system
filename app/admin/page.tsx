@@ -3,16 +3,16 @@
 import React from "react"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { signIn, useSession } from "next-auth/react" // ✅ Using NextAuth
+import { signIn, useSession } from "next-auth/react" // Using NextAuth
 import { Wrench, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const { data: session, status } = useSession() // ✅ Check if user is authenticated
+  const { data: session, status } = useSession() // Check if user is authenticated
 
   useEffect(() => {
-    // ✅ If authenticated with Google, redirect to dashboard
+    // If authenticated with Google, redirect to dashboard
     if (status === "authenticated") {
       router.push("/admin/dashboard")
     }
@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
 
   const handleGoogleSignIn = async () => {
     try {
-      // ✅ Use Google OAuth to sign in
+      // Use Google OAuth to sign in
       await signIn("google", {
         callbackUrl: "/admin/dashboard",
         redirect: true,
@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
     }
   }
 
-  // ✅ Show loading while checking authentication
+  // Show loading while checking authentication
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
     )
   }
 
-  // ✅ Don't show login if already authenticated
+  // Don't show login if already authenticated
   if (status === "authenticated") {
     return null
   }
@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
-        {/* ✅ Same logo section */}
+        {/* Same logo section */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4">
             <Wrench className="w-8 h-8 text-primary-foreground" />
@@ -58,7 +58,7 @@ export default function AdminLoginPage() {
           <p className="text-sm text-muted-foreground mt-1">Autoworx Repairs</p>
         </div>
 
-        {/* ✅ Google OAuth button instead of form */}
+        {/* Google OAuth button instead of form */}
         <div className="p-6 bg-card rounded-xl border border-border">
           <div className="space-y-4">
             <div className="text-center mb-6">
@@ -68,7 +68,7 @@ export default function AdminLoginPage() {
               </p>
             </div>
 
-            {/* ✅ Google Sign-In Button */}
+            {/* Google Sign-In Button */}
             <Button
               onClick={handleGoogleSignIn}
               className="w-full"
@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
           </div>
         </div>
 
-        {/* ✅ Shows which emails are authorized */}
+        {/* Shows which emails are authorized */}
         <div className="mt-4 p-4 bg-secondary rounded-lg text-center">
           <p className="text-xs text-muted-foreground">
             Only the following email addresses are authorized:
@@ -103,7 +103,7 @@ export default function AdminLoginPage() {
             <li className="text-xs font-mono text-foreground">
               autoworxcagayan2025@gmail.com
             </li>
-              <li className="text-xs font-mono text-foreground">
+            <li className="text-xs font-mono text-foreground">
               paulsuazo64@gmail.com
             </li>
             <li className="text-xs font-mono text-foreground">

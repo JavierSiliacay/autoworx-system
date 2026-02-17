@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Menu, X, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { playORCRReminder } from "@/lib/notifications"
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -35,8 +36,33 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const handleNavClick = (href: string) => {
+  useEffect(() => {
+    // Lock body scroll when mobile menu is open
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [mobileMenuOpen])
 
+  useEffect(() => {
+    // Close mobile menu on desktop resize
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileMenuOpen(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const handleNavClick = (href: string) => {
+    if (href === "/contact") {
+      playORCRReminder()
+    }
     setClickedLink(href)
     setTimeout(() => setClickedLink(null), 500)
   }
@@ -90,7 +116,7 @@ export function Header() {
             <Phone className="w-4 h-4" />
             <span>0936-354-9603</span>
           </a>
-          <Button asChild className="hover:scale-105 transition-transform duration-300 shadow-md hover:shadow-primary/20">
+          <Button asChild onClick={playORCRReminder} className="hover:scale-105 transition-transform duration-300 shadow-md hover:shadow-primary/20">
             <Link href="/contact">Book Appointment</Link>
           </Button>
         </div>
@@ -112,15 +138,23 @@ export function Header() {
         </div>
       </nav>
 
+      {/* Mobile menu backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 lg:hidden z-[-1] animate-in fade-in duration-300"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-border bg-background animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="space-y-1 px-4 py-4">
+        <div className="lg:hidden border-t border-border bg-background shadow-2xl animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="space-y-1 px-4 py-6">
             {navigation.map((item, index) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`relative block py-3 text-base font-medium text-foreground hover:text-primary transition-all duration-200 overflow-hidden ${clickedLink === item.href ? "scale-95" : ""
+                className={`relative block py-3 text-lg font-medium text-foreground hover:text-primary transition-all duration-200 overflow-hidden ${clickedLink === item.href ? "scale-95 translate-x-1" : ""
                   }`}
                 style={{ animationDelay: `${index * 50}ms` }}
                 onClick={() => {
@@ -128,30 +162,33 @@ export function Header() {
                   setMobileMenuOpen(false)
                 }}
               >
-                <div className={`flex items-center justify-between transition-all duration-200 ${clickedLink === item.href ? "translate-x-2 text-primary" : ""
+                <div className={`flex items-center justify-between transition-all duration-200 ${clickedLink === item.href ? "text-primary" : ""
                   }`}>
-                  <span className="flex items-center gap-2">
-                    <span className={`inline-block w-0 h-0.5 bg-primary transition-all duration-300 ${clickedLink === item.href ? "w-4" : ""
+                  <span className="flex items-center gap-3">
+                    <span className={`inline-block w-1.5 h-1.5 rounded-full bg-primary transition-all duration-300 ${clickedLink === item.href ? "scale-100 opacity-100" : "scale-0 opacity-0"
                       }`} />
                     {item.name}
                   </span>
                   {item.name === "Track" && pendingCount > 0 && (
-                    <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-primary rounded-full animate-pulse ml-2">
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-primary rounded-full ml-2">
                       {pendingCount}
                     </span>
                   )}
                 </div>
               </Link>
             ))}
-            <div className="pt-4 border-t border-border mt-4">
+            <div className="pt-6 border-t border-border mt-4">
               <a
                 href="tel:0936-354-9603"
-                className="flex items-center gap-2 py-3 text-base font-medium text-muted-foreground"
+                className="flex items-center gap-3 py-4 text-base font-medium text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
               >
-                <Phone className="w-5 h-5" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary">
+                  <Phone className="w-5 h-5" />
+                </div>
                 <span>0936-354-9603</span>
               </a>
-              <Button asChild className="w-full mt-2">
+              <Button asChild onClick={() => { playORCRReminder(); setMobileMenuOpen(false); }} className="w-full mt-4 h-12 text-base shadow-lg shadow-primary/20">
                 <Link href="/contact">Book Appointment</Link>
               </Button>
             </div>
