@@ -183,6 +183,11 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
           <li>Autoworx is only given for at least <strong style="color: red;">15 days</strong> free of charge for storage fees if the unit is already done for repair or the unit is stored for quotation purposes only. ( Rates range in P250-500 per day)</li>
           <li>Outside parts supply have corkage of 25% from autoworx price</li>
         </ol>
+        <div class="conforme-section" style="margin-top: 15px;">
+          Conforme: <span class="conforme-line"></span>
+          <div style="margin-top: 20px; border-top: 1.5px solid #333; width: 240px;"></div>
+          <div style="margin-top: 5px; font-size: 11px; font-weight: bold;">We also accept all other brands</div>
+        </div>
       </div>
       
       <div class="contact-info">
@@ -475,7 +480,11 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
           <li>Autoworx is only given for at least <strong style="color: red;">15 days</strong> free of charge for storage fees if the unit is already done for repair or the unit is stored for quotation purposes only. ( Rates range in P250-500 per day)</li>
           <li>Outside parts supply have corkage of 25% from autoworx price</li>
         </ol>
-        <div class="conforme-section">Conforme: <span class="conforme-line"></span></div>
+        <div class="conforme-section" style="margin-top: 15px;">
+          Conforme: <span class="conforme-line"></span>
+          <div style="margin-top: 20px; border-top: 1.5px solid #333; width: 240px;"></div>
+          <div style="margin-top: 5px; font-size: 11px; font-weight: bold;">We also accept all other brands</div>
+        </div>
       </div>
 
       <div class="signatures-totals-container">
