@@ -547,16 +547,18 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
           </div>
           
           <p style="font-size: 10px; font-weight: bold; margin-top: 15px; margin-bottom: 5px;">Noted by:</p>
-          <div class="noted-by-section" style="display: flex; gap: 40px; justify-content: space-between;">
-            <div style="flex: 1; min-width: 150px;">
-              <span class="signature-name" style="margin-top: 28px;">Paul D. Suazo</span>
-              <p class="signature-title">Service Manager</p>
-            </div>
-            <div style="flex: 1; min-width: 150px; text-align: right;">
-              <span class="signature-name" style="margin-top: 28px;">Alfred N. Agbong</span>
-              <p class="signature-title">Gen. & Op. Manager</p>
-            </div>
-          </div>
+          <table style="width: 100%; border-collapse: collapse; border: none;">
+            <tr>
+              <td style="width: 50%; border: none; padding: 0;">
+                <span class="signature-name" style="margin-top: 25px;">Paul D. Suazo</span>
+                <p class="signature-title">Service Manager</p>
+              </td>
+              <td style="width: 50%; border: none; padding: 0; text-align: right;">
+                <span class="signature-name" style="margin-top: 25px;">Alfred N. Agbong</span>
+                <p class="signature-title">Gen. & Op. Manager</p>
+              </td>
+            </tr>
+          </table>
         </div>
       </div>
     </div>
