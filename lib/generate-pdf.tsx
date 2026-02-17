@@ -225,11 +225,12 @@ function getAppointmentStatusLabel(status: string): string {
   return statusMap[status] || status
 }
 
-export async function generateTrackingPDF(appointment: TrackingAppointment, role: 'admin' | 'user' = 'user'): Promise<string> {
+export async function generateTrackingPDF(appointment: TrackingAppointment, role: 'admin' | 'user' = 'user', reportTitle?: string): Promise<string> {
   const isAdmin = role === 'admin'
   const repairStatus = getRepairStatusLabel(appointment.repairStatus)
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
+  const displayTitle = reportTitle || `Status Report - ${appointment.trackingCode}`
 
   const laborCategories = ["Painting", "Detailing", "Service", "Labor", "Glassworks", "Alignment", "Tinsmith"]
   const hasCosting = !!appointment.costing
@@ -268,7 +269,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Status Report - ${appointment.trackingCode}</title>
+  <title>${displayTitle}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 

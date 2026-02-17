@@ -654,62 +654,20 @@ export default function AdminDashboard() {
 
       const filename = parts.join(" ")
 
-      const htmlContent = await generateTrackingPDF({ ...appointment, estimateNumber: currentEstimateNumber }, 'admin')
+      const htmlContent = await generateTrackingPDF(
+        { ...appointment, estimateNumber: currentEstimateNumber },
+        'admin',
+        filename
+      )
 
-      // 1. Create a hidden iframe to isolate the rendering
-      const iframe = document.createElement('iframe')
-      iframe.style.position = 'absolute'
-      iframe.style.left = '-9999px'
-      iframe.style.top = '0'
-      iframe.style.width = '210mm'
-      iframe.style.height = '1000mm'
-      iframe.style.border = 'none'
-      document.body.appendChild(iframe)
-
-      const doc = iframe.contentWindow?.document || iframe.contentDocument
-      if (!doc) throw new Error("Could not create PDF document context")
-
-      doc.open()
-      doc.write(htmlContent)
-      doc.close()
-
-      // 2. Wait for images to load inside the iframe
-      const images = Array.from(doc.getElementsByTagName('img'))
-      await Promise.all(images.map(img => {
-        if (img.complete) return Promise.resolve()
-        return new Promise(resolve => {
-          img.onload = resolve
-          img.onerror = resolve
-        })
-      }))
-
-      // 3. Convert to Canvas using the iframe body
-      const canvas = await html2canvas(doc.body, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      })
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95)
-
-      // 4. Create PDF
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4'
-      })
-
-      const imgProps = pdf.getImageProperties(imgData)
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
-
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
-      // 5. Cleanup
-      document.body.removeChild(iframe)
-
-      // 6. Trigger Browser Download
-      pdf.save(`${filename}.pdf`)
+      const printWindow = window.open("", "_blank")
+      if (printWindow) {
+        printWindow.document.write(htmlContent)
+        printWindow.document.close()
+        printWindow.onload = () => {
+          printWindow.print()
+        }
+      }
 
       const { dismiss } = toast({
         title: "PDF Ready!",
