@@ -225,8 +225,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
 
   const hasCosting = isAdmin && appointment.costing && appointment.costing.items.length > 0
-  const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
-  const serviceTotal = appointment.costing?.items.filter(item => item.type === 'service').reduce((sum, item) => sum + item.total, 0) || 0
+  const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts' || item.type === 'service').reduce((sum, item) => sum + item.total, 0) || 0
   const laborTotal = appointment.costing?.items.filter(item => item.type === 'labor').reduce((sum, item) => sum + item.total, 0) || 0
   const otherTotal = appointment.costing?.items.filter(item => item.type === 'custom').reduce((sum, item) => sum + item.total, 0) || 0
 
@@ -504,8 +503,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <div class="signatures-totals-container">
         ${hasCosting ? `
         <div class="totals-summary">
-          ${partsTotal > 0 || (serviceTotal === 0 && laborTotal === 0 && otherTotal === 0) ? `<div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
-          ${serviceTotal > 0 ? `<div class="totals-summary-row"><span>Total Service</span><span>₱${serviceTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          ${partsTotal > 0 || (laborTotal === 0 && otherTotal === 0) ? `<div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
           ${laborTotal > 0 ? `<div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
           ${otherTotal > 0 ? `<div class="totals-summary-row"><span>Other Total</span><span>₱${otherTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
           <div class="totals-summary-row" style="border-top: 1px dashed #ddd; margin-top: 4px; padding-top: 4px; font-weight: 600;">
