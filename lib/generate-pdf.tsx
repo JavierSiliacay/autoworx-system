@@ -62,7 +62,6 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     .container { 
       width: 100%; 
       margin: 0 auto; 
-      min-height: 10in;
       display: flex;
       flex-direction: column;
     }
@@ -227,7 +226,8 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
 
   const hasCosting = isAdmin && appointment.costing && appointment.costing.items.length > 0
   const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
-  const laborTotal = appointment.costing?.items.filter(item => item.type === 'service' || item.type === 'labor').reduce((sum, item) => sum + item.total, 0) || 0
+  const serviceTotal = appointment.costing?.items.filter(item => item.type === 'service').reduce((sum, item) => sum + item.total, 0) || 0
+  const laborTotal = appointment.costing?.items.filter(item => item.type === 'labor').reduce((sum, item) => sum + item.total, 0) || 0
   const otherTotal = appointment.costing?.items.filter(item => item.type === 'custom').reduce((sum, item) => sum + item.total, 0) || 0
 
   // Dynamic Categorization logic
@@ -277,7 +277,6 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     .container { 
       width: 100%; 
       margin: 0 auto; 
-      min-height: 10.2in;
       display: flex;
       flex-direction: column;
     }
@@ -291,46 +290,46 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
     .header .email { color: #000; font-size: 10px; }
     
-    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: -5px; margin-bottom: 5px; border: 1px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; }
+    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: -5px; margin-bottom: 4px; border: 1px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; }
     
-    .estimate-meta { text-align: right; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; margin-bottom: 12px; line-height: 1.4; color: #000; }
+    .estimate-meta { text-align: right; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; margin-bottom: 8px; line-height: 1.4; color: #000; }
     
-    .status-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
-    .status-box { border: 1.5px solid #ddd; padding: 8px; text-align: center; border-radius: 4px; }
+    .status-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+    .status-box { border: 1.5px solid #ddd; padding: 4px; text-align: center; border-radius: 4px; }
     .status-box.repair { border-color: #28a745 !important; background: #f4faf6 !important; -webkit-print-color-adjust: exact; }
     .status-box.appointment { border-color: #ffc107 !important; background: #fffcf0 !important; -webkit-print-color-adjust: exact; }
     
-    .section-title { background: #f4f4f4 !important; font-weight: bold; border: 1px solid #ddd !important; padding: 4px 8px; font-size: 11px; margin-top: 2px; -webkit-print-color-adjust: exact; }
-    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
-    .info-table td { border: 1px solid #ddd !important; padding: 4px 6px; vertical-align: middle; word-wrap: break-word; font-size: 10px; }
+    .section-title { background: #f4f4f4 !important; font-weight: bold; border: 1px solid #ddd !important; padding: 3px 8px; font-size: 11px; margin-top: 1px; -webkit-print-color-adjust: exact; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; table-layout: fixed; }
+    .info-table td { border: 1px solid #ddd !important; padding: 3px 6px; vertical-align: middle; word-wrap: break-word; font-size: 10px; }
     .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc !important; -webkit-print-color-adjust: exact; }
     .info-table td.value-cell { width: 28%; }
     
-    .costing-section { margin-top: 5px; }
-    .costing-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; page-break-inside: auto; }
+    .costing-section { margin-top: 4px; }
+    .costing-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; page-break-inside: auto; }
     .costing-table tr { page-break-inside: avoid; page-break-after: auto; }
-    .costing-table th, .costing-table td { border: 1px solid #000; padding: 4px 8px; text-align: left; font-size: 10px; }
+    .costing-table th, .costing-table td { border: 1px solid #000; padding: 3px 8px; text-align: left; font-size: 10px; }
     .costing-table th { background: #d9e1f2 !important; font-weight: bold; border: 1px solid #000 !important; -webkit-print-color-adjust: exact; }
     .amount { text-align: right; }
     
-    .delivery-date { color: red; font-weight: bold; margin: 8px 0; font-size: 12px; }
+    .delivery-date { color: red; font-weight: bold; margin: 6px 0; font-size: 12px; }
     
-    .footer-layout { display: flex; justify-content: space-between; gap: 15px; padding-top: 8px; border-top: 1px solid #eee; page-break-inside: avoid; }
+    .footer-layout { display: flex; justify-content: space-between; gap: 15px; padding-top: 6px; border-top: 1px solid #eee; margin-top: 10px; page-break-inside: avoid; }
     .terms-box { border: 1.5px solid #999; padding: 8px; font-size: 8px; line-height: 1.25; flex: 1.5; }
     .terms-box ol { padding-left: 14px; }
     .terms-box li { margin-bottom: 3px; }
     
-    .signatures-totals-container { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-    .totals-summary { width: 100%; font-size: 11px; border: 1.5px solid #000; padding: 6px; border-radius: 0; background: #fff; }
-    .totals-summary-row { display: flex; justify-content: space-between; padding: 2px 0; }
-    .totals-summary-row.bold { font-weight: bold; border-top: 1px solid #000; margin-top: 4px; padding-top: 4px; font-size: 13px; }
+    .signatures-totals-container { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .totals-summary { width: 100%; font-size: 10.5px; border: 1.5px solid #000; padding: 4px; border-radius: 0; background: #fff; }
+    .totals-summary-row { display: flex; justify-content: space-between; padding: 1px 0; }
+    .totals-summary-row.bold { font-weight: bold; border-top: 1px solid #000; margin-top: 2px; padding-top: 2px; font-size: 12px; }
     
-    .signatures-section { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .signatures-section { display: grid; grid-template-columns: 1fr; gap: 8px; }
     .signature-group { text-align: left; position: relative; }
-    .signature-name { font-weight: bold; text-decoration: underline; font-size: 11px; margin-top: 22px !important; display: block; }
-    .signature-title { font-size: 9px; color: #666; font-weight: 600; }
+    .signature-name { font-weight: bold; text-decoration: underline; font-size: 10.5px; margin-top: 18px !important; display: block; }
+    .signature-title { font-size: 8.5px; color: #666; font-weight: 600; }
     .noted-by-section { display: flex; gap: 20px; }
-    .conforme-section { margin-top: 10px; font-weight: bold; font-size: 10px; }
+    .conforme-section { margin-top: 6px; font-weight: bold; font-size: 10px; }
     .conforme-line { border-bottom: 1.5px solid #333; display: inline-block; width: 180px; height: 14px; }
     .signature-img { width: 70px; height: auto; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); z-index: 10; pointer-events: none; }
   </style>
@@ -357,7 +356,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <div>ESTIMATE #: ${appointment.estimateNumber || "PENDING"}</div>
     </div>
     ` : `
-    <div style="height: 15px;"></div>
+    <div style="height: 4px;"></div>
     `}
 
     <div class="section-title">Customer & Vehicle Information</div>
@@ -505,8 +504,9 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <div class="signatures-totals-container">
         ${hasCosting ? `
         <div class="totals-summary">
-          <div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
-          <div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+          ${partsTotal > 0 || (serviceTotal === 0 && laborTotal === 0 && otherTotal === 0) ? `<div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          ${serviceTotal > 0 ? `<div class="totals-summary-row"><span>Total Service</span><span>₱${serviceTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          ${laborTotal > 0 ? `<div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
           ${otherTotal > 0 ? `<div class="totals-summary-row"><span>Other Total</span><span>₱${otherTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
           <div class="totals-summary-row" style="border-top: 1px dashed #ddd; margin-top: 4px; padding-top: 4px; font-weight: 600;">
             <span>Subtotal</span><span>₱${appointment.costing!.subtotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>

@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signOut, useSession } from "next-auth/react"
@@ -27,6 +29,7 @@ import {
   Search,
   X,
   Plus,
+  Save,
   DollarSign,
   Receipt,
   ImageIcon,
@@ -245,6 +248,10 @@ export default function AdminDashboard() {
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
+  // Refs for stabilizing typing and real-time updates
+  const costingDebounceRef = useRef<Record<string, any>>({})
+  const lastStateUpdateRef = useRef<Record<string, number>>({})
+
   const loadAppointments = useCallback(async () => {
     try {
       const response = await fetch("/api/appointments")
@@ -315,9 +322,15 @@ export default function AdminDashboard() {
           }
           else if (payload.eventType === 'UPDATE') {
             const updatedApt = dbToFrontend(payload.new as AppointmentDB)
-            setAppointments((prev) =>
-              prev.map(apt => apt.id === updatedApt.id ? updatedApt : apt)
-            )
+            setAppointments((prev) => {
+              const now = Date.now()
+              // Guard: If we recently updated this specific appointment locally, 
+              // ignore the server's update for a few seconds to prevent cursor jumps and state flickering.
+              if (lastStateUpdateRef.current[updatedApt.id] && now - lastStateUpdateRef.current[updatedApt.id] < 3000) {
+                return prev
+              }
+              return prev.map(apt => apt.id === updatedApt.id ? updatedApt : apt)
+            })
           }
           else if (payload.eventType === 'DELETE') {
             const deletedId = (payload.old as { id: string }).id
@@ -454,26 +467,44 @@ export default function AdminDashboard() {
     }
   }
 
-  const updateCosting = async (id: string, costing: CostingData) => {
+  const updateCosting = (id: string, costing: CostingData, immediate = false) => {
+    // Track that we are manually updating this record
+    lastStateUpdateRef.current[id] = Date.now()
+
     const updatedCosting = {
       ...costing,
       updatedAt: new Date().toISOString(),
     }
-    const updated = appointments.map((apt) =>
-      apt.id === id
-        ? {
-          ...apt,
-          costing: updatedCosting,
-        }
-        : apt
-    )
-    setAppointments(updated)
 
-    await fetch("/api/appointments", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, costing: updatedCosting }),
-    })
+    // 1. Update local state immediately for snappy UI
+    setAppointments((prev) =>
+      prev.map((apt) => (apt.id === id ? { ...apt, costing: updatedCosting } : apt))
+    )
+
+    // 2. Synchronize with backend (Immediate or Debounced)
+    const syncWithBackend = async () => {
+      try {
+        await fetch("/api/appointments", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, costing: updatedCosting }),
+        })
+      } catch (error) {
+        console.error("Failed to sync costing to backend:", error)
+      }
+    }
+
+    // Clear existing timer if any
+    if (costingDebounceRef.current[id]) {
+      clearTimeout(costingDebounceRef.current[id])
+    }
+
+    if (immediate) {
+      syncWithBackend()
+    } else {
+      // Debounce the network request by 1 second to allow smooth typing
+      costingDebounceRef.current[id] = setTimeout(syncWithBackend, 1000)
+    }
   }
 
   const handleEditAppointment = (appointment: Appointment) => {
@@ -523,6 +554,122 @@ export default function AdminDashboard() {
       toast({
         title: "Update Failed",
         description: "There was an error saving the changes.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSaveFile = async (appointment: Appointment) => {
+    try {
+      let currentEstimateNumber = appointment.estimateNumber
+
+      // Generate estimate number if it doesn't exist
+      if (!currentEstimateNumber) {
+        const response = await fetch("/api/appointments/generate-estimate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ appointmentId: appointment.id }),
+        })
+        if (response.ok) {
+          const data = await response.json()
+          currentEstimateNumber = data.estimateNumber
+          setAppointments(prev => prev.map(apt =>
+            apt.id === appointment.id ? { ...apt, estimateNumber: currentEstimateNumber } : apt
+          ))
+        }
+      }
+
+      // Format: (ESTIMATE #) (PLATE NUMBER) (UNIT/MODEL) (INSURANCE) (NAME/CLIENT)
+      // Omit N/A fields
+      const unitModel = `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim()
+
+      const parts = [
+        currentEstimateNumber,
+        appointment.vehiclePlate,
+        unitModel,
+        appointment.insurance,
+        appointment.name
+      ].filter(part => {
+        if (!part) return false;
+        const s = part.toString().trim();
+        return s !== "" && s.toUpperCase() !== "N/A";
+      });
+
+      const filename = parts.join(" ")
+
+      const htmlContent = await generateTrackingPDF({ ...appointment, estimateNumber: currentEstimateNumber }, 'admin')
+
+      // 1. Create a hidden container to render the HTML
+      const container = document.createElement('div')
+      container.style.position = 'absolute'
+      container.style.left = '-9999px'
+      container.style.top = '0'
+      container.style.width = '210mm' // A4 width
+      container.style.backgroundColor = 'white'
+      container.innerHTML = htmlContent
+      document.body.appendChild(container)
+
+      // 2. Wait for images to load (logo, qr code)
+      const images = container.getElementsByTagName('img')
+      await Promise.all(Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve()
+        return new Promise(resolve => {
+          img.onload = resolve
+          img.onerror = resolve
+        })
+      }))
+
+      // 3. Convert to Canvas
+      const canvas = await html2canvas(container, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      })
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95)
+
+      // 4. Create PDF
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+      })
+
+      const imgProps = pdf.getImageProperties(imgData)
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
+      const pdfBase64 = pdf.output('datauristring')
+
+      // 5. Cleanup
+      document.body.removeChild(container)
+
+      // 6. Send to server
+      const response = await fetch("/api/admin/save-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename,
+          htmlContent: pdfBase64,
+          isPdfData: true
+        }),
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        toast({
+          title: "File Saved! 📂",
+          description: `Saved to: \\\\ADMIN\\autoworx repair estimate...`,
+        })
+      } else {
+        throw new Error(data.error || "Failed to save file. Ensure the network path is accessible.")
+      }
+    } catch (error: any) {
+      toast({
+        title: "Save Failed",
+        description: error.message,
         variant: "destructive",
       })
     }
@@ -593,7 +740,7 @@ export default function AdminDashboard() {
       items: [...currentCosting.items, newItem],
     }
 
-    updateCosting(appointmentId, newCosting)
+    updateCosting(appointmentId, newCosting, true)
   }
 
   const calculateTotal = (subtotal: number, discount: number, discountType: "fixed" | "percentage", vatEnabled: boolean) => {
@@ -601,19 +748,23 @@ export default function AdminDashboard() {
       ? (subtotal * discount) / 100
       : discount
     const afterDiscount = Math.max(0, subtotal - discountAmount)
-    const vatAmount = vatEnabled ? afterDiscount * 0.12 : 0
-    const total = afterDiscount + vatAmount
-    return { discountAmount, vatAmount, total }
+    const vatAmount = vatEnabled ? Math.round(afterDiscount * 0.12 * 100) / 100 : 0
+    const total = Math.round((afterDiscount + vatAmount) * 100) / 100
+    return {
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      vatAmount,
+      total
+    }
   }
 
-  const updateCostItem = (appointmentId: string, itemId: string, updates: Partial<CostItem>) => {
+  const updateCostItem = (appointmentId: string, itemId: string, updates: Partial<CostItem>, immediate = false) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
     if (!appointment?.costing) return
 
     const updatedItems = appointment.costing.items.map((item) => {
       if (item.id === itemId) {
         const updatedItem = { ...item, ...updates }
-        updatedItem.total = updatedItem.quantity * updatedItem.unitPrice
+        updatedItem.total = Math.round(updatedItem.quantity * updatedItem.unitPrice * 100) / 100
         return updatedItem
       }
       return item
@@ -633,7 +784,7 @@ export default function AdminDashboard() {
       subtotal,
       vatAmount,
       total,
-    })
+    }, immediate)
   }
 
   const removeCostItem = (appointmentId: string, itemId: string) => {
@@ -655,10 +806,10 @@ export default function AdminDashboard() {
       subtotal,
       vatAmount,
       total,
-    })
+    }, true)
   }
 
-  const updateDiscount = (appointmentId: string, discount: number, discountType: "fixed" | "percentage") => {
+  const updateDiscount = (appointmentId: string, discount: number, discountType: "fixed" | "percentage", immediate = false) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
     if (!appointment?.costing) return
 
@@ -675,7 +826,7 @@ export default function AdminDashboard() {
       discountType,
       vatAmount,
       total,
-    })
+    }, immediate)
   }
 
   const toggleVat = (appointmentId: string, vatEnabled: boolean) => {
@@ -694,7 +845,7 @@ export default function AdminDashboard() {
       vatEnabled,
       vatAmount,
       total,
-    })
+    }, true)
   }
 
   const updateCostingNotes = (appointmentId: string, notes: string) => {
@@ -704,7 +855,7 @@ export default function AdminDashboard() {
     updateCosting(appointmentId, {
       ...appointment.costing,
       notes,
-    })
+    }, false)
   }
 
   const toggleCardExpanded = (id: string) => {
@@ -1039,7 +1190,18 @@ export default function AdminDashboard() {
                           <div className="flex-1 space-y-3">
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <h3 className="font-semibold text-foreground">{appointment.name}</h3>
+                                <div className="flex items-center gap-3">
+                                  <h3 className="font-semibold text-foreground">{appointment.name}</h3>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSaveFile(appointment)}
+                                    className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5"
+                                  >
+                                    <Save className="w-3 h-3 text-primary" />
+                                    Save File
+                                  </Button>
+                                </div>
                                 <div className="flex items-center gap-2 mt-1">
                                   <p className="text-xs text-muted-foreground">
                                     Tracking: <span className="font-mono text-primary">{appointment.trackingCode}</span>
@@ -1497,7 +1659,7 @@ export default function AdminDashboard() {
                                             <label className="text-xs text-muted-foreground mb-1 block">Category</label>
                                             <Select
                                               value={item.category || "Others"}
-                                              onValueChange={(value) => updateCostItem(appointment.id, item.id, { category: value })}
+                                              onValueChange={(value) => updateCostItem(appointment.id, item.id, { category: value }, true)}
                                             >
                                               <SelectTrigger
                                                 className="h-8 text-[11px] px-2"
@@ -1607,7 +1769,7 @@ export default function AdminDashboard() {
                                       />
                                       <Select
                                         value={appointment.costing?.discountType || "fixed"}
-                                        onValueChange={(value) => updateDiscount(appointment.id, appointment.costing?.discount || 0, value as "fixed" | "percentage")}
+                                        onValueChange={(value) => updateDiscount(appointment.id, appointment.costing?.discount || 0, value as "fixed" | "percentage", true)}
                                       >
                                         <SelectTrigger className="w-24 h-8">
                                           <SelectValue />
