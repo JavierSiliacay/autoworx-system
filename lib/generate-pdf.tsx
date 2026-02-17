@@ -225,8 +225,8 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
 
   const hasCosting = isAdmin && appointment.costing && appointment.costing.items.length > 0
-  const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts' || item.type === 'service').reduce((sum, item) => sum + item.total, 0) || 0
-  const laborTotal = appointment.costing?.items.filter(item => item.type === 'labor').reduce((sum, item) => sum + item.total, 0) || 0
+  const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
+  const laborTotal = appointment.costing?.items.filter(item => item.type === 'service' || item.type === 'labor').reduce((sum, item) => sum + item.total, 0) || 0
   const otherTotal = appointment.costing?.items.filter(item => item.type === 'custom').reduce((sum, item) => sum + item.total, 0) || 0
 
   // Dynamic Categorization logic
