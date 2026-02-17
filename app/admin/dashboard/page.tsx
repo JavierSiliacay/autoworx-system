@@ -615,10 +615,10 @@ export default function AdminDashboard() {
 
   const handleSaveFile = async (appointment: Appointment) => {
     if (savingIds.has(appointment.id)) return;
-    setSavingIds(prev => new Set(prev).add(appointment.id))
+    setSavingIds(prev => new Set(prev).add(appointment.id));
 
     try {
-      let currentEstimateNumber = appointment.estimateNumber
+      let currentEstimateNumber = appointment.estimateNumber;
 
       // Generate estimate number if it doesn't exist
       if (!currentEstimateNumber) {
@@ -626,20 +626,17 @@ export default function AdminDashboard() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ appointmentId: appointment.id }),
-        })
+        });
         if (response.ok) {
-          const data = await response.json()
-          currentEstimateNumber = data.estimateNumber
+          const data = await response.json();
+          currentEstimateNumber = data.estimateNumber;
           setAppointments(prev => prev.map(apt =>
             apt.id === appointment.id ? { ...apt, estimateNumber: currentEstimateNumber } : apt
-          ))
+          ));
         }
       }
 
-      // Format: (ESTIMATE #) (PLATE NUMBER) (UNIT/MODEL) (INSURANCE) (NAME/CLIENT)
-      // Omit N/A fields
-      const unitModel = `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim()
-
+      const unitModel = `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim();
       const parts = [
         currentEstimateNumber,
         appointment.vehiclePlate,
@@ -652,86 +649,134 @@ export default function AdminDashboard() {
         return s !== "" && s.toUpperCase() !== "N/A";
       });
 
-      const filename = parts.join(" ")
+      const filename = parts.join(" ");
 
       const htmlContent = await generateTrackingPDF(
         { ...appointment, estimateNumber: currentEstimateNumber },
         'admin',
         filename
-      )
+      );
 
-      const printWindow = window.open("", "_blank")
-      if (printWindow) {
-        printWindow.document.write(htmlContent)
-        printWindow.document.close()
-        printWindow.onload = () => {
-          printWindow.print()
-        }
-      }
+      // 1. Create a hidden iframe to isolate the rendering
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.left = '0';
+      iframe.style.top = '0';
+      iframe.style.width = '210mm';
+      iframe.style.height = '297mm';
+      iframe.style.visibility = 'hidden';
+      iframe.style.zIndex = '-9999';
+      document.body.appendChild(iframe);
 
-      const { dismiss } = toast({
-        title: "PDF Ready!",
-        description: "Your browser will now prompt you to save the file.",
-        action: (
-          <ToastAction altText="Dismiss" onClick={() => dismiss()}>
-            OK
-          </ToastAction>
-        ),
-      })
+      const doc = iframe.contentWindow?.document || iframe.contentDocument;
+      if (!doc) throw new Error("Could not create PDF document context");
+
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+
+      // 2. Wait for images
+      const images = Array.from(doc.getElementsByTagName('img'));
+      await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      }));
+
+      await new Promise(r => setTimeout(r, 300));
+
+      // 3. High-quality Canvas
+      const canvas = await html2canvas(doc.body, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 794,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+      // 4. Create PDF
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+
+      document.body.removeChild(iframe);
+      pdf.save(`${filename}.pdf`);
+
+      toast({
+        title: "PDF Saved",
+        description: `Successfully downloaded ${filename}.pdf`,
+      });
     } catch (error: any) {
-      const { dismiss } = toast({
-        title: "Generation Failed",
+      console.error("PDF Export Error:", error);
+      toast({
+        title: "Export Failed",
         description: error.message,
         variant: "destructive",
-        action: (
-          <ToastAction altText="Dismiss" onClick={() => dismiss()}>
-            OK
-          </ToastAction>
-        ),
-      })
+      });
     } finally {
       setSavingIds(prev => {
-        const next = new Set(prev)
-        next.delete(appointment.id)
-        return next
-      })
+        const next = new Set(prev);
+        next.delete(appointment.id);
+        return next;
+      });
     }
-  }
+  };
 
   const handleDownloadFullReport = async (appointment: Appointment) => {
-    let currentEstimateNumber = appointment.estimateNumber
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast({
+        title: "Popup Blocked",
+        description: "Please allow popups to view the report.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Generate estimate number if it doesn't exist
+    printWindow.document.write("<html><body><p style='font-family: sans-serif; text-align: center; margin-top: 50px;'>Generating report...</p></body></html>");
+
+    let currentEstimateNumber = appointment.estimateNumber;
     if (!currentEstimateNumber) {
       try {
         const response = await fetch("/api/appointments/generate-estimate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ appointmentId: appointment.id }),
-        })
+        });
         if (response.ok) {
-          const data = await response.json()
-          currentEstimateNumber = data.estimateNumber
-          // Update the local state so it shows up in the UI without refresh
+          const data = await response.json();
+          currentEstimateNumber = data.estimateNumber;
           setAppointments(prev => prev.map(apt =>
             apt.id === appointment.id ? { ...apt, estimateNumber: currentEstimateNumber } : apt
-          ))
+          ));
         }
-      } catch (error) {
-        console.error("Error generating estimate number:", error)
+      } catch (e) {
+        console.error(e);
       }
     }
 
-    const htmlContent = await generateTrackingPDF({ ...appointment, estimateNumber: currentEstimateNumber }, 'admin')
-    const printWindow = window.open("", "_blank")
-    if (printWindow) {
-      printWindow.document.write(htmlContent)
-      printWindow.document.close()
-      printWindow.onload = () => {
-        printWindow.print()
-      }
-    }
-  }
+    const htmlContent = await generateTrackingPDF({ ...appointment, estimateNumber: currentEstimateNumber }, 'admin');
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 500);
+  };
 
   const addCostItem = (appointmentId: string, type: CostItemType, category?: string) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)

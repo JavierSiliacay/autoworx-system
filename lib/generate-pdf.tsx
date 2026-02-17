@@ -301,7 +301,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
     .header .email { color: #000; font-size: 10px; }
     
-    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: Arial, sans-serif; font-weight: 900; font-size: 22px; padding: 6px 15px; margin-top: -2px; margin-bottom: 8px; border: 1.5px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; line-height: 1; }
+    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: Arial, sans-serif; font-weight: 900; font-size: 21px; padding: 10px 15px; margin-top: -2px; margin-bottom: 12px; border: 1.5px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; line-height: 1.2; text-align: left; }
     
     .estimate-meta { text-align: right; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; margin-bottom: 8px; line-height: 1.4; color: #000; }
     
