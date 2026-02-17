@@ -100,6 +100,29 @@ export async function POST(request: Request) {
       )
     }
 
+    // Generate estimate number (Monthly Sequence: YYYYMM-####)
+    const now = new Date()
+    const yearMonth = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`
+    const prefix = `${yearMonth}-`
+
+    const { data: latestEstimates } = await supabase
+      .from("appointments")
+      .select("estimate_number")
+      .like("estimate_number", `${prefix}%`)
+      .order("estimate_number", { ascending: false })
+      .limit(1)
+
+    let nextSequence = 1
+    if (latestEstimates && latestEstimates.length > 0 && latestEstimates[0].estimate_number) {
+      const lastNum = latestEstimates[0].estimate_number
+      const parts = lastNum.split('-')
+      if (parts.length === 2) {
+        nextSequence = parseInt(parts[1]) + 1
+      }
+    }
+
+    const estimateNumber = `${prefix}${nextSequence.toString().padStart(4, '0')}`
+
     const { data, error } = await supabase
       .from("appointments")
       .insert({
@@ -120,6 +143,7 @@ export async function POST(request: Request) {
         damage_images: body.damageImages || [],
         orcr_image: body.orcrImage || null,
         insurance: body.insurance || null,
+        estimate_number: estimateNumber,
         status: "pending",
       })
       .select()
@@ -148,7 +172,8 @@ export async function POST(request: Request) {
         status: 'Pending',
         chassisNumber: data.chassis_number,
         engineNumber: data.engine_number,
-        assigneeDriver: data.assignee_driver
+        assigneeDriver: data.assignee_driver,
+        estimateNumber: data.estimate_number
       });
       console.log(`Confirmation email sent to ${data.email}`);
     } catch (emailError) {
