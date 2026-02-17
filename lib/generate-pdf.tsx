@@ -230,7 +230,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const repairStatus = getRepairStatusLabel(appointment.repairStatus)
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
-  const displayTitle = reportTitle || `Status Report - ${appointment.trackingCode}`
+  const displayTitle = reportTitle || (isAdmin ? "Repair Estimate" : "Repair Status Report")
 
   const laborCategories = ["Painting", "Detailing", "Service", "Labor", "Glassworks", "Alignment", "Tinsmith"]
   const hasCosting = !!appointment.costing
@@ -364,7 +364,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     ${isAdmin ? `
     <div class="estimate-meta">
       <div>DATE: ${new Date().toLocaleDateString("en-PH", { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
-      <div>ESTIMATE #: ${appointment.estimateNumber || "PENDING"}</div>
+      <div>ESTIMATE NUMBER: ${appointment.estimateNumber || "PENDING"}</div>
     </div>
     ` : `
     <div style="height: 4px;"></div>
@@ -373,37 +373,37 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     <div class="section-title">Customer & Vehicle Information</div>
     <table class="info-table">
       <tr>
-        <td class="label-cell">NAME/CLIENT:</td>
+        <td class="label-cell">CLIENT NAME:</td>
         <td class="value-cell">${appointment.name}</td>
         <td class="label-cell">ASSIGNEE/DRIVER:</td>
         <td class="value-cell">${appointment.assigneeDriver || "N/A"}</td>
       </tr>
       <tr>
-        <td class="label-cell">UNIT/MODEL:</td>
+        <td class="label-cell">VEHICLE UNIT:</td>
         <td class="value-cell">${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}</td>
-        <td class="label-cell">CONTACT #:</td>
+        <td class="label-cell">CONTACT NUMBER:</td>
         <td class="value-cell">${appointment.phone}</td>
       </tr>
       <tr>
-        <td class="label-cell">PLATE #:</td>
+        <td class="label-cell">PLATE NUMBER:</td>
         <td class="value-cell"><strong>${appointment.vehiclePlate}</strong></td>
-        <td class="label-cell">EMAIL ADD:</td>
+        <td class="label-cell">EMAIL ADDRESS:</td>
         <td class="value-cell">${appointment.email}</td>
       </tr>
       <tr>
-        <td class="label-cell">COLOR:</td>
+        <td class="label-cell">VEHICLE COLOR:</td>
         <td class="value-cell">${appointment.vehicleColor || "N/A"}</td>
-        <td class="label-cell">TRACKING CODE:</td>
+        <td class="label-cell">TRACKING NO:</td>
         <td class="value-cell" style="font-family: monospace; font-weight: bold;">${appointment.trackingCode}</td>
       </tr>
       <tr>
         <td class="label-cell">INSURANCE:</td>
         <td class="value-cell">${appointment.insurance || "N/A"}</td>
-        <td class="label-cell">SERVICE:</td>
+        <td class="label-cell">SERVICE TYPE:</td>
         <td class="value-cell">${appointment.service}</td>
       </tr>
       <tr>
-        <td class="label-cell">CHASSIS:</td>
+        <td class="label-cell">CHASSIS NO:</td>
         <td class="value-cell">${appointment.chassisNumber || "N/A"}</td>
         <td class="label-cell" rowspan="2" style="text-align: center; font-size: 9px; vertical-align: middle; text-transform: uppercase;">SCAN TO TRACK:</td>
         <td class="value-cell" rowspan="2" style="text-align: center; padding: 10px;">
@@ -412,7 +412,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         </td>
       </tr>
       <tr>
-        <td class="label-cell">ENGINE:</td>
+        <td class="label-cell">ENGINE NO:</td>
         <td class="value-cell">${appointment.engineNumber || "N/A"}</td>
       </tr>
     </table>
