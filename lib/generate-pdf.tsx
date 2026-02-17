@@ -49,7 +49,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     body { 
       font-family: Arial, sans-serif; 
       font-size: 10px; 
-      line-height: 1.15; 
+      line-height: 1.35; 
       color: #333; 
       background: white; 
       -webkit-print-color-adjust: exact;
@@ -75,16 +75,16 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
     .header .email { color: #000; font-size: 10px; }
     
-    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: 0; margin-bottom: 10px; border: 1px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; }
+    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: Arial, sans-serif; font-weight: 900; font-size: 22px; padding: 6px 15px; margin-top: 0; margin-bottom: 12px; border: 1.5px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; line-height: 1; }
     
     .tracking-box { border: 2px solid #1a5f9c; background: #f0f7ff; border-radius: 4px; padding: 10px; margin-bottom: 12px; text-align: center; }
     .tracking-code { font-family: 'Courier New', monospace; font-size: 20px; font-weight: bold; color: #1a5f9c; letter-spacing: 2px; }
     
     .section-title { background: #f4f4f4 !important; color: #000 !important; font-size: 11px; font-weight: bold; border: 1px solid #ddd !important; padding: 4px 8px; margin-bottom: 0; -webkit-print-color-adjust: exact; }
     .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; table-layout: fixed; }
-    .info-table td { border: 1px solid #ddd !important; padding: 6px; vertical-align: middle; font-size: 10px; }
+    .info-table td { border: 1px solid #ddd !important; padding: 6px 8px; vertical-align: middle; font-size: 10px; }
     .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc !important; -webkit-print-color-adjust: exact; }
-    .info-table td.value-cell { width: 28%; }
+    .info-table td.value-cell { width: 28%; font-weight: 500; }
     
     .qr-section { text-align: center; margin: 15px 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     
@@ -274,7 +274,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     body { 
       font-family: Arial, sans-serif; 
       font-size: ${shouldScale ? (totalRows > 20 ? '8.5px' : '9px') : '10px'}; 
-      line-height: 1.15; 
+      line-height: 1.3; 
       color: #333; 
       background: white; 
       -webkit-print-color-adjust: exact;
@@ -300,7 +300,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
     .header .email { color: #000; font-size: 10px; }
     
-    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: -5px; margin-bottom: 4px; border: 1px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; }
+    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: Arial, sans-serif; font-weight: 900; font-size: 22px; padding: 6px 15px; margin-top: -2px; margin-bottom: 8px; border: 1.5px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; line-height: 1; }
     
     .estimate-meta { text-align: right; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; margin-bottom: 8px; line-height: 1.4; color: #000; }
     
@@ -309,20 +309,20 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     .status-box.repair { border-color: #28a745 !important; background: #f4faf6 !important; -webkit-print-color-adjust: exact; }
     .status-box.appointment { border-color: #ffc107 !important; background: #fffcf0 !important; -webkit-print-color-adjust: exact; }
     
-    .section-title { background: #f4f4f4 !important; font-weight: bold; border: 1px solid #ddd !important; padding: 3px 8px; font-size: 11px; margin-top: 1px; -webkit-print-color-adjust: exact; }
-    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; table-layout: fixed; }
-    .info-table td { border: 1px solid #ddd !important; padding: 3px 6px; vertical-align: middle; word-wrap: break-word; font-size: 10px; }
+    .section-title { background: #f4f4f4 !important; font-weight: bold; border: 1px solid #ddd !important; padding: 4px 10px; font-size: 11px; margin-top: 4px; -webkit-print-color-adjust: exact; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; table-layout: fixed; }
+    .info-table td { border: 1px solid #ddd !important; padding: 5px 8px; vertical-align: middle; word-wrap: break-word; font-size: 10px; }
     .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc !important; -webkit-print-color-adjust: exact; }
-    .info-table td.value-cell { width: 28%; }
+    .info-table td.value-cell { width: 28%; font-weight: 500; }
     
-    .costing-section { margin-top: 4px; }
-    .costing-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; page-break-inside: auto; }
+    .costing-section { margin-top: 8px; margin-bottom: 12px; }
+    .costing-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; page-break-inside: auto; }
     .costing-table tr { page-break-inside: avoid; page-break-after: auto; }
-    .costing-table th, .costing-table td { border: 1px solid #000; padding: 3px 8px; text-align: left; font-size: 10px; }
+    .costing-table th, .costing-table td { border: 1px solid #000; padding: 5px 8px; text-align: left; font-size: 10px; }
     .costing-table th { background: #d9e1f2 !important; font-weight: bold; border: 1px solid #000 !important; -webkit-print-color-adjust: exact; }
-    .amount { text-align: right; }
+    .amount { text-align: right; font-family: monospace; font-size: 10.5px; }
     
-    .delivery-date { color: red; font-weight: bold; margin: 6px 0; font-size: 12px; }
+    .delivery-date { color: red; font-weight: bold; margin: 12px 0 8px 0; font-size: 13px; }
     
     .footer-layout { display: flex; justify-content: space-between; gap: 15px; padding-top: 6px; border-top: 1px solid #eee; margin-top: 10px; page-break-inside: avoid; }
     .terms-box { border: 1.5px solid #999; padding: 8px; font-size: 8px; line-height: 1.25; flex: 1.5; }
@@ -330,9 +330,9 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     .terms-box li { margin-bottom: 3px; }
     
     .signatures-totals-container { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-    .totals-summary { width: 100%; font-size: 10.5px; border: 1.5px solid #000; padding: 4px; border-radius: 0; background: #fff; }
-    .totals-summary-row { display: flex; justify-content: space-between; padding: 1px 0; }
-    .totals-summary-row.bold { font-weight: bold; border-top: 1px solid #000; margin-top: 2px; padding-top: 2px; font-size: 12px; }
+    .totals-summary { width: 100%; font-size: 10.5px; border: 1.5px solid #000; padding: 8px; border-radius: 0; background: #fff; line-height: 1.4; }
+    .totals-summary-row { display: flex; justify-content: space-between; padding: 2px 0; }
+    .totals-summary-row.bold { font-weight: bold; border-top: 1.5px solid #000; margin-top: 4px; padding-top: 4px; font-size: 13px; }
     
     .signatures-section { display: grid; grid-template-columns: 1fr; gap: 8px; }
     .signature-group { text-align: left; position: relative; }
@@ -404,10 +404,10 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <tr>
         <td class="label-cell">CHASSIS:</td>
         <td class="value-cell">${appointment.chassisNumber || "N/A"}</td>
-        <td class="label-cell" rowspan="2" style="text-align: center; font-size: 8px; vertical-align: middle; text-transform: uppercase;">SCAN TO TRACK:</td>
-        <td class="value-cell" rowspan="2" style="text-align: center; padding: 5px;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/track?code=${appointment.trackingCode}`)}" style="width: 65px; height: 65px;" />
-          <p style="font-size: 7px; margin-top: 4px; color: #666;">Scan to track the unit status</p>
+        <td class="label-cell" rowspan="2" style="text-align: center; font-size: 9px; vertical-align: middle; text-transform: uppercase;">SCAN TO TRACK:</td>
+        <td class="value-cell" rowspan="2" style="text-align: center; padding: 10px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/track?code=${appointment.trackingCode}`)}" style="width: 75px; height: 75px; display: inline-block;" />
+          <p style="font-size: 8px; margin-top: 6px; color: #666; font-weight: bold;">Scan to track status</p>
         </td>
       </tr>
       <tr>
@@ -540,19 +540,19 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
 
         <div class="signatures-section">
           <div class="signature-group">
-            <p style="font-size: 9px; font-weight: bold;">Prepared by:</p>
+            <p style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">Prepared by:</p>
             <span class="signature-name">Ryan Christopher D. Quintos</span>
             <p class="signature-title">Service Advisor</p>
           </div>
           
-          <p style="font-size: 9px; font-weight: bold; margin-top: 4px;">Noted by:</p>
+          <p style="font-size: 10px; font-weight: bold; margin-top: 15px; margin-bottom: 5px;">Noted by:</p>
           <div class="noted-by-section">
             <div style="flex: 1; position: relative;">
-              <span class="signature-name" style="margin-top: 22px;">Paul D. Suazo</span>
+              <span class="signature-name" style="margin-top: 25px;">Paul D. Suazo</span>
               <p class="signature-title">Service Manager</p>
             </div>
             <div style="flex: 1; text-align: center; position: relative;">
-              <span class="signature-name" style="margin-top: 22px;">Alfred N. Agbong</span>
+              <span class="signature-name" style="margin-top: 25px;">Alfred N. Agbong</span>
               <p class="signature-title">Gen. & Op. Manager</p>
             </div>
           </div>
