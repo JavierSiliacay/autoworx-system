@@ -503,8 +503,8 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <div class="signatures-totals-container">
         ${hasCosting ? `
         <div class="totals-summary">
-          ${partsTotal > 0 || (laborTotal === 0 && serviceAndOtherTotal === 0) ? `<div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
-          ${laborTotal > 0 ? `<div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+          <div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+          <div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
           ${serviceAndOtherTotal > 0 ? `<div class="totals-summary-row"><span>Other Total</span><span>₱${serviceAndOtherTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
           <div class="totals-summary-row" style="border-top: 1px dashed #ddd; margin-top: 4px; padding-top: 4px; font-weight: 600;">
             <span>Subtotal</span><span>₱${appointment.costing!.subtotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
