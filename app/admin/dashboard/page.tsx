@@ -599,19 +599,26 @@ export default function AdminDashboard() {
 
       const htmlContent = await generateTrackingPDF({ ...appointment, estimateNumber: currentEstimateNumber }, 'admin')
 
-      // 1. Create a hidden container to render the HTML
-      const container = document.createElement('div')
-      container.style.position = 'absolute'
-      container.style.left = '-9999px'
-      container.style.top = '0'
-      container.style.width = '210mm' // A4 width
-      container.style.backgroundColor = 'white'
-      container.innerHTML = htmlContent
-      document.body.appendChild(container)
+      // 1. Create a hidden iframe to isolate the rendering
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'absolute'
+      iframe.style.left = '-9999px'
+      iframe.style.top = '0'
+      iframe.style.width = '210mm'
+      iframe.style.height = '1000mm'
+      iframe.style.border = 'none'
+      document.body.appendChild(iframe)
 
-      // 2. Wait for images to load (logo, qr code)
-      const images = container.getElementsByTagName('img')
-      await Promise.all(Array.from(images).map(img => {
+      const doc = iframe.contentWindow?.document || iframe.contentDocument
+      if (!doc) throw new Error("Could not create PDF document context")
+
+      doc.open()
+      doc.write(htmlContent)
+      doc.close()
+
+      // 2. Wait for images to load inside the iframe
+      const images = Array.from(doc.getElementsByTagName('img'))
+      await Promise.all(images.map(img => {
         if (img.complete) return Promise.resolve()
         return new Promise(resolve => {
           img.onload = resolve
@@ -619,9 +626,9 @@ export default function AdminDashboard() {
         })
       }))
 
-      // 3. Convert to Canvas
-      const canvas = await html2canvas(container, {
-        scale: 2, // Higher quality
+      // 3. Convert to Canvas using the iframe body
+      const canvas = await html2canvas(doc.body, {
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
@@ -641,10 +648,8 @@ export default function AdminDashboard() {
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
 
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
-      const pdfBase64 = pdf.output('datauristring')
-
       // 5. Cleanup
-      document.body.removeChild(container)
+      document.body.removeChild(iframe)
 
       // 6. Trigger Browser Download
       pdf.save(`${filename}.pdf`)
