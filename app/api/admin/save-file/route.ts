@@ -19,7 +19,7 @@ export async function POST(request: Request) {
         }
 
         // The specified network/local directory
-        const baseDirectory = "\\\\ADMIN\\autoworx repair estimate\\REPAIR ESTIMATE 2026"
+        const baseDirectory = "\\\\ADMIN\\autoworx repair estimate\\REPAIR ESTIATE 2026"
 
         // Ensure filename is safe and has an extension if not provided
         let safeFilename = filename.replace(/[<>:"/\\|?*]/g, '_')
