@@ -163,7 +163,13 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
 
     <div class="qr-section">
       <p style="font-size: 14px; font-weight: bold; color: #2e74b5; margin-bottom: 8px;">Thank you for your appointment request!</p>
-      <p style="font-size: 10px; color: #666; max-width: 85%; line-height: 1.4;">We have received your details. Our team will review your request and contact you via phone or email for final confirmation within 24 hours.</p>
+      <p style="font-size: 11px; color: #666; max-width: 85%; line-height: 1.4; margin-bottom: 25px;">We have received your details. Our team will review your request and contact you via phone or email for final confirmation within 24 hours.</p>
+      <div style="padding: 20px; text-align: center; border: 1.5px dashed #1a5f9c; border-radius: 8px; background: #fdfdfd; max-width: 90%; -webkit-print-color-adjust: exact;">
+        <p style="font-size: 11px; font-weight: bold; color: #1a5f9c; line-height: 1.6; margin: 0;">
+          For complete cost estimation information, please reach out to Sir Ryan or Sir Paul.<br><br>
+          Thank you
+        </p>
+      </div>
     </div>
     
     <div class="footer-layout">
@@ -413,7 +419,13 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     ${appointment.status === 'pending' ? `
     <div style="text-align: center; margin: 40px 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
       <p style="font-size: 14px; font-weight: bold; color: #2e74b5; margin-bottom: 8px;">Thank you for your appointment request!</p>
-      <p style="font-size: 10px; color: #666; max-width: 85%; line-height: 1.4;">We have received your details. Our team will review your request and contact you via phone or email for final confirmation within 24 hours.</p>
+      <p style="font-size: 11px; color: #666; max-width: 85%; line-height: 1.4; margin-bottom: 25px;">We have received your details. Our team will review your request and contact you via phone or email for final confirmation within 24 hours.</p>
+      <div style="padding: 20px; text-align: center; border: 1.5px dashed #1a5f9c; border-radius: 8px; background: #fdfdfd; max-width: 90%; -webkit-print-color-adjust: exact;">
+        <p style="font-size: 11px; font-weight: bold; color: #1a5f9c; line-height: 1.6; margin: 0;">
+          For complete cost estimation information, please reach out to Sir Ryan or Sir Paul.<br><br>
+          Thank you
+        </p>
+      </div>
     </div>
     ` : `
     <div class="status-summary">
@@ -475,13 +487,14 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <strong>Notes:</strong> ${appointment.costing.notes}
     </div>
     ` : ""}
-    ` : isAdmin ? `
-    <div style="margin: 20px 0; padding: 15px; border: 1px dashed #ccc; text-align: center; background: #fafafa; border-radius: 4px;">
-      <p style="font-size: 11px; font-weight: bold; color: #1a5f9c; margin: 0;">
-        For complete cost estimation information, please reach out to Sir Ryan or Sir Paul. Thank you
+    ` : `
+    <div style="margin: 40px auto; padding: 25px; text-align: center; border: 1.5px dashed #1a5f9c; border-radius: 8px; background: #fdfdfd; max-width: 90%; -webkit-print-color-adjust: exact;">
+      <p style="font-size: 11px; font-weight: bold; color: #1a5f9c; line-height: 1.6; margin: 0;">
+        For complete cost estimation information, please reach out to Sir Ryan or Sir Paul.<br><br>
+        Thank you
       </p>
     </div>
-    ` : ""}
+    `}
 
     <div class="delivery-date">DELIVERY DATE: ________ working days</div>
     `}
