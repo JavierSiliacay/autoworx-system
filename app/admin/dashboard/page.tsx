@@ -247,6 +247,7 @@ export default function AdminDashboard() {
   // Appointment Editing states
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
 
   // Refs for stabilizing typing and real-time updates
   const costingDebounceRef = useRef<Record<string, any>>({})
@@ -560,6 +561,9 @@ export default function AdminDashboard() {
   }
 
   const handleSaveFile = async (appointment: Appointment) => {
+    if (savingIds.has(appointment.id)) return;
+    setSavingIds(prev => new Set(prev).add(appointment.id))
+
     try {
       let currentEstimateNumber = appointment.estimateNumber
 
@@ -663,6 +667,12 @@ export default function AdminDashboard() {
         title: "Generation Failed",
         description: error.message,
         variant: "destructive",
+      })
+    } finally {
+      setSavingIds(prev => {
+        const next = new Set(prev)
+        next.delete(appointment.id)
+        return next
       })
     }
   }
@@ -1187,11 +1197,16 @@ export default function AdminDashboard() {
                                   <Button
                                     variant="outline"
                                     size="sm"
+                                    disabled={savingIds.has(appointment.id)}
                                     onClick={() => handleSaveFile(appointment)}
-                                    className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5"
+                                    className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 disabled:opacity-70"
                                   >
-                                    <Save className="w-3 h-3 text-primary" />
-                                    Save File
+                                    {savingIds.has(appointment.id) ? (
+                                      <RefreshCw className="w-3 h-3 text-primary animate-spin" />
+                                    ) : (
+                                      <Save className="w-3 h-3 text-primary" />
+                                    )}
+                                    {savingIds.has(appointment.id) ? "Saving..." : "Save File"}
                                   </Button>
                                 </div>
                                 <div className="flex items-center gap-2 mt-1">
