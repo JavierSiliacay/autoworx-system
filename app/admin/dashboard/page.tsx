@@ -613,145 +613,51 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleSaveFile = async (appointment: Appointment) => {
-    if (savingIds.has(appointment.id)) return;
-    setSavingIds(prev => new Set(prev).add(appointment.id));
+  const handlePrintReport = async (appointment: Appointment) => {
+    // 1. Format professional filename for the document title
+    const currentEstimateNumber = appointment.estimateNumber || "PENDING";
+    const unitModel = `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim();
+    const parts = [
+      currentEstimateNumber,
+      appointment.vehiclePlate,
+      unitModel,
+      appointment.insurance,
+      appointment.name
+    ].filter(part => part && part.toString().trim() !== "" && part.toString().toUpperCase() !== "N/A");
 
-    try {
-      let currentEstimateNumber = appointment.estimateNumber;
+    const filename = parts.join(" ");
 
-      // Generate estimate number if it doesn't exist
-      if (!currentEstimateNumber) {
-        const response = await fetch("/api/appointments/generate-estimate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appointmentId: appointment.id }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          currentEstimateNumber = data.estimateNumber;
-          setAppointments(prev => prev.map(apt =>
-            apt.id === appointment.id ? { ...apt, estimateNumber: currentEstimateNumber } : apt
-          ));
-        }
-      }
-
-      const unitModel = `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim();
-      const parts = [
-        currentEstimateNumber,
-        appointment.vehiclePlate,
-        unitModel,
-        appointment.insurance,
-        appointment.name
-      ].filter(part => {
-        if (!part) return false;
-        const s = part.toString().trim();
-        return s !== "" && s.toUpperCase() !== "N/A";
-      });
-
-      const filename = parts.join(" ");
-
-      const htmlContent = await generateTrackingPDF(
-        { ...appointment, estimateNumber: currentEstimateNumber },
-        'admin',
-        filename
-      );
-
-      // 1. Create a hidden iframe to isolate the rendering
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.left = '0';
-      iframe.style.top = '0';
-      iframe.style.width = '210mm';
-      iframe.style.height = '297mm';
-      iframe.style.visibility = 'hidden';
-      iframe.style.zIndex = '-9999';
-      document.body.appendChild(iframe);
-
-      const doc = iframe.contentWindow?.document || iframe.contentDocument;
-      if (!doc) throw new Error("Could not create PDF document context");
-
-      doc.open();
-      doc.write(htmlContent);
-      doc.close();
-
-      // 2. Wait for images
-      const images = Array.from(doc.getElementsByTagName('img'));
-      await Promise.all(images.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise(resolve => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
-      }));
-
-      await new Promise(r => setTimeout(r, 300));
-
-      // 3. High-quality Canvas with stable width
-      const canvas = await html2canvas(doc.body, {
-        scale: 4, // Higher resolution for professional print look
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: 794,
-        height: doc.body.scrollHeight,
-        windowWidth: 794,
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-
-      // 4. Create PDF
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-
-      document.body.removeChild(iframe);
-      pdf.save(`${filename}.pdf`);
-
-      toast({
-        title: "PDF Saved",
-        description: `Successfully downloaded ${filename}.pdf`,
-      });
-    } catch (error: any) {
-      console.error("PDF Export Error:", error);
-      toast({
-        title: "Export Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setSavingIds(prev => {
-        const next = new Set(prev);
-        next.delete(appointment.id);
-        return next;
-      });
-    }
-  };
-
-  const handleDownloadFullReport = async (appointment: Appointment) => {
+    // 2. Open window IMMEDIATELY to satisfy browser security & prevent blocks
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
       toast({
         title: "Popup Blocked",
-        description: "Please allow popups to view the report.",
+        description: "Please allow popups for this site to view the high-quality report.",
         variant: "destructive",
       });
       return;
     }
 
-    printWindow.document.write("<html><body><p style='font-family: sans-serif; text-align: center; margin-top: 50px;'>Generating report...</p></body></html>");
+    // 3. Show a nice loading state in the new window
+    printWindow.document.write(`
+      <html>
+        <head><title>${filename}</title></head>
+        <body style="font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f9fafb;">
+          <div style="text-align: center; padding: 40px; border-radius: 12px; background: white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+            <div style="width: 40px; height: 40px; border: 4px solid #1a5f9c; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+            <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 18px;">Generating Report</h2>
+            <p style="color: #6b7280; margin: 0; font-size: 14px;">Please wait while we prepare your high-quality PDF...</p>
+            <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+          </div>
+        </body>
+      </html>
+    `);
 
-    let currentEstimateNumber = appointment.estimateNumber;
-    if (!currentEstimateNumber) {
-      try {
+    try {
+      let finalEstimateNumber = appointment.estimateNumber;
+
+      // 4. Generate estimate number if missing
+      if (!finalEstimateNumber) {
         const response = await fetch("/api/appointments/generate-estimate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -759,26 +665,44 @@ export default function AdminDashboard() {
         });
         if (response.ok) {
           const data = await response.json();
-          currentEstimateNumber = data.estimateNumber;
+          finalEstimateNumber = data.estimateNumber;
           setAppointments(prev => prev.map(apt =>
-            apt.id === appointment.id ? { ...apt, estimateNumber: currentEstimateNumber } : apt
+            apt.id === appointment.id ? { ...apt, estimateNumber: finalEstimateNumber } : apt
           ));
         }
-      } catch (e) {
-        console.error(e);
       }
+
+      // 5. Generate high-quality HTML content using the unified lib
+      const htmlContent = await generateTrackingPDF(
+        { ...appointment, estimateNumber: finalEstimateNumber },
+        'admin',
+        filename
+      );
+
+      // 6. Write to the new window and trigger print
+      printWindow.document.open();
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+
+      // Give images and layout 800ms to settle for peak quality
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+      }, 800);
+
+    } catch (error: any) {
+      console.error("Print Error:", error);
+      printWindow.document.body.innerHTML = `<div style="color: red; padding: 20px;">Error generating report: \${error.message}</div>`;
+      toast({
+        title: "Generation Failed",
+        description: "Could not create the high-quality report.",
+        variant: "destructive",
+      });
     }
-
-    const htmlContent = await generateTrackingPDF({ ...appointment, estimateNumber: currentEstimateNumber }, 'admin');
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-
-    setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-    }, 500);
   };
+
+  const handleSaveFile = (appointment: Appointment) => handlePrintReport(appointment);
+  const handleDownloadFullReport = (appointment: Appointment) => handlePrintReport(appointment);
 
   const addCostItem = (appointmentId: string, type: CostItemType, category?: string) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
