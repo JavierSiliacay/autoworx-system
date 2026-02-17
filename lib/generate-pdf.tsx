@@ -53,6 +53,8 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       color: #333; 
       background: white; 
       padding: 0.25in; 
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     @page { 
       size: A4; 
@@ -75,15 +77,15 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
     .header .email { color: #000; font-size: 10px; }
     
-    .estimate-bar { background: #d9e1f2; color: #000; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: 0; margin-bottom: 10px; border: 1px solid #000; text-transform: uppercase; letter-spacing: 1px; }
+    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: 0; margin-bottom: 10px; border: 1px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; }
     
     .tracking-box { border: 2px solid #1a5f9c; background: #f0f7ff; border-radius: 4px; padding: 10px; margin-bottom: 12px; text-align: center; }
     .tracking-code { font-family: 'Courier New', monospace; font-size: 20px; font-weight: bold; color: #1a5f9c; letter-spacing: 2px; }
     
-    .section-title { background: #f4f4f4; color: #000; font-size: 11px; font-weight: bold; border: 1px solid #ddd; padding: 4px 8px; margin-bottom: 0; }
+    .section-title { background: #f4f4f4 !important; color: #000 !important; font-size: 11px; font-weight: bold; border: 1px solid #ddd !important; padding: 4px 8px; margin-bottom: 0; -webkit-print-color-adjust: exact; }
     .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; table-layout: fixed; }
-    .info-table td { border: 1px solid #ddd; padding: 6px; vertical-align: middle; font-size: 10px; }
-    .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc; }
+    .info-table td { border: 1px solid #ddd !important; padding: 6px; vertical-align: middle; font-size: 10px; }
+    .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc !important; -webkit-print-color-adjust: exact; }
     .info-table td.value-cell { width: 28%; }
     
     .qr-section { text-align: center; margin: 15px 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
@@ -265,6 +267,8 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       color: #333; 
       background: white; 
       padding: ${shouldScale ? (totalRows > 20 ? '0.1in' : '0.15in') : '0.25in'}; 
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     @page { 
       size: A4; 
@@ -287,26 +291,26 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
     .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
     .header .email { color: #000; font-size: 10px; }
     
-    .estimate-bar { background: #d9e1f2; color: #000; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: -5px; margin-bottom: 10px; border: 1px solid #000; text-transform: uppercase; letter-spacing: 1px; }
+    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: -5px; margin-bottom: 10px; border: 1px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; }
     
     .tracking-code-header { font-weight: bold; text-align: right; margin-bottom: 10px; padding: 4px; font-size: 12px; color: #666; }
     
     .status-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
     .status-box { border: 1.5px solid #ddd; padding: 8px; text-align: center; border-radius: 4px; }
-    .status-box.repair { border-color: #28a745; background: #f4faf6; }
-    .status-box.appointment { border-color: #ffc107; background: #fffcf0; }
+    .status-box.repair { border-color: #28a745 !important; background: #f4faf6 !important; -webkit-print-color-adjust: exact; }
+    .status-box.appointment { border-color: #ffc107 !important; background: #fffcf0 !important; -webkit-print-color-adjust: exact; }
     
-    .section-title { background: #f4f4f4; font-weight: bold; border: 1px solid #ddd; padding: 4px 8px; font-size: 11px; margin-top: 2px; }
+    .section-title { background: #f4f4f4 !important; font-weight: bold; border: 1px solid #ddd !important; padding: 4px 8px; font-size: 11px; margin-top: 2px; -webkit-print-color-adjust: exact; }
     .info-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
-    .info-table td { border: 1px solid #ddd; padding: 4px 6px; vertical-align: middle; word-wrap: break-word; font-size: 10px; }
-    .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc; }
+    .info-table td { border: 1px solid #ddd !important; padding: 4px 6px; vertical-align: middle; word-wrap: break-word; font-size: 10px; }
+    .info-table td.label-cell { font-weight: bold; width: 22%; background: #fcfcfc !important; -webkit-print-color-adjust: exact; }
     .info-table td.value-cell { width: 28%; }
     
     .costing-section { margin-top: 5px; }
     .costing-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; page-break-inside: auto; }
     .costing-table tr { page-break-inside: avoid; page-break-after: auto; }
     .costing-table th, .costing-table td { border: 1px solid #000; padding: 4px 8px; text-align: left; font-size: 10px; }
-    .costing-table th { background: #d9e1f2; font-weight: bold; border: 1px solid #000; }
+    .costing-table th { background: #d9e1f2 !important; font-weight: bold; border: 1px solid #000 !important; -webkit-print-color-adjust: exact; }
     .amount { text-align: right; }
     
     .delivery-date { color: red; font-weight: bold; margin: 8px 0; font-size: 12px; }
