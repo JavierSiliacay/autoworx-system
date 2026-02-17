@@ -5,72 +5,85 @@ import { getToken } from "next-auth/jwt"
 import { sendAppointmentEmail } from "@/lib/email"
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
-  const { searchParams } = new URL(request.url)
-  const trackingCode = searchParams.get("trackingCode")
+  try {
+    const supabase = await createClient()
+    const { searchParams } = new URL(request.url)
+    const trackingCode = searchParams.get("trackingCode")
 
-  if (trackingCode) {
-    let { data, error } = await supabase
-      .from("appointments")
-      .select("*")
-      .eq("tracking_code", trackingCode)
-      .single()
-
-    if (error || !data) {
-      // Try searching in history
-      const { data: historyData, error: historyError } = await supabase
-        .from("appointment_history")
+    if (trackingCode) {
+      let { data, error } = await supabase
+        .from("appointments")
         .select("*")
         .eq("tracking_code", trackingCode)
         .single()
 
-      if (historyError) {
-        return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+      if (error || !data) {
+        // Try searching in history
+        const { data: historyData, error: historyError } = await supabase
+          .from("appointment_history")
+          .select("*")
+          .eq("tracking_code", trackingCode)
+          .single()
+
+        if (historyError) {
+          return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+        }
+
+        // Format history data to match appointment format
+        // Note: final_status in history maps to status in active
+        data = {
+          ...historyData,
+          status: historyData.final_status,
+          created_at: historyData.original_created_at
+        }
       }
 
-      // Format history data to match appointment format
-      // Note: final_status in history maps to status in active
-      data = {
-        ...historyData,
-        status: historyData.final_status,
-        created_at: historyData.original_created_at
+      // Check authorization for costing data
+      const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+      const isAdmin = isAuthorizedAdminEmail(token?.email)
+
+      if (!isAdmin) {
+        delete data.costing
       }
+
+      return NextResponse.json(data)
     }
 
-    return NextResponse.json(data)
-  }
+    const isCountRequest = searchParams.get("count") === "true"
 
-  const isCountRequest = searchParams.get("count") === "true"
+    if (isCountRequest) {
+      const { count, error } = await supabase
+        .from("appointments")
+        .select("*", { count: "exact", head: true })
+        .or("repair_status.eq.pending_inspection,repair_status.is.null")
 
-  if (isCountRequest) {
-    const { count, error } = await supabase
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ count: count || 0 })
+    }
+
+    // Get all appointments (admin only)
+    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+    if (!isAuthorizedAdminEmail(token?.email)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { data, error } = await supabase
       .from("appointments")
-      .select("*", { count: "exact", head: true })
-      .or("repair_status.eq.pending_inspection,repair_status.is.null")
+      .select("*")
+      .order("created_at", { ascending: false })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ count: count || 0 })
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error("Error in GET appointments:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
-
-  // Get all appointments (admin only)
-  const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
-  if (!isAuthorizedAdminEmail(token?.email)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const { data, error } = await supabase
-    .from("appointments")
-    .select("*")
-    .order("created_at", { ascending: false })
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json(data)
 }
 
 export async function POST(request: Request) {
@@ -103,7 +116,6 @@ export async function POST(request: Request) {
         engine_number: body.engineNumber || null,
         assignee_driver: body.assigneeDriver || null,
         service: body.service,
-        preferred_date: body.preferredDate,
         message: body.message,
         damage_images: body.damageImages || [],
         orcr_image: body.orcrImage || null,
@@ -131,7 +143,6 @@ export async function POST(request: Request) {
         plateNumber: data.vehicle_plate,
         color: data.vehicle_color,
         insurance: data.insurance,
-        preferredDate: data.preferred_date,
         services: data.service,
         message: data.message,
         status: 'Pending',
@@ -170,6 +181,7 @@ export async function PUT(request: Request) {
 
   if (updates.status !== undefined) dbUpdates.status = updates.status
   if (updates.repairStatus !== undefined) dbUpdates.repair_status = updates.repairStatus
+  if (updates.estimateNumber !== undefined) dbUpdates.estimate_number = updates.estimateNumber
   if (updates.currentRepairPart !== undefined) dbUpdates.current_repair_part = updates.currentRepairPart
   if (updates.statusUpdatedAt !== undefined) dbUpdates.status_updated_at = updates.statusUpdatedAt
   if (updates.costing !== undefined) dbUpdates.costing = updates.costing
@@ -189,7 +201,6 @@ export async function PUT(request: Request) {
   if (updates.engineNumber !== undefined) dbUpdates.engine_number = updates.engineNumber
   if (updates.assigneeDriver !== undefined) dbUpdates.assignee_driver = updates.assigneeDriver
   if (updates.service !== undefined) dbUpdates.service = updates.service
-  if (updates.preferredDate !== undefined) dbUpdates.preferred_date = updates.preferredDate
   if (updates.message !== undefined) dbUpdates.message = updates.message
 
   dbUpdates.updated_at = new Date().toISOString()

@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -66,6 +66,7 @@ interface AppointmentDB {
   damage_images?: string[]
   orcr_image?: string
   insurance?: string
+  estimate_number?: string
 }
 
 // Helper to convert DB response to frontend format
@@ -92,6 +93,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     damageImages: apt.damage_images,
     orcrImage: apt.orcr_image,
     insurance: apt.insurance,
+    estimateNumber: apt.estimate_number,
   }
 }
 
@@ -122,6 +124,8 @@ interface Appointment {
   orcrImage?: string
   // Insurance
   insurance?: string
+  // Estimate Number
+  estimateNumber?: string
 }
 
 import { Suspense } from "react"
@@ -142,33 +146,60 @@ function TrackingContent() {
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
   const searchParams = useSearchParams()
 
+  const mountedRef = useRef(true)
+  const abortControllerRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
+
   const performSearch = useCallback(async (code: string) => {
+    if (!mountedRef.current) return
     setError("")
     setAppointment(null)
     setIsSearching(true)
 
+    // Abort previous request if any
+    if (abortControllerRef.current) abortControllerRef.current.abort()
+    abortControllerRef.current = new AbortController()
+
     try {
-      const response = await fetch(`/api/appointments?trackingCode=${encodeURIComponent(code.toUpperCase())}`)
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      const response = await fetch(`${baseUrl}/api/appointments?trackingCode=${encodeURIComponent(code.toUpperCase())}`, {
+        signal: abortControllerRef.current.signal
+      })
       const data = await response.json()
 
-      if (data && !data.error) {
-        setAppointment(dbToFrontend(data))
-        // Check if feedback exists
-        const feedbackRes = await fetch(`/api/feedback?appointmentId=${data.id}`)
-        if (feedbackRes.ok) {
-          const feedbackData = await feedbackRes.json()
-          if (feedbackData.length > 0) {
-            setHasSubmittedFeedback(true)
+      if (mountedRef.current) {
+        if (data && !data.error) {
+          setAppointment(dbToFrontend(data))
+          // Check if feedback exists
+          const feedbackRes = await fetch(`${baseUrl}/api/feedback?appointmentId=${data.id}`, {
+            signal: abortControllerRef.current.signal
+          })
+          if (feedbackRes.ok) {
+            const feedbackData = await feedbackRes.json()
+            if (feedbackData.length > 0) {
+              setHasSubmittedFeedback(true)
+            }
           }
+        } else {
+          setError("No appointment found. Please check your tracking code.")
         }
-      } else {
-        setError("No appointment found. Please check your tracking code.")
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
       console.error("Error searching appointment:", error)
-      setError("An error occurred. Please try again.")
+      if (mountedRef.current) setError("An error occurred. Please try again.")
+    } finally {
+      if (mountedRef.current) setIsSearching(false)
     }
-    setIsSearching(false)
   }, [])
 
   // Auto-search if code is in URL
@@ -181,48 +212,59 @@ function TrackingContent() {
   }, [searchParams, appointment, isSearching, performSearch])
 
   // Load pending appointments count
-  const loadPendingCount = useCallback(async () => {
+  const loadPendingCount = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch("/api/appointments?count=true")
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      const response = await fetch(`${baseUrl}/api/appointments?count=true`, { signal })
       if (response.ok) {
         const data = await response.json()
-        setPendingCount(data.count)
+        if (mountedRef.current) setPendingCount(data.count)
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
       console.error("Error loading pending count:", error)
     }
-    setLastRefreshed(new Date())
+    if (mountedRef.current) setLastRefreshed(new Date())
   }, [])
 
   // Refresh appointment data for real-time updates
-  const refreshAppointmentData = useCallback(async () => {
+  const refreshAppointmentData = useCallback(async (signal?: AbortSignal) => {
     if (!appointment) return
 
     try {
-      const response = await fetch(`/api/appointments?trackingCode=${encodeURIComponent(trackingCode)}`)
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      const response = await fetch(`${baseUrl}/api/appointments?trackingCode=${encodeURIComponent(trackingCode)}`, { signal })
       if (response.ok) {
         const data = await response.json()
-        if (data && !data.error) {
+        if (mountedRef.current && data && !data.error) {
           setAppointment(dbToFrontend(data))
         }
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
       console.error("Error refreshing appointment:", error)
     }
-    loadPendingCount()
+    await loadPendingCount(signal)
   }, [appointment, trackingCode, loadPendingCount])
 
   // Initial load and polling setup
   useEffect(() => {
-    loadPendingCount()
+    const controller = new AbortController()
+
+    loadPendingCount(controller.signal)
 
     // Poll every 10 seconds for real-time updates
     const interval = setInterval(() => {
-      loadPendingCount()
-      refreshAppointmentData()
+      if (mountedRef.current) {
+        loadPendingCount(controller.signal)
+        refreshAppointmentData(controller.signal)
+      }
     }, 10000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      controller.abort()
+    }
   }, [loadPendingCount, refreshAppointmentData])
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -252,7 +294,7 @@ function TrackingContent() {
   const handleDownloadPDF = async () => {
     if (!appointment) return
 
-    const htmlContent = await generateTrackingPDF(appointment)
+    const htmlContent = await generateTrackingPDF(appointment, 'user')
     const printWindow = window.open("", "_blank")
     if (printWindow) {
       printWindow.document.write(htmlContent)
@@ -519,13 +561,6 @@ function TrackingContent() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <p className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Preferred Date
-                  </p>
-                  <p className="text-foreground">{formatAppointmentDate(appointment.preferredDate)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
                     <FileText className="w-4 h-4" />
                     Request Date
                   </p>
@@ -621,7 +656,8 @@ function TrackingContent() {
             </div>
 
             {/* Cost Breakdown - Only show if costing data exists */}
-            {appointment.costing && appointment.costing.items.length > 0 && (
+            {/* Cost Breakdown - Only show if costing data exists (Admin only) */}
+            {appointment.costing && appointment.costing.items.length > 0 ? (
               <div className="bg-card rounded-xl border border-border overflow-hidden">
                 <div className="p-6 border-b border-border bg-green-500/5">
                   <div className="flex items-center gap-3">
@@ -632,11 +668,7 @@ function TrackingContent() {
                       <h3 className="font-semibold text-foreground">Cost Breakdown</h3>
                       <p className="text-xs text-muted-foreground">
                         Last updated: {new Date(appointment.costing.updatedAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
+                          month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit"
                         })}
                       </p>
                     </div>
@@ -644,7 +676,6 @@ function TrackingContent() {
                 </div>
 
                 <div className="p-6 space-y-4">
-                  {/* Group items by type */}
                   {COST_ITEM_TYPES.map((type) => {
                     const items = appointment.costing?.items.filter(item => item.type === type.value) || []
                     if (items.length === 0) return null
@@ -752,29 +783,15 @@ function TrackingContent() {
                   )}
                 </div>
               </div>
-            )}
-
-            {/* Costing Contact Info - Only show if no costing data */}
-            {(!appointment.costing || appointment.costing.items.length === 0) && (
-              <div className="bg-primary/5 rounded-xl border border-primary/30 p-6">
-                <h3 className="font-semibold text-foreground mb-3">Need a Cost Estimate?</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  For costing and estimation inquiries, please contact:
-                </p>
-                <div className="flex items-center gap-4 p-4 bg-background rounded-lg border border-border">
-                  <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-full">
-                    <Phone className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">{COSTING_CONTACT.name}</p>
-                    <a
-                      href={`tel:${COSTING_CONTACT.phone.replace(/-/g, "")}`}
-                      className="text-primary hover:underline font-mono"
-                    >
-                      {COSTING_CONTACT.phone}
-                    </a>
-                  </div>
+            ) : (
+              <div className="bg-card rounded-xl border border-border p-8 text-center bg-blue-500/5">
+                <div className="flex items-center justify-center w-12 h-12 bg-blue-500/10 rounded-full mx-auto mb-4">
+                  <Receipt className="w-6 h-6 text-blue-500" />
                 </div>
+                <p className="text-sm font-semibold text-foreground max-w-sm mx-auto">
+                  For complete cost estimation information, please reach out to Sir Ryan or Sir Paul.
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">Thank you</p>
               </div>
             )}
 
@@ -809,87 +826,89 @@ function TrackingContent() {
             </div>
 
             {/* Customer Feedback Section */}
-            {appointment.status === "completed" && (
-              <div className="bg-primary/5 rounded-xl border border-primary/30 p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
-                    <Star className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Rate Our Service</h3>
-                    <p className="text-xs text-muted-foreground">Share your experience with Autoworx</p>
-                  </div>
-                </div>
-
-                {hasSubmittedFeedback ? (
-                  <div className="bg-background/50 p-4 rounded-lg border border-border text-center">
-                    <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-foreground">Thank you for your feedback!</p>
-                    <p className="text-xs text-muted-foreground mt-1">Your rating helps us improve our services.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex justify-center gap-2 py-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setFeedbackRating(star)}
-                          className={`transition-all ${feedbackRating >= star ? "text-primary scale-110" : "text-muted hover:text-primary/50"}`}
-                        >
-                          <Star className={`w-8 h-8 ${feedbackRating >= star ? "fill-current" : ""}`} />
-                        </button>
-                      ))}
+            {
+              appointment.status === "completed" && (
+                <div className="bg-primary/5 rounded-xl border border-primary/30 p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
+                      <Star className="w-5 h-5 text-primary" />
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="feedback-comment" className="text-xs">Your Comments (Optional)</Label>
-                      <Textarea
-                        id="feedback-comment"
-                        value={feedbackComment}
-                        onChange={(e) => setFeedbackComment(e.target.value)}
-                        placeholder="Tell us what you liked or how we can improve..."
-                        rows={3}
-                        className="text-sm bg-background"
-                      />
+                    <div>
+                      <h3 className="font-semibold text-foreground">Rate Our Service</h3>
+                      <p className="text-xs text-muted-foreground">Share your experience with Autoworx</p>
                     </div>
+                  </div>
 
-                    <Button
-                      onClick={async () => {
-                        setIsSubmittingFeedback(true)
-                        try {
-                          const res = await fetch("/api/feedback", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              appointmentId: appointment.id,
-                              rating: feedbackRating,
-                              comment: feedbackComment,
-                              customerName: appointment.name,
-                              service: appointment.service
+                  {hasSubmittedFeedback ? (
+                    <div className="bg-background/50 p-4 rounded-lg border border-border text-center">
+                      <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                      <p className="text-sm font-medium text-foreground">Thank you for your feedback!</p>
+                      <p className="text-xs text-muted-foreground mt-1">Your rating helps us improve our services.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex justify-center gap-2 py-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setFeedbackRating(star)}
+                            className={`transition-all ${feedbackRating >= star ? "text-primary scale-110" : "text-muted hover:text-primary/50"}`}
+                          >
+                            <Star className={`w-8 h-8 ${feedbackRating >= star ? "fill-current" : ""}`} />
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="feedback-comment" className="text-xs">Your Comments (Optional)</Label>
+                        <Textarea
+                          id="feedback-comment"
+                          value={feedbackComment}
+                          onChange={(e) => setFeedbackComment(e.target.value)}
+                          placeholder="Tell us what you liked or how we can improve..."
+                          rows={3}
+                          className="text-sm bg-background"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={async () => {
+                          setIsSubmittingFeedback(true)
+                          try {
+                            const res = await fetch("/api/feedback", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                appointmentId: appointment.id,
+                                rating: feedbackRating,
+                                comment: feedbackComment,
+                                customerName: appointment.name,
+                                service: appointment.service
+                              })
                             })
-                          })
-                          if (res.ok) {
-                            setHasSubmittedFeedback(true)
-                          } else {
-                            const err = await res.json()
-                            alert(err.error || "Failed to submit feedback")
+                            if (res.ok) {
+                              setHasSubmittedFeedback(true)
+                            } else {
+                              const err = await res.json()
+                              alert(err.error || "Failed to submit feedback")
+                            }
+                          } catch (error) {
+                            console.error("Feedback error:", error)
+                            alert("An error occurred. Please try again.")
                           }
-                        } catch (error) {
-                          console.error("Feedback error:", error)
-                          alert("An error occurred. Please try again.")
-                        }
-                        setIsSubmittingFeedback(false)
-                      }}
-                      className="w-full"
-                      disabled={isSubmittingFeedback}
-                    >
-                      {isSubmittingFeedback ? "Submitting..." : "Submit Review"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
+                          setIsSubmittingFeedback(false)
+                        }}
+                        className="w-full"
+                        disabled={isSubmittingFeedback}
+                      >
+                        {isSubmittingFeedback ? "Submitting..." : "Submit Review"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )
+            }
 
             {/* Support */}
             <div className="text-center pt-6 border-t border-border">
@@ -905,26 +924,28 @@ function TrackingContent() {
                 </Button>
               </div>
             </div>
-          </div>
+          </div >
         )}
 
-        {!appointment && !error && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              Enter your tracking code above to view your appointment or vehicle status
-            </p>
-          </div>
-        )}
-      </div>
+        {
+          !appointment && !error && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                Enter your tracking code above to view your appointment or vehicle status
+              </p>
+            </div>
+          )
+        }
+      </div >
 
       {/* Image Zoom Modal */}
-      <ImageZoomModal
+      < ImageZoomModal
         images={zoomImages}
         initialIndex={zoomInitialIndex}
         isOpen={zoomModalOpen}
         onClose={() => setZoomModalOpen(false)}
       />
-    </main>
+    </main >
   )
 }
 

@@ -24,7 +24,7 @@ const contactInfo = [
   {
     icon: MapPin,
     label: "Address",
-    value: "BACK OF CETRAMINA BUILDING, ZONE 7 SEPULVIDA DRIVE KAUSWAGAN HIGH WAY ZONE 7 SEPULVIDA DRIVE, Rodolfo N. Pelaez Blvd, Cagayan De Oro City, 9000 Misamis Oriental",
+    value: "Zone 7 Sepulvida Street, Kauswagan Highway, Cagayan de Oro City",
     href: "https://www.google.com/maps/place/Autoworx+Repair+%26+General+Merchandise+Co.+ltd./@8.4925727,124.6294772,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff34fb1b32ba5:0x6a8fdfec5942404f!8m2!3d8.4925674!4d124.6320521!16s%2Fg%2F11q_m2z00_?hl=en&entry=ttu&g_ep=EgoyMDI2MDEyOC4wIKXMDSoASAFQAw%3D%3D",
   },
   {

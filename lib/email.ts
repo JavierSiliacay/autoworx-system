@@ -11,7 +11,6 @@ interface EmailParams {
     plateNumber?: string;
     color?: string;
     insurance?: string;
-    preferredDate?: string;
     services: string;
     message?: string;
     status: string;
@@ -29,7 +28,6 @@ export async function sendAppointmentEmail({
     plateNumber,
     color,
     insurance,
-    preferredDate,
     services,
     message,
     status,
@@ -145,7 +143,6 @@ export async function sendAppointmentEmail({
                             ${plateNumber ? `<tr><td style="padding: 6px 0; color: #666;">Plate Number:</td><td style="padding: 6px 0; color: #1a1a1a;">${plateNumber}</td></tr>` : ''}
                             ${color ? `<tr><td style="padding: 6px 0; color: #666;">Color:</td><td style="padding: 6px 0; color: #1a1a1a;">${color}</td></tr>` : ''}
                             ${insurance ? `<tr><td style="padding: 6px 0; color: #666;">Insurance:</td><td style="padding: 6px 0; color: #1a1a1a;">${insurance}</td></tr>` : ''}
-                            ${preferredDate ? `<tr><td style="padding: 6px 0; color: #666;">Preferred Date:</td><td style="padding: 6px 0; color: #1a1a1a;">${preferredDate}</td></tr>` : ''}
                             <tr>
                                 <td style="padding: 6px 0; color: #666;">Services Availed:</td>
                                 <td style="padding: 6px 0; color: #1a1a1a;">${services}</td>

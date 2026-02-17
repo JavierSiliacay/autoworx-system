@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/select"
 import { VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
 import { getRepairStatusInfo } from "@/lib/appointment-tracking"
+import { generateTrackingPDF } from "@/lib/generate-pdf"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
 import {
@@ -89,6 +90,7 @@ interface AppointmentDB {
   damage_images?: string[]
   orcr_image?: string
   insurance?: string
+  estimate_number?: string
 }
 
 // Frontend interface (camelCase)
@@ -118,6 +120,7 @@ interface Appointment {
   damageImages?: string[]
   orcrImage?: string
   insurance?: string
+  estimateNumber?: string
 }
 
 // History interface
@@ -173,6 +176,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     damageImages: apt.damage_images,
     orcrImage: apt.orcr_image,
     insurance: apt.insurance,
+    estimateNumber: apt.estimate_number,
   }
 }
 
@@ -524,6 +528,41 @@ export default function AdminDashboard() {
         description: "There was an error saving the changes.",
         variant: "destructive",
       })
+    }
+  }
+
+  const handleDownloadFullReport = async (appointment: Appointment) => {
+    let currentEstimateNumber = appointment.estimateNumber
+
+    // Generate estimate number if it doesn't exist
+    if (!currentEstimateNumber) {
+      try {
+        const response = await fetch("/api/appointments/generate-estimate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ appointmentId: appointment.id }),
+        })
+        if (response.ok) {
+          const data = await response.json()
+          currentEstimateNumber = data.estimateNumber
+          // Update the local state so it shows up in the UI without refresh
+          setAppointments(prev => prev.map(apt =>
+            apt.id === appointment.id ? { ...apt, estimateNumber: currentEstimateNumber } : apt
+          ))
+        }
+      } catch (error) {
+        console.error("Error generating estimate number:", error)
+      }
+    }
+
+    const htmlContent = await generateTrackingPDF({ ...appointment, estimateNumber: currentEstimateNumber }, 'admin')
+    const printWindow = window.open("", "_blank")
+    if (printWindow) {
+      printWindow.document.write(htmlContent)
+      printWindow.document.close()
+      printWindow.onload = () => {
+        printWindow.print()
+      }
     }
   }
 
@@ -1099,12 +1138,6 @@ export default function AdminDashboard() {
                                   <span className="text-orange-500 font-medium">Working on: {appointment.currentRepairPart}</span>
                                 </div>
                               )}
-                              {appointment.preferredDate && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Calendar className="w-4 h-4" />
-                                  <span>Preferred: {appointment.preferredDate}</span>
-                                </div>
-                              )}
                               <div className="flex items-center gap-2 text-muted-foreground">
                                 <Clock className="w-4 h-4" />
                                 <span>Submitted: {formatDate(appointment.createdAt)}</span>
@@ -1288,6 +1321,15 @@ export default function AdminDashboard() {
                             >
                               <Trash2 className="w-4 h-4 mr-1" />
                               Delete
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-primary hover:text-primary/80 border-primary/30 bg-transparent"
+                              onClick={() => handleDownloadFullReport(appointment)}
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Download Full Report
                             </Button>
                           </div>
                         </div>

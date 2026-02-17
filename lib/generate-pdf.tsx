@@ -29,6 +29,7 @@ interface TrackingAppointment {
   statusUpdatedAt?: string
   costing?: CostingData
   insurance?: string
+  estimateNumber?: string
 }
 
 export async function generateConfirmationPDF(options: PDFGeneratorOptions): Promise<string> {
@@ -113,11 +114,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     
     <div class="estimate-bar" style="margin-top: -5px;">APPOINTMENT CONFIRMATION</div>
     
-    <div class="tracking-box">
-      <p style="font-size: 9px; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; color: #666;">YOUR TRACKING CODE</p>
-      <div class="tracking-code">${trackingCode}</div>
-      <p style="font-size: 9px; margin-top: 5px; color: #1a5f9c; font-weight: 600;">Use this code to track your appointment status online</p>
-    </div>
+    <div style="height: 10px;"></div>
 
     <div class="section-title">Customer & Vehicle Information</div>
     <table class="info-table">
@@ -142,8 +139,8 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       <tr>
         <td class="label-cell">COLOR:</td>
         <td class="value-cell">${appointmentData.vehicleColor || "N/A"}</td>
-        <td class="label-cell">PREFERRED DATE:</td>
-        <td class="value-cell">${appointmentData.preferredDate || "Not specified"}</td>
+        <td class="label-cell">TRACKING CODE:</td>
+        <td class="value-cell" style="font-family: monospace; font-weight: bold;">${trackingCode}</td>
       </tr>
       <tr>
         <td class="label-cell">INSURANCE:</td>
@@ -223,12 +220,13 @@ function getAppointmentStatusLabel(status: string): string {
   return statusMap[status] || status
 }
 
-export async function generateTrackingPDF(appointment: TrackingAppointment): Promise<string> {
+export async function generateTrackingPDF(appointment: TrackingAppointment, role: 'admin' | 'user' = 'user'): Promise<string> {
+  const isAdmin = role === 'admin'
   const repairStatus = getRepairStatusLabel(appointment.repairStatus)
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
 
-  const hasCosting = appointment.costing && appointment.costing.items.length > 0
+  const hasCosting = isAdmin && appointment.costing && appointment.costing.items.length > 0
   const partsTotal = appointment.costing?.items.filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
   const laborTotal = appointment.costing?.items.filter(item => item.type === 'service' || item.type === 'labor').reduce((sum, item) => sum + item.total, 0) || 0
   const otherTotal = appointment.costing?.items.filter(item => item.type === 'custom').reduce((sum, item) => sum + item.total, 0) || 0
@@ -294,9 +292,9 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
     .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
     .header .email { color: #000; font-size: 10px; }
     
-    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: -5px; margin-bottom: 10px; border: 1px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; }
+    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: "Impact", "Arial Black", sans-serif; font-size: 24px; padding: 4px 15px; margin-top: -5px; margin-bottom: 5px; border: 1px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; }
     
-    .tracking-code-header { font-weight: bold; text-align: right; margin-bottom: 10px; padding: 4px; font-size: 12px; color: #666; }
+    .estimate-meta { text-align: right; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; margin-bottom: 12px; line-height: 1.4; color: #000; }
     
     .status-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
     .status-box { border: 1.5px solid #ddd; padding: 8px; text-align: center; border-radius: 4px; }
@@ -352,9 +350,16 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       </div>
     </div>
     
-    <div class="estimate-bar">REPAIR ESTIMATE</div>
+    <div class="estimate-bar">${isAdmin ? 'REPAIR ESTIMATE' : 'REPAIR STATUS REPORT'}</div>
     
-    <div class="tracking-code-header">TRACKING CODE: ${appointment.trackingCode}</div>
+    ${isAdmin ? `
+    <div class="estimate-meta">
+      <div>DATE: ${new Date().toLocaleDateString("en-PH", { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
+      <div>ESTIMATE #: ${appointment.estimateNumber || "PENDING"}</div>
+    </div>
+    ` : `
+    <div style="height: 15px;"></div>
+    `}
 
     <div class="section-title">Customer & Vehicle Information</div>
     <table class="info-table">
@@ -379,8 +384,8 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
       <tr>
         <td class="label-cell">COLOR:</td>
         <td class="value-cell">${appointment.vehicleColor || "N/A"}</td>
-        <td class="label-cell">PREFERRED DATE:</td>
-        <td class="value-cell">${appointment.preferredDate || "Not specified"}</td>
+        <td class="label-cell">TRACKING CODE:</td>
+        <td class="value-cell" style="font-family: monospace; font-weight: bold;">${appointment.trackingCode}</td>
       </tr>
       <tr>
         <td class="label-cell">INSURANCE:</td>
@@ -463,7 +468,18 @@ export async function generateTrackingPDF(appointment: TrackingAppointment): Pro
         </tbody>
       </table>
     </div>
+    ${appointment.costing?.notes ? `
+    <div style="margin-top: 8px; padding: 6px 10px; background: #f9f9f9; border-left: 3px solid #d9e1f2; font-size: 9px; font-style: italic;">
+      <strong>Notes:</strong> ${appointment.costing.notes}
+    </div>
     ` : ""}
+    ` : `
+    <div style="margin: 20px 0; padding: 15px; border: 1px dashed #ccc; text-align: center; background: #fafafa; border-radius: 4px;">
+      <p style="font-size: 11px; font-weight: bold; color: #1a5f9c; margin: 0;">
+        For complete cost estimation information, please reach out to Sir Ryan or Sir Paul. Thank you
+      </p>
+    </div>
+    `}
 
     <div class="delivery-date">DELIVERY DATE: ________ working days</div>
     `}

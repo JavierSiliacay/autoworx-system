@@ -47,7 +47,6 @@ export interface BookingFormData {
   engineNumber: string
   assigneeDriver: string
   service: string
-  preferredDate: string
   message: string
   orcrImage?: string
   insurance?: string
@@ -73,7 +72,6 @@ export function BookingForm() {
     engineNumber: "",
     assigneeDriver: "",
     service: "",
-    preferredDate: "",
     message: "",
     insurance: "",
   })
@@ -449,7 +447,6 @@ export function BookingForm() {
                 engineNumber: "",
                 assigneeDriver: "",
                 service: "",
-                preferredDate: "",
                 message: "",
                 insurance: "",
               })
@@ -680,40 +677,6 @@ export function BookingForm() {
                 </SelectContent>
               </Select>
               {errors.service && <p className="text-xs text-red-500 font-medium">{errors.service}</p>}
-            </div>
-            <div className="space-y-2 group">
-              <Label htmlFor="preferredDate" className="group-hover:text-primary transition-colors">Preferred Date</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="preferredDate"
-                  type="date"
-                  value={formData.preferredDate}
-                  onChange={(e) => updateField("preferredDate", e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
-                  className="flex-1 group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
-                />
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="px-3 bg-transparent group-hover:border-primary/50 group-hover:bg-primary/5 transition-all" type="button">
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <CalendarComponent
-                      mode="single"
-                      selected={formData.preferredDate ? new Date(formData.preferredDate) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          const formattedDate = date.toISOString().split("T")[0]
-                          updateField("preferredDate", formattedDate)
-                        }
-                      }}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
             </div>
           </div>
           <div className="mt-4 space-y-2 group">
