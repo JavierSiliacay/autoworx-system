@@ -687,13 +687,15 @@ export default function AdminDashboard() {
 
       await new Promise(r => setTimeout(r, 300));
 
-      // 3. High-quality Canvas
+      // 3. High-quality Canvas with stable width
       const canvas = await html2canvas(doc.body, {
-        scale: 3,
+        scale: 4, // Higher resolution for professional print look
         useCORS: true,
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
+        width: 794,
+        height: doc.body.scrollHeight,
         windowWidth: 794,
       });
 

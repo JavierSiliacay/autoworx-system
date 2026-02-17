@@ -301,7 +301,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     .header .contact { color: #000; font-size: 10px; margin-bottom: 2px; }
     .header .email { color: #000; font-size: 10px; }
     
-    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: Arial, sans-serif; font-weight: 900; font-size: 21px; padding: 10px 15px; margin-top: -2px; margin-bottom: 12px; border: 1.5px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; line-height: 1.2; text-align: left; }
+    .estimate-bar { background: #d9e1f2 !important; color: #000 !important; font-family: Arial, sans-serif; font-weight: 900; font-size: 20px; padding: 10px 15px; margin-top: -2px; margin-bottom: 15px; border: 1.5px solid #000 !important; text-transform: uppercase; letter-spacing: 1px; -webkit-print-color-adjust: exact; line-height: 1.2; text-align: center; }
     
     .estimate-meta { text-align: right; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; margin-bottom: 8px; line-height: 1.4; color: #000; }
     
@@ -547,13 +547,13 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
           </div>
           
           <p style="font-size: 10px; font-weight: bold; margin-top: 15px; margin-bottom: 5px;">Noted by:</p>
-          <div class="noted-by-section">
-            <div style="flex: 1; position: relative;">
-              <span class="signature-name" style="margin-top: 25px;">Paul D. Suazo</span>
+          <div class="noted-by-section" style="display: flex; gap: 40px; justify-content: space-between;">
+            <div style="flex: 1; min-width: 150px;">
+              <span class="signature-name" style="margin-top: 28px;">Paul D. Suazo</span>
               <p class="signature-title">Service Manager</p>
             </div>
-            <div style="flex: 1; text-align: center; position: relative;">
-              <span class="signature-name" style="margin-top: 25px;">Alfred N. Agbong</span>
+            <div style="flex: 1; min-width: 150px; text-align: right;">
+              <span class="signature-name" style="margin-top: 28px;">Alfred N. Agbong</span>
               <p class="signature-title">Gen. & Op. Manager</p>
             </div>
           </div>
