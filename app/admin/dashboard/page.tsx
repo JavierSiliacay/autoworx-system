@@ -646,29 +646,16 @@ export default function AdminDashboard() {
       // 5. Cleanup
       document.body.removeChild(container)
 
-      // 6. Send to server
-      const response = await fetch("/api/admin/save-file", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename,
-          htmlContent: pdfBase64,
-          isPdfData: true
-        }),
-      })
+      // 6. Trigger Browser Download
+      pdf.save(`${filename}.pdf`)
 
-      const data = await response.json()
-      if (response.ok) {
-        toast({
-          title: "File Saved! 📂",
-          description: `Saved to: \\\\ADMIN\\autoworx repair estimate\\REPAIR ESTIATE 2026`,
-        })
-      } else {
-        throw new Error(data.error || "Failed to save file. Ensure the network path is accessible.")
-      }
+      toast({
+        title: "PDF Ready! 📄",
+        description: "Your browser will now prompt you to save the file.",
+      })
     } catch (error: any) {
       toast({
-        title: "Save Failed",
+        title: "Generation Failed",
         description: error.message,
         variant: "destructive",
       })
