@@ -536,13 +536,10 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
               <span class="signature-name" style="margin-top: 22px;">Paul D. Suazo</span>
               <p class="signature-title">Service Manager</p>
             </div>
-            <!-- 
             <div style="flex: 1; text-align: center; position: relative;">
-              <img src="/signature_alfred.png" alt="" class="signature-img" onerror="this.style.display='none'" />
               <span class="signature-name" style="margin-top: 22px;">Alfred N. Agbong</span>
               <p class="signature-title">Gen. & Op. Manager</p>
             </div>
-            -->
           </div>
         </div>
       </div>
