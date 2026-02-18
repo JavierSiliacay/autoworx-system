@@ -64,6 +64,7 @@ interface AppointmentDB {
   costing?: CostingData
   damage_images?: string[]
   orcr_image?: string
+  orcr_image_2?: string
   insurance?: string
   estimate_number?: string
 }
@@ -90,6 +91,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     costing: apt.costing,
     damageImages: apt.damage_images,
     orcrImage: apt.orcr_image,
+    orcrImage2: apt.orcr_image_2,
     insurance: apt.insurance,
     estimateNumber: apt.estimate_number,
   }
@@ -117,11 +119,9 @@ interface Appointment {
   costing?: CostingData
   // Damage images
   damageImages?: string[]
-  // ORCR image
   orcrImage?: string
-  // Insurance
+  orcrImage2?: string
   insurance?: string
-  // Estimate Number
   estimateNumber?: string
 }
 
@@ -618,36 +618,67 @@ function TrackingContent() {
                 </div>
               )}
 
-              {/* ORCR Document */}
-              {appointment.orcrImage && (
+              {/* ORCR Documents */}
+              {(appointment.orcrImage || appointment.orcrImage2) && (
                 <div className="mt-6 pt-6 border-t border-border">
                   <p className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
-                    ORCR (Official Receipt/Certificate of Registration)
+                    ORCR Documents (Official Receipt/Certificate of Registration)
                   </p>
-                  <div className="max-w-md mx-auto">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setZoomImages([appointment.orcrImage!])
-                        setZoomInitialIndex(0)
-                        setZoomModalOpen(true)
-                      }}
-                      className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-primary/50 hover:border-primary transition-colors group cursor-zoom-in w-full"
-                    >
-                      <img
-                        src={appointment.orcrImage}
-                        alt="ORCR Document"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-sm py-2 text-center font-medium">
-                        ORCR Document - Click to Zoom
+                  <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
+                    {appointment.orcrImage && (
+                      <div className="space-y-1 w-[140px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const images = [appointment.orcrImage!];
+                            if (appointment.orcrImage2) images.push(appointment.orcrImage2);
+                            setZoomImages(images);
+                            setZoomInitialIndex(0);
+                            setZoomModalOpen(true);
+                          }}
+                          className="relative aspect-[3/2] rounded-md overflow-hidden border border-primary/30 hover:border-primary transition-all group cursor-zoom-in w-full shadow-sm"
+                        >
+                          <img
+                            src={appointment.orcrImage}
+                            alt="ORCR Photo 1"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
+                            PHOTO 1 - ZOOM
+                          </div>
+                        </button>
                       </div>
-                    </button>
-                    <p className="text-[10px] text-muted-foreground mt-2 text-center">
-                      Click on the image to zoom in
-                    </p>
+                    )}
+                    {appointment.orcrImage2 && (
+                      <div className="space-y-1 w-[140px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const images = [];
+                            if (appointment.orcrImage) images.push(appointment.orcrImage);
+                            images.push(appointment.orcrImage2!);
+                            setZoomImages(images);
+                            setZoomInitialIndex(images.length - 1);
+                            setZoomModalOpen(true);
+                          }}
+                          className="relative aspect-[3/2] rounded-md overflow-hidden border border-primary/30 hover:border-primary transition-all group cursor-zoom-in w-full shadow-sm"
+                        >
+                          <img
+                            src={appointment.orcrImage2}
+                            alt="ORCR Photo 2"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
+                            PHOTO 2 - ZOOM
+                          </div>
+                        </button>
+                      </div>
+                    )}
                   </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 text-center sm:text-left">
+                    Click an image to see full size (Photo 1 & 2 included)
+                  </p>
                 </div>
               )}
             </div>

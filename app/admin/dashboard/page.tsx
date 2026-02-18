@@ -95,6 +95,7 @@ interface AppointmentDB {
   costing?: CostingData
   damage_images?: string[]
   orcr_image?: string
+  orcr_image_2?: string
   insurance?: string
   estimate_number?: string
   paul_notes?: string
@@ -125,6 +126,7 @@ interface Appointment {
   costing?: CostingData
   damageImages?: string[]
   orcrImage?: string
+  orcrImage2?: string
   insurance?: string
   estimateNumber?: string
   paulNotes?: string
@@ -1571,48 +1573,82 @@ export default function AdminDashboard() {
                               </div>
                             )}
 
-                            {/* ORCR Image */}
-                            {appointment.orcrImage && (
+                            {/* ORCR Images */}
+                            {(appointment.orcrImage || appointment.orcrImage2) && (
                               <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                                <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2">
+                                <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2 font-bold uppercase tracking-wider">
                                   <ImageIcon className="w-3 h-3" />
-                                  ORCR (Official Receipt/Certificate of Registration)
+                                  Official Documents (OR/CR)
                                 </div>
-                                <div className="max-w-md mx-auto">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setZoomImages([appointment.orcrImage!])
-                                      setZoomInitialIndex(0)
-                                      setZoomModalOpen(true)
-                                    }}
-                                    className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-blue-500/50 hover:border-blue-500 transition-colors cursor-zoom-in w-full"
-                                  >
-                                    <img
-                                      src={appointment.orcrImage}
-                                      alt="ORCR Document"
-                                      className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs py-1 text-center font-medium">
-                                      ORCR Document - Click to Zoom
+                                <div className="flex flex-wrap gap-4">
+                                  {appointment.orcrImage && (
+                                    <div className="space-y-1 w-[140px]">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const images = [appointment.orcrImage!];
+                                          if (appointment.orcrImage2) images.push(appointment.orcrImage2);
+                                          setZoomImages(images);
+                                          setZoomInitialIndex(0);
+                                          setZoomModalOpen(true);
+                                        }}
+                                        className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
+                                      >
+                                        <img
+                                          src={appointment.orcrImage}
+                                          alt="ORCR Photo 1"
+                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                        <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
+                                          PHOTO 1 - CLICK TO ZOOM
+                                        </div>
+                                      </button>
+                                      <a
+                                        href={appointment.orcrImage}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
+                                      >
+                                        <Download className="w-2 h-2" /> DOWNLOAD
+                                      </a>
                                     </div>
-                                  </button>
-                                  <a
-                                    href={appointment.orcrImage}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                                  >
-                                    <Download className="w-3 h-3" />
-                                    Download ORCR
-                                  </a>
+                                  )}
+                                  {appointment.orcrImage2 && (
+                                    <div className="space-y-1 w-[140px]">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const images = [];
+                                          if (appointment.orcrImage) images.push(appointment.orcrImage);
+                                          images.push(appointment.orcrImage2!);
+                                          setZoomImages(images);
+                                          setZoomInitialIndex(images.length - 1);
+                                          setZoomModalOpen(true);
+                                        }}
+                                        className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
+                                      >
+                                        <img
+                                          src={appointment.orcrImage2}
+                                          alt="ORCR Photo 2"
+                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                        <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
+                                          PHOTO 2 - CLICK TO ZOOM
+                                        </div>
+                                      </button>
+                                      <a
+                                        href={appointment.orcrImage2}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
+                                      >
+                                        <Download className="w-2 h-2" /> DOWNLOAD
+                                      </a>
+                                    </div>
+                                  )}
                                 </div>
-                                <p className="text-[10px] text-muted-foreground mt-2 text-center">
-                                  Click image to zoom or download for verification
-                                </p>
                               </div>
                             )}
-
                             {/* Insurance Info */}
                             {appointment.insurance && (
                               <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">

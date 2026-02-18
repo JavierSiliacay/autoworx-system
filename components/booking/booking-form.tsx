@@ -49,6 +49,7 @@ export interface BookingFormData {
   service: string
   message: string
   orcrImage?: string
+  orcrImage2?: string
   insurance?: string
 }
 
@@ -82,6 +83,11 @@ export function BookingForm() {
   const [orcrImage, setOrcrImage] = useState<string>("")
   const [orcrImageFile, setOrcrImageFile] = useState<File | null>(null)
   const [isUploadingOrcr, setIsUploadingOrcr] = useState(false)
+
+  const [orcrImage2, setOrcrImage2] = useState<string>("")
+  const [orcrImageFile2, setOrcrImageFile2] = useState<File | null>(null)
+  const [isUploadingOrcr2, setIsUploadingOrcr2] = useState(false)
+
   const [useCustomMake, setUseCustomMake] = useState(false)
 
   const validateForm = () => {
@@ -104,7 +110,8 @@ export function BookingForm() {
     if (!formData.vehiclePlate.trim()) newErrors.vehiclePlate = "Plate number is required"
     if (!formData.vehicleColor.trim()) newErrors.vehicleColor = "Color is required"
     if (!formData.service) newErrors.service = "Service type is required"
-    if (!orcrImage) newErrors.orcrImage = "ORCR document is required"
+    if (!orcrImage) newErrors.orcrImage = "ORCR Photo 1 is required"
+    if (!orcrImage2) newErrors.orcrImage2 = "ORCR Photo 2 is required"
     if (!captchaVerified) newErrors.captcha = "Please verify you're not a robot"
 
     setErrors(newErrors)
@@ -131,14 +138,18 @@ export function BookingForm() {
       const trackingCodeGenerated = generateTrackingCode()
       let uploadedImageUrls: string[] = []
       let uploadedOrcrUrl = ""
+      let uploadedOrcrUrl2 = ""
 
       // Upload images directly to Supabase Storage if any
       // This bypasses Vercel's 4.5MB payload limit which causes "Failed to fetch" errors on mobile
-      if (uploadedImageFiles.length > 0 || orcrImageFile) {
+      if (uploadedImageFiles.length > 0 || orcrImageFile || orcrImageFile2) {
         const supabase = createClient()
         const filesToUpload = [...uploadedImageFiles]
         if (orcrImageFile) {
           filesToUpload.push(orcrImageFile)
+        }
+        if (orcrImageFile2) {
+          filesToUpload.push(orcrImageFile2)
         }
 
         const uploadPromises = filesToUpload.map(async (file) => {
@@ -170,11 +181,17 @@ export function BookingForm() {
 
         const allUrls = await Promise.all(uploadPromises)
 
+        // Map URLs back to their respective fields
+        let currentIndex = uploadedImageFiles.length;
+        uploadedImageUrls = allUrls.slice(0, currentIndex);
+
         if (orcrImageFile) {
-          uploadedOrcrUrl = allUrls[allUrls.length - 1]
-          uploadedImageUrls = allUrls.slice(0, -1)
-        } else {
-          uploadedImageUrls = allUrls
+          uploadedOrcrUrl = allUrls[currentIndex];
+          currentIndex++;
+        }
+
+        if (orcrImageFile2) {
+          uploadedOrcrUrl2 = allUrls[currentIndex];
         }
       }
 
@@ -187,6 +204,7 @@ export function BookingForm() {
           ...formData,
           damageImages: uploadedImageUrls,
           orcrImage: uploadedOrcrUrl,
+          orcrImage2: uploadedOrcrUrl2,
         }),
       })
 
@@ -366,6 +384,45 @@ export function BookingForm() {
   const removeOrcrImage = () => {
     setOrcrImage("")
     setOrcrImageFile(null)
+  }
+
+  const handleOrcrUpload2 = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file")
+      return
+    }
+
+    setIsUploadingOrcr2(true)
+    setOrcrImageFile2(file)
+
+    const base64 = await new Promise<string>((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        resolve(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    })
+
+    setOrcrImage2(base64)
+    setIsUploadingOrcr2(false)
+
+    if (errors.orcrImage2) {
+      setErrors(prev => {
+        const next = { ...prev }
+        delete next.orcrImage2
+        return next
+      })
+    }
+
+    e.target.value = ""
+  }
+
+  const removeOrcrImage2 = () => {
+    setOrcrImage2("")
+    setOrcrImageFile2(null)
   }
 
   if (isSubmitted) {
@@ -810,91 +867,129 @@ export function BookingForm() {
         <div className="animate-in fade-in slide-in-from-right-2 duration-500">
           <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
             <ImageIcon className="w-5 h-5" />
-            ORCR (Official Receipt/Certificate of Registration) *
+            ORCR Documents (Official Receipt & Certificate of Registration) *
           </h3>
 
           <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
             <div className="flex gap-3">
               <AlertTriangle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Required Document</p>
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Required Documents</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Please upload a clear photo of your vehicle's ORCR. This is required for the admin to process your appointment. Make sure all text is readable.
+                  Please upload clear photos of your vehicle's OR and CR. These are required for the admin to process your appointment.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            {/* ORCR Preview */}
-            {orcrImage && (
-              <div className="relative w-full max-w-md mx-auto">
-                <div className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-primary/50 group">
-                  <img
-                    src={orcrImage}
-                    alt="ORCR Document"
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={removeOrcrImage}
-                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg"
-                    aria-label="Remove ORCR image"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-sm py-2 text-center font-medium">
-                    ORCR Document
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* ORCR Photo 1 */}
+            <div className="space-y-4 text-center">
+              <Label className={errors.orcrImage ? "text-red-500 font-bold" : "font-medium"}>ORCR Photo 1 *</Label>
+              {orcrImage ? (
+                <div className="relative w-full mx-auto">
+                  <div className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-primary/50 group">
+                    <img
+                      src={orcrImage}
+                      alt="ORCR Photo 1"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeOrcrImage}
+                      className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg"
+                      aria-label="Remove ORCR image 1"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-1 text-center font-medium">
+                      Photo 1: Click × to replace
+                    </div>
                   </div>
                 </div>
-                <p className="text-xs text-center text-muted-foreground mt-2">
-                  Click the × button to replace the image
-                </p>
-              </div>
-            )}
+              ) : (
+                <label
+                  htmlFor="orcrImageUpload"
+                  className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer transition-all ${errors.orcrImage ? 'border-red-500 bg-red-50' : 'border-primary/30 hover:border-primary hover:bg-primary/5'}`}
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                    {isUploadingOrcr ? (
+                      <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                    ) : (
+                      <>
+                        <ImageIcon className={`w-8 h-8 mb-2 ${errors.orcrImage ? 'text-red-500' : 'text-primary'}`} />
+                        <p className={`text-xs ${errors.orcrImage ? 'text-red-500' : 'text-foreground font-medium'}`}>
+                          Click to upload ORCR Photo 1
+                        </p>
+                        {errors.orcrImage && <p className="text-[10px] text-red-600 font-bold mt-1 uppercase">{errors.orcrImage}</p>}
+                      </>
+                    )}
+                  </div>
+                  <input
+                    id="orcrImageUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleOrcrUpload}
+                    className="hidden"
+                    disabled={isUploadingOrcr}
+                  />
+                </label>
+              )}
+            </div>
 
-            {/* Upload Button */}
-            {!orcrImage && (
-              <label
-                htmlFor="orcrImageUpload"
-                className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${errors.orcrImage ? 'border-red-500 bg-red-50' : 'border-primary/50 hover:border-primary hover:bg-primary/5'}`}
-              >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                  {isUploadingOrcr ? (
-                    <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
-                  ) : (
-                    <>
-                      <ImageIcon className={`w-8 h-8 mb-2 ${errors.orcrImage ? 'text-red-500' : 'text-primary'}`} />
-                      <p className={`text-sm ${errors.orcrImage ? 'text-red-500' : 'text-foreground'}`}>
-                        <span className={`font-medium underline ${errors.orcrImage ? 'text-red-600' : 'text-primary'}`}>Click to upload ORCR photo</span>
-                      </p>
-                      {errors.orcrImage && <p className="text-xs text-red-600 font-bold mt-1 uppercase tracking-tight">{errors.orcrImage}</p>}
-                      {!errors.orcrImage && (
-                        <div className="mt-2 space-y-1">
-                          <p className="text-[10px] text-muted-foreground">
-                            Tip: Place document on a flat surface with good lighting
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            Tip: Ensure all text and the plate number are clearly readable
-                          </p>
-                          <p className="text-[10px] text-primary italic">
-                            Required for appointment processing
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
+            {/* ORCR Photo 2 */}
+            <div className="space-y-4 text-center">
+              <Label className={errors.orcrImage2 ? "text-red-500 font-bold" : "font-medium"}>ORCR Photo 2 *</Label>
+              {orcrImage2 ? (
+                <div className="relative w-full mx-auto">
+                  <div className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-primary/50 group">
+                    <img
+                      src={orcrImage2}
+                      alt="ORCR Photo 2"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeOrcrImage2}
+                      className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg"
+                      aria-label="Remove ORCR image 2"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-1 text-center font-medium">
+                      Photo 2: Click × to replace
+                    </div>
+                  </div>
                 </div>
-                <input
-                  id="orcrImageUpload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleOrcrUpload}
-                  className="hidden"
-                  disabled={isUploadingOrcr}
-                />
-              </label>
-            )}
+              ) : (
+                <label
+                  htmlFor="orcrImageUpload2"
+                  className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer transition-all ${errors.orcrImage2 ? 'border-red-500 bg-red-50' : 'border-primary/30 hover:border-primary hover:bg-primary/5'}`}
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                    {isUploadingOrcr2 ? (
+                      <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                    ) : (
+                      <>
+                        <ImageIcon className={`w-8 h-8 mb-2 ${errors.orcrImage2 ? 'text-red-500' : 'text-primary'}`} />
+                        <p className={`text-xs ${errors.orcrImage2 ? 'text-red-500' : 'text-foreground font-medium'}`}>
+                          Click to upload ORCR Photo 2
+                        </p>
+                        {errors.orcrImage2 && <p className="text-[10px] text-red-600 font-bold mt-1 uppercase">{errors.orcrImage2}</p>}
+                      </>
+                    )}
+                  </div>
+                  <input
+                    id="orcrImageUpload2"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleOrcrUpload2}
+                    className="hidden"
+                    disabled={isUploadingOrcr2}
+                  />
+                </label>
+              )}
+            </div>
           </div>
         </div>
 

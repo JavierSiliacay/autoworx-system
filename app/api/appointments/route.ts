@@ -145,6 +145,7 @@ export async function POST(request: Request) {
         message: body.message,
         damage_images: body.damageImages || [],
         orcr_image: body.orcrImage || null,
+        orcr_image_2: body.orcrImage2 || null,
         insurance: body.insurance || null,
         estimate_number: estimateNumber,
         status: "pending",
@@ -223,6 +224,8 @@ export async function PUT(request: Request) {
   if (updates.damageImages !== undefined) dbUpdates.damage_images = updates.damageImages
   if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
   if (updates.paulNotes !== undefined) dbUpdates.paul_notes = updates.paulNotes
+  if (updates.orcrImage !== undefined) dbUpdates.orcr_image = updates.orcrImage
+  if (updates.orcrImage2 !== undefined) dbUpdates.orcr_image_2 = updates.orcrImage2
 
   // New editable fields
   if (updates.name !== undefined) dbUpdates.name = updates.name
