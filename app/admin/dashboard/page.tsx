@@ -204,6 +204,29 @@ const normalizeString = (str: string) => {
   return str.toLowerCase().replace(/[\s\-\.\/\,]/g, "")
 }
 
+const MONTHS = [
+  { full: "january", short: "jan", index: 0, variations: ["january"] },
+  { full: "february", short: "feb", index: 1, variations: ["february", "feburary", "feb"] },
+  { full: "march", short: "mar", index: 2, variations: ["march", "mar"] },
+  { full: "april", short: "apr", index: 3, variations: ["april", "apr"] },
+  { full: "may", short: "may", index: 4, variations: ["may"] },
+  { full: "june", short: "jun", index: 5, variations: ["june", "jun"] },
+  { full: "july", short: "jul", index: 6, variations: ["july", "jul"] },
+  { full: "august", short: "aug", index: 7, variations: ["august", "aug"] },
+  { full: "september", short: "sep", index: 8, variations: ["september", "sept", "sep"] },
+  { full: "october", short: "oct", index: 9, variations: ["october", "oct"] },
+  { full: "november", short: "nov", index: 10, variations: ["november", "nov"] },
+  { full: "december", short: "dec", index: 11, variations: ["december", "dec"] },
+]
+
+const getMatchedMonth = (query: string) => {
+  const norm = query.toLowerCase().trim()
+  if (norm.length < 3) return null
+  return MONTHS.find(m =>
+    m.variations.some(v => v.includes(norm) || norm.includes(v))
+  )
+}
+
 const statusConfig = {
   pending: {
     label: "Pending",
@@ -920,6 +943,15 @@ export default function AdminDashboard() {
     // Search filter
     if (searchQuery.trim()) {
       const normalizedQuery = normalizeString(searchQuery)
+      const matchedMonth = getMatchedMonth(searchQuery)
+
+      const checkMonth = (dateStr?: string) => {
+        if (!dateStr) return false
+        const d = new Date(dateStr)
+        return d.getMonth() === matchedMonth?.index
+      }
+
+      const matchesMonth = matchedMonth ? (checkMonth(apt.createdAt) || checkMonth(apt.statusUpdatedAt)) : false
 
       const matchesName = normalizeString(apt.name).includes(normalizedQuery)
       const matchesEmail = normalizeString(apt.email).includes(normalizedQuery)
@@ -933,10 +965,44 @@ export default function AdminDashboard() {
       const matchesEstimateNumber = normalizeString(apt.estimateNumber || "").includes(normalizedQuery)
       const matchesInsurance = normalizeString(apt.insurance || "").includes(normalizedQuery)
 
-      if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesModel && !matchesTrackingCode && !matchesMessage && !matchesEstimateNumber && !matchesInsurance) return false
+      if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesModel && !matchesTrackingCode && !matchesMessage && !matchesEstimateNumber && !matchesInsurance && !matchesMonth) return false
     }
     return true
   })
+
+  const getMatchCategories = (apt: Appointment, query: string) => {
+    if (!query.trim()) return []
+    const categories: Set<string> = new Set()
+    const normQuery = normalizeString(query)
+    const matchedMonth = getMatchedMonth(query)
+
+    const checkMonth = (dateStr?: string) => {
+      if (!dateStr || !matchedMonth) return false
+      const d = new Date(dateStr)
+      return d.getMonth() === matchedMonth.index
+    }
+
+    // Insurance Category
+    if (normalizeString(apt.insurance || "").includes(normQuery) || (matchedMonth && !!apt.insurance && checkMonth(apt.createdAt))) {
+      categories.add("Insurance")
+    }
+
+    // Estimates Category
+    if (normalizeString(apt.estimateNumber || "").includes(normQuery) || (matchedMonth && !!apt.estimateNumber && checkMonth(apt.createdAt))) {
+      categories.add("Estimates")
+    }
+
+    // Vehicle Status Category
+    if (
+      normalizeString(apt.repairStatus || "").includes(normQuery) ||
+      normalizeString(apt.trackingCode).includes(normQuery) ||
+      checkMonth(apt.statusUpdatedAt)
+    ) {
+      categories.add("Vehicle Status")
+    }
+
+    return Array.from(categories)
+  }
 
   const stats = {
     total: appointments.length,
@@ -959,6 +1025,15 @@ export default function AdminDashboard() {
       // Search filter
       if (historySearchQuery.trim()) {
         const normalizedQuery = normalizeString(historySearchQuery)
+        const matchedMonth = getMatchedMonth(historySearchQuery)
+
+        const checkMonth = (dateStr?: string) => {
+          if (!dateStr || !matchedMonth) return false
+          const d = new Date(dateStr)
+          return d.getMonth() === matchedMonth.index
+        }
+
+        const matchesMonth = matchedMonth ? (checkMonth(record.original_created_at) || checkMonth(record.completed_at)) : false
 
         const matchesTrackingCode = normalizeString(record.tracking_code).includes(normalizedQuery)
         const matchesName = normalizeString(record.name).includes(normalizedQuery)
@@ -971,7 +1046,7 @@ export default function AdminDashboard() {
         const matchesInsurance = normalizeString(record.insurance || "").includes(normalizedQuery)
         const matchesEstimateNumber = normalizeString(record.estimate_number || "").includes(normalizedQuery)
 
-        if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel && !matchesInsurance && !matchesEstimateNumber) {
+        if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel && !matchesInsurance && !matchesEstimateNumber && !matchesMonth) {
           return false
         }
       }
@@ -1222,6 +1297,17 @@ export default function AdminDashboard() {
                 )}
               </div>
 
+              {/* Search Result Summary Feedack */}
+              {searchQuery.trim() && (
+                <div className="animate-in fade-in slide-in-from-top-1 duration-300">
+                  <p className="text-sm font-bold text-primary">
+                    {filteredAppointments.length === 0
+                      ? `No results found for "${searchQuery}"`
+                      : `${filteredAppointments.length} result${filteredAppointments.length !== 1 ? 's' : ''} for "${searchQuery}"`}
+                  </p>
+                </div>
+              )}
+
               {/* Filters */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <Select value={filter} onValueChange={(value) => setFilter(value as typeof filter)}>
@@ -1268,10 +1354,18 @@ export default function AdminDashboard() {
             {/* Appointments List */}
             {filteredAppointments.length === 0 ? (
               <div className="p-12 bg-card rounded-xl border border-border text-center">
-                <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-semibold text-foreground">No appointments yet</h3>
+                {searchQuery.trim() ? (
+                  <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                ) : (
+                  <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                )}
+                <h3 className="font-semibold text-foreground">
+                  {searchQuery.trim() ? "No results found" : "No appointments yet"}
+                </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Appointment requests from the booking form will appear here.
+                  {searchQuery.trim()
+                    ? `No records found matching "${searchQuery}" in this view.`
+                    : "Appointment requests from the booking form will appear here."}
                 </p>
               </div>
             ) : (
@@ -1338,6 +1432,11 @@ export default function AdminDashboard() {
                                     {repairStatusInfo.label}
                                   </Badge>
                                 )}
+                                {searchQuery.trim() && getMatchCategories(appointment, searchQuery).map(cat => (
+                                  <Badge key={cat} variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4">
+                                    {cat}
+                                  </Badge>
+                                ))}
                               </div>
                             </div>
 
@@ -2045,6 +2144,17 @@ export default function AdminDashboard() {
                 </Select>
               </div>
 
+              {/* Search Result Summary Feedack */}
+              {historySearchQuery.trim() && (
+                <div className="animate-in fade-in slide-in-from-top-1 duration-300">
+                  <p className="text-sm font-bold text-primary">
+                    {filteredAndSortedHistory.length === 0
+                      ? `No results found for "${historySearchQuery}"`
+                      : `${filteredAndSortedHistory.length} result${filteredAndSortedHistory.length !== 1 ? 's' : ''} for "${historySearchQuery}"`}
+                  </p>
+                </div>
+              )}
+
               <div className="text-sm text-muted-foreground">
                 Found {filteredAndSortedHistory.length} record{filteredAndSortedHistory.length !== 1 ? "s" : ""}
               </div>
@@ -2053,12 +2163,18 @@ export default function AdminDashboard() {
             {/* History Records */}
             {filteredAndSortedHistory.length === 0 ? (
               <div className="p-12 bg-card rounded-xl border border-border text-center">
-                <HistoryIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-semibold text-foreground">No history records found</h3>
+                {historySearchQuery.trim() ? (
+                  <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                ) : (
+                  <HistoryIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                )}
+                <h3 className="font-semibold text-foreground">
+                  {historySearchQuery.trim() ? "No history records found" : "No history records found"}
+                </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {historyRecords.length === 0
-                    ? "No completed repairs archived yet."
-                    : "Try adjusting your search or filters."}
+                  {historySearchQuery.trim()
+                    ? `No historical records found matching "${historySearchQuery}"`
+                    : "No completed repairs archived yet."}
                 </p>
               </div>
             ) : (
@@ -2081,6 +2197,22 @@ export default function AdminDashboard() {
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
                                 Completed
                               </Badge>
+                              {historySearchQuery.trim() && (
+                                <div className="flex flex-wrap gap-1 justify-end">
+                                  {/* Dummy Conversion to Appointment structure for consistency */}
+                                  {getMatchCategories({
+                                    ...record,
+                                    trackingCode: record.tracking_code,
+                                    estimateNumber: record.estimate_number,
+                                    statusUpdatedAt: record.completed_at,
+                                    createdAt: record.original_created_at
+                                  } as any, historySearchQuery).map(cat => (
+                                    <Badge key={cat} variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4">
+                                      {cat}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -2228,11 +2360,12 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-        )}
-      </main>
+        )
+        }
+      </main >
 
       {/* Image Zoom Modal */}
-      <ImageZoomModal
+      < ImageZoomModal
         images={zoomImages}
         initialIndex={zoomInitialIndex}
         isOpen={zoomModalOpen}
@@ -2240,53 +2373,55 @@ export default function AdminDashboard() {
       />
 
       {/* Archive Confirmation Modal */}
-      {archiveModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-card rounded-xl border border-border p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-amber-500/10 rounded-lg">
-                <Archive className="w-6 h-6 text-amber-500" />
+      {
+        archiveModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-card rounded-xl border border-border p-6 max-w-md w-full mx-4 shadow-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-amber-500/10 rounded-lg">
+                  <Archive className="w-6 h-6 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Archive Appointment</h3>
+                  <p className="text-sm text-muted-foreground">Move to history without images</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground">Archive Appointment</h3>
-                <p className="text-sm text-muted-foreground">Move to history without images</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                This will archive the appointment record to history. Images will be deleted to save storage space. This action cannot be undone.
+              </p>
+              <div className="space-y-2 mb-4">
+                <label className="text-sm font-medium text-foreground">Reason (optional)</label>
+                <textarea
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  placeholder="e.g., Service completed, Customer no-show..."
+                  className="w-full h-20 px-3 py-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                />
               </div>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              This will archive the appointment record to history. Images will be deleted to save storage space. This action cannot be undone.
-            </p>
-            <div className="space-y-2 mb-4">
-              <label className="text-sm font-medium text-foreground">Reason (optional)</label>
-              <textarea
-                value={archiveReason}
-                onChange={(e) => setArchiveReason(e.target.value)}
-                placeholder="e.g., Service completed, Customer no-show..."
-                className="w-full h-20 px-3 py-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setArchiveModalOpen(false)
-                  setArchiveAppointmentId(null)
-                  setArchiveReason("")
-                }}
-                className="bg-transparent"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={archiveAppointment}
-                className="bg-amber-500 hover:bg-amber-600 text-white"
-              >
-                <Archive className="w-4 h-4 mr-2" />
-                Archive
-              </Button>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setArchiveModalOpen(false)
+                    setArchiveAppointmentId(null)
+                    setArchiveReason("")
+                  }}
+                  className="bg-transparent"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={archiveAppointment}
+                  className="bg-amber-500 hover:bg-amber-600 text-white"
+                >
+                  <Archive className="w-4 h-4 mr-2" />
+                  Archive
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
       {/* Edit Appointment Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -2509,6 +2644,6 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   )
 }
