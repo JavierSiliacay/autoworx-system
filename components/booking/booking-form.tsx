@@ -88,16 +88,14 @@ export function BookingForm() {
     const newErrors: Record<string, string> = {}
 
     if (!formData.name.trim()) newErrors.name = "Full name is required"
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address"
+    const isPhoneNA = formData.phone.trim().toUpperCase() === "N/A"
+    if (formData.phone.trim() && !isPhoneNA && !isValidPhoneNumber(formData.phone)) {
+      newErrors.phone = "Invalid Philippine phone number"
     }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required"
-    } else if (!isValidPhoneNumber(formData.phone)) {
-      newErrors.phone = "Invalid Philippine phone number"
+    const isEmailNA = formData.email.trim().toUpperCase() === "N/A"
+    if (formData.email.trim() && !isEmailNA && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address"
     }
 
     if (!formData.vehicleMake.trim()) newErrors.vehicleMake = "Manufacturer is required"
@@ -479,7 +477,7 @@ export function BookingForm() {
               {errors.name && <p className="text-xs text-red-500 font-medium">{errors.name}</p>}
             </div>
             <div className="space-y-2 group">
-              <Label htmlFor="phone" className={`transition-colors ${errors.phone ? 'text-red-500' : 'group-hover:text-primary'}`}>Phone Number (PH) *</Label>
+              <Label htmlFor="phone" className={`transition-colors ${errors.phone ? 'text-red-500' : 'group-hover:text-primary'}`}>Phone Number (PH)</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -492,7 +490,7 @@ export function BookingForm() {
               {errors.phone && <p className="text-xs text-red-500 font-medium">{errors.phone}</p>}
             </div>
             <div className="space-y-2 group">
-              <Label htmlFor="email" className={`transition-colors ${errors.email ? 'text-red-500' : 'group-hover:text-primary'}`}>Email Address *</Label>
+              <Label htmlFor="email" className={`transition-colors ${errors.email ? 'text-red-500' : 'group-hover:text-primary'}`}>Email Address</Label>
               <Input
                 id="email"
                 type="email"

@@ -382,13 +382,13 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         <td class="label-cell">VEHICLE UNIT:</td>
         <td class="value-cell">${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}</td>
         <td class="label-cell">CONTACT NUMBER:</td>
-        <td class="value-cell">${appointment.phone}</td>
+        <td class="value-cell">${appointment.phone || "N/A"}</td>
       </tr>
       <tr>
         <td class="label-cell">PLATE NUMBER:</td>
         <td class="value-cell"><strong>${appointment.vehiclePlate}</strong></td>
         <td class="label-cell">EMAIL ADDRESS:</td>
-        <td class="value-cell">${appointment.email}</td>
+        <td class="value-cell">${appointment.email || "N/A"}</td>
       </tr>
       <tr>
         <td class="label-cell">VEHICLE COLOR:</td>

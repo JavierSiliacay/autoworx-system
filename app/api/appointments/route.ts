@@ -93,12 +93,15 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     // Validate required fields
-    if (!body.trackingCode || !body.name || !body.email || !body.phone) {
+    if (!body.trackingCode || !body.name) {
       return NextResponse.json(
-        { error: "Missing required fields: trackingCode, name, email, phone" },
+        { error: "Missing required fields: trackingCode, name" },
         { status: 400 }
       )
     }
+
+    const email = body.email?.trim() || "N/A"
+    const phone = body.phone?.trim() || "N/A"
 
     // Generate estimate number (Monthly Sequence: YYYYMM-####)
     const now = new Date()
@@ -128,8 +131,8 @@ export async function POST(request: Request) {
       .insert({
         tracking_code: body.trackingCode,
         name: body.name,
-        email: body.email,
-        phone: body.phone,
+        email: email,
+        phone: phone,
         vehicle_make: body.vehicleMake,
         vehicle_model: body.vehicleModel,
         vehicle_year: body.vehicleYear,
@@ -148,6 +151,7 @@ export async function POST(request: Request) {
       })
       .select()
       .single()
+
     if (error) {
       console.error("Error creating appointment:", error)
       return NextResponse.json(
@@ -157,30 +161,36 @@ export async function POST(request: Request) {
     }
 
     // Send confirmation email directly from the server for better reliability
-    try {
-      await sendAppointmentEmail({
-        type: 'submission',
-        name: data.name,
-        email: data.email,
-        trackingCode: data.tracking_code,
-        vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
-        plateNumber: data.vehicle_plate,
-        color: data.vehicle_color,
-        insurance: data.insurance,
-        services: data.service,
-        message: data.message,
-        status: 'Pending',
-        chassisNumber: data.chassis_number,
-        engineNumber: data.engine_number,
-        assigneeDriver: data.assignee_driver,
-        estimateNumber: data.estimate_number
-      });
-      console.log(`Confirmation email sent to ${data.email}`);
-    } catch (emailError) {
-      // Log email error but don't fail the appointment creation
-      console.error("Failed to send initial confirmation email:", emailError);
-    }
+    // Only send if the email is not "N/A" and looks somewhat valid
+    const isValidEmail = data.email && data.email.toUpperCase() !== "N/A" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
 
+    if (isValidEmail) {
+      try {
+        await sendAppointmentEmail({
+          type: 'submission',
+          name: data.name,
+          email: data.email,
+          trackingCode: data.tracking_code,
+          vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
+          plateNumber: data.vehicle_plate,
+          color: data.vehicle_color,
+          insurance: data.insurance,
+          services: data.service,
+          message: data.message,
+          status: 'Pending',
+          chassisNumber: data.chassis_number,
+          engineNumber: data.engine_number,
+          assigneeDriver: data.assignee_driver,
+          estimateNumber: data.estimate_number
+        });
+        console.log(`Confirmation email sent to ${data.email}`);
+      } catch (emailError) {
+        // Log email error but don't fail the appointment creation
+        console.error("Failed to send initial confirmation email:", emailError);
+      }
+    } else {
+      console.log(`Skipping confirmation email: No valid email provided (${data.email})`);
+    }
     return NextResponse.json(data)
   } catch (error) {
     console.error("Error in POST /api/appointments:", error)
@@ -245,22 +255,28 @@ export async function PUT(request: Request) {
 
   // Trigger Completion Email if status is updated to completed
   if (updates.status?.toLowerCase() === "completed") {
-    console.log(`Triggering completion email for ${data.email}`);
-    try {
-      const emailResponse = await sendAppointmentEmail({
-        type: 'completed',
-        name: data.name,
-        email: data.email,
-        trackingCode: data.tracking_code,
-        vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
-        plateNumber: data.vehicle_plate,
-        services: data.service,
-        status: 'Completed'
-      });
-      console.log('Completion email response:', emailResponse);
-    } catch (emailError) {
-      // Log email error but don't fail the update request
-      console.error("Failed to send completion email:", emailError);
+    const isValidEmail = data.email && data.email.toUpperCase() !== "N/A" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
+
+    if (isValidEmail) {
+      console.log(`Triggering completion email for ${data.email}`);
+      try {
+        const emailResponse = await sendAppointmentEmail({
+          type: 'completed',
+          name: data.name,
+          email: data.email,
+          trackingCode: data.tracking_code,
+          vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
+          plateNumber: data.vehicle_plate,
+          services: data.service,
+          status: 'Completed'
+        });
+        console.log('Completion email response:', emailResponse);
+      } catch (emailError) {
+        // Log email error but don't fail the update request
+        console.error("Failed to send completion email:", emailError);
+      }
+    } else {
+      console.log(`Skipping completion email: No valid email provided (${data.email})`);
     }
   }
 
