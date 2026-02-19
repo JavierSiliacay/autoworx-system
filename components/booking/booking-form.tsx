@@ -222,6 +222,9 @@ export function BookingForm() {
       setSubmittedData(formData)
       setTrackingCode(trackingCodeGenerated)
       setIsSubmitted(true)
+
+      // Scroll to top to show success message
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (error) {
       console.error("Error submitting appointment:", error)
       const errorMessage = error instanceof Error ? error.message : "Unknown error"
