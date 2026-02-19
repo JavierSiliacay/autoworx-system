@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Send, Loader2, CheckCircle, Download, Camera, X, AlertTriangle, ImageIcon, ShieldCheck, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -88,7 +88,17 @@ export function BookingForm() {
   const [orcrImageFile2, setOrcrImageFile2] = useState<File | null>(null)
   const [isUploadingOrcr2, setIsUploadingOrcr2] = useState(false)
 
+
+
   const [useCustomMake, setUseCustomMake] = useState(false)
+
+  const successRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isSubmitted && successRef.current) {
+      successRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [isSubmitted])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -222,9 +232,6 @@ export function BookingForm() {
       setSubmittedData(formData)
       setTrackingCode(trackingCodeGenerated)
       setIsSubmitted(true)
-
-      // Scroll to top to show success message
-      window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (error) {
       console.error("Error submitting appointment:", error)
       const errorMessage = error instanceof Error ? error.message : "Unknown error"
@@ -430,7 +437,7 @@ export function BookingForm() {
 
   if (isSubmitted) {
     return (
-      <div className="p-8 bg-card rounded-xl border border-border text-center animate-in fade-in zoom-in-95 duration-500">
+      <div ref={successRef} className="p-8 bg-card rounded-xl border border-border text-center animate-in fade-in zoom-in-95 duration-500">
         <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-primary/10 text-primary animate-in zoom-in-50 duration-500">
           <CheckCircle className="w-8 h-8 animate-in spin-in-1.5 duration-1000" />
         </div>
