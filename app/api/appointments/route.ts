@@ -115,14 +115,32 @@ export async function POST(request: Request) {
       .order("estimate_number", { ascending: false })
       .limit(1)
 
-    let nextSequence = 1
+    const { data: latestHistoryEstimates } = await supabase
+      .from("appointment_history")
+      .select("estimate_number")
+      .like("estimate_number", `${prefix}%`)
+      .order("estimate_number", { ascending: false })
+      .limit(1)
+
+    let maxSequence = 0
+
     if (latestEstimates && latestEstimates.length > 0 && latestEstimates[0].estimate_number) {
       const lastNum = latestEstimates[0].estimate_number
       const parts = lastNum.split('-')
       if (parts.length === 2) {
-        nextSequence = parseInt(parts[1]) + 1
+        maxSequence = Math.max(maxSequence, parseInt(parts[1]))
       }
     }
+
+    if (latestHistoryEstimates && latestHistoryEstimates.length > 0 && latestHistoryEstimates[0].estimate_number) {
+      const lastNum = latestHistoryEstimates[0].estimate_number
+      const parts = lastNum.split('-')
+      if (parts.length === 2) {
+        maxSequence = Math.max(maxSequence, parseInt(parts[1]))
+      }
+    }
+
+    const nextSequence = maxSequence + 1
 
     const estimateNumber = `${prefix}${nextSequence.toString().padStart(4, '0')}`
 
