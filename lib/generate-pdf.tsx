@@ -227,13 +227,16 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
   const displayTitle = reportTitle || (isAdmin ? "Repair Estimate" : "Repair Status Report")
 
-  const laborCategories = ["Painting", "Detailing", "Service", "Labor", "Glassworks", "Alignment", "Tinsmith"]
+  const laborCategories = ["Mechanical Works", "Electrical", "Aircon", "Painting", "Detailing", "Service", "Labor", "Glassworks", "Alignment", "Tinsmith"]
   const hasCosting = !!appointment.costing
   const partsTotal = (appointment.costing?.items || []).filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
   const laborTotal = (appointment.costing?.items || []).filter(item =>
-    item.type === 'labor' ||
-    item.type === 'service' ||
-    (item.category && laborCategories.includes(item.category))
+    item.type !== 'parts' && (
+      (item.type as string) === 'labor' ||
+      (item.type as string) === 'service' ||
+      item.type === 'service_labor' ||
+      (item.category && laborCategories.includes(item.category))
+    )
   ).reduce((sum, item) => sum + item.total, 0) || 0
 
   // Dynamic Categorization logic
@@ -241,11 +244,13 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     // If a specific work category is selected and it's not "Others", use it
     // Otherwise, fall back to the billing type label (Service, Parts, etc.)
     let group = item.category && item.category !== "Others" ? item.category : "";
+    const type = item.type as string;
 
     if (!group) {
-      if (item.type === 'parts') group = "Parts";
-      else if (item.type === 'service') group = "Service";
-      else if (item.type === 'labor') group = "Labor";
+      if (type === 'parts') group = "Parts";
+      else if (type === 'service') group = "Service";
+      else if (type === 'labor') group = "Labor";
+      else if (type === 'service_labor') group = "Service/Labor";
       else group = "Others";
     }
 
@@ -450,7 +455,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         </thead>
         <tbody>
           ${activeCategories.sort((a, b) => {
-    const order = ["Tinsmith", "Alignment", "Glassworks", "Detailing", "Painting", "Parts", "Service", "Labor"];
+    const order = ["Tinsmith", "Mechanical Works", "Electrical", "Aircon", "Alignment", "Glassworks", "Detailing", "Painting", "Parts", "Service", "Labor", "Service/Labor"];
     const indexA = order.indexOf(a);
     const indexB = order.indexOf(b);
     if (indexA !== -1 && indexB !== -1) return indexA - indexB;

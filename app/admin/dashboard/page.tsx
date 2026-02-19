@@ -1991,7 +1991,7 @@ export default function AdminDashboard() {
                                               </div>
                                               <div className="sm:col-span-2">
                                                 <label className="text-xs text-muted-foreground mb-1 block">
-                                                  {COST_ITEM_TYPES.find(t => t.value === item.type)?.label} Description
+                                                  {COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type)} Description
                                                 </label>
                                                 <Input
                                                   value={item.description}

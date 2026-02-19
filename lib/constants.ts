@@ -54,13 +54,15 @@ export const COSTING_CONTACT = {
 
 // Cost Item Types
 export const COST_ITEM_TYPES = [
-  { value: "service", label: "Service" },
+  { value: "service_labor", label: "Service/Labor" },
   { value: "parts", label: "Parts" },
-  { value: "labor", label: "Labor" },
   { value: "custom", label: "Custom" },
 ] as const
 
 export const COST_ITEM_CATEGORIES = [
+  "Mechanical Works",
+  "Electrical",
+  "Aircon",
   "Tinsmith",
   "Alignment",
   "Glassworks",
