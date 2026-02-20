@@ -261,7 +261,7 @@ export default function AdminDashboard() {
   const { status, data: session } = useSession()
   const { toast } = useToast()
   const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [filter, setFilter] = useState<"all" | "pending" | "contacted" | "completed">("all")
+  const [filter, setFilter] = useState<string>("all")
   const [vehicleBrandFilter, setVehicleBrandFilter] = useState<string>("all")
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState<string>("")
@@ -747,7 +747,7 @@ export default function AdminDashboard() {
     const newItem: CostItem = {
       id: `item-${Date.now()}`,
       type,
-      category: category || "Others",
+      category: category,
       description: "",
       quantity: 1,
       unitPrice: 0,
@@ -932,8 +932,20 @@ export default function AdminDashboard() {
   }
 
   const filteredAppointments = appointments.filter((apt) => {
-    // Status filter
-    if (filter !== "all" && apt.status !== filter) return false
+    // Unified Status filter
+    if (filter !== "all") {
+      if (filter === "pending_inspection") {
+        // Specific logic for Pending Inspection (includes null/undefined as per stats)
+        if (apt.repairStatus && apt.repairStatus !== "pending_inspection") return false
+      } else if (filter === "waiting_for_approval") {
+        // Specific logic for Waiting for Approval (groups all waiting statuses)
+        const waitingStatuses = ["waiting_for_client_approval", "waiting_for_insurance"]
+        if (!apt.repairStatus || !waitingStatuses.includes(apt.repairStatus)) return false
+      } else if (["pending", "contacted", "completed"].includes(filter)) {
+        // Standard Appointment Status
+        if (apt.status !== filter) return false
+      }
+    }
     // Vehicle brand filter
     if (vehicleBrandFilter !== "all" && apt.vehicleMake !== vehicleBrandFilter) return false
     // Date range filter
@@ -1008,7 +1020,7 @@ export default function AdminDashboard() {
     contacted: appointments.filter((apt) => apt.status === "contacted").length,
     completed: appointments.filter((apt) => apt.status === "completed").length,
     pendingInspection: appointments.filter((apt) => apt.repairStatus === "pending_inspection" || !apt.repairStatus).length,
-    waitingForApproval: appointments.filter((apt) => apt.repairStatus === "waiting_for_insurance").length,
+    waitingForApproval: appointments.filter((apt) => apt.repairStatus === "waiting_for_insurance" || apt.repairStatus === "waiting_for_client_approval").length,
   }
 
   // History filtering and sorting
@@ -1308,14 +1320,16 @@ export default function AdminDashboard() {
 
               {/* Filters */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <Select value={filter} onValueChange={(value) => setFilter(value as typeof filter)}>
-                  <SelectTrigger className="w-full sm:w-[140px]">
+                <Select value={filter} onValueChange={setFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="pending">Pending Request</SelectItem>
                     <SelectItem value="contacted">Contacted</SelectItem>
+                    <SelectItem value="pending_inspection">Pending Inspection</SelectItem>
+                    <SelectItem value="waiting_for_approval">Waiting for Approval</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1948,7 +1962,7 @@ export default function AdminDashboard() {
                                           key={type.value}
                                           size="sm"
                                           variant="outline"
-                                          onClick={() => addCostItem(appointment.id, type.value)}
+                                          onClick={() => addCostItem(appointment.id, type.value, "")}
                                           className="bg-transparent text-xs"
                                         >
                                           <Plus className="w-3 h-3 mr-1" />
@@ -1965,31 +1979,33 @@ export default function AdminDashboard() {
                                         <div key={item.id} className="p-3 bg-background rounded-lg border border-border">
                                           <div className="flex items-start gap-3">
                                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-6 gap-3">
-                                              <div className="sm:col-span-1">
-                                                <label className="text-xs text-muted-foreground mb-1 block">Category</label>
-                                                <Select
-                                                  value={item.category || "Others"}
-                                                  onValueChange={(value) => updateCostItem(appointment.id, item.id, { category: value }, true)}
-                                                >
-                                                  <SelectTrigger
-                                                    className="h-8 text-[11px] px-2"
-                                                    onKeyDown={(e) => {
-                                                      if (e.key === 'Enter') {
-                                                        e.preventDefault()
-                                                        addCostItem(appointment.id, item.type, item.category)
-                                                      }
-                                                    }}
+                                              {item.category !== undefined && (
+                                                <div className="sm:col-span-1">
+                                                  <label className="text-xs text-muted-foreground mb-1 block">Category</label>
+                                                  <Select
+                                                    value={item.category || ""}
+                                                    onValueChange={(value) => updateCostItem(appointment.id, item.id, { category: value }, true)}
                                                   >
-                                                    <SelectValue placeholder="Category" />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    {COST_ITEM_CATEGORIES.map((cat) => (
-                                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                                    ))}
-                                                  </SelectContent>
-                                                </Select>
-                                              </div>
-                                              <div className="sm:col-span-2">
+                                                    <SelectTrigger
+                                                      className="h-8 text-[11px] px-2"
+                                                      onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                          e.preventDefault()
+                                                          addCostItem(appointment.id, item.type)
+                                                        }
+                                                      }}
+                                                    >
+                                                      <SelectValue placeholder="Select Category" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                      {COST_ITEM_CATEGORIES.map((cat) => (
+                                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                      ))}
+                                                    </SelectContent>
+                                                  </Select>
+                                                </div>
+                                              )}
+                                              <div className={item.category !== undefined ? "sm:col-span-2" : "sm:col-span-3"}>
                                                 <label className="text-xs text-muted-foreground mb-1 block">
                                                   {COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type)} Description
                                                 </label>
@@ -1999,7 +2015,7 @@ export default function AdminDashboard() {
                                                   onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                       e.preventDefault()
-                                                      addCostItem(appointment.id, item.type, item.category)
+                                                      addCostItem(appointment.id, item.type)
                                                     }
                                                   }}
                                                   placeholder="Enter description..."
@@ -2027,7 +2043,7 @@ export default function AdminDashboard() {
                                                   onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                       e.preventDefault()
-                                                      addCostItem(appointment.id, item.type, item.category)
+                                                      addCostItem(appointment.id, item.type)
                                                     }
                                                   }}
                                                   className="h-8 text-sm"

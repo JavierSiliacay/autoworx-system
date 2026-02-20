@@ -121,7 +121,6 @@ export function BookingForm() {
     if (!formData.vehicleColor.trim()) newErrors.vehicleColor = "Color is required"
     if (!formData.service) newErrors.service = "Service type is required"
     if (!orcrImage) newErrors.orcrImage = "ORCR Photo 1 is required"
-    if (!orcrImage2) newErrors.orcrImage2 = "ORCR Photo 2 is required"
     if (!captchaVerified) newErrors.captcha = "Please verify you're not a robot"
 
     setErrors(newErrors)
@@ -163,11 +162,11 @@ export function BookingForm() {
         }
 
         const uploadPromises = filesToUpload.map(async (file) => {
-          // Compress image before upload (max 1200px width, 70% quality)
+          // Compress image before upload (max 1024px width, 60% quality)
           let fileToUpload: Blob = file;
           if (file.type.startsWith('image/')) {
             try {
-              fileToUpload = await compressImage(file, 1200, 0.7);
+              fileToUpload = await compressImage(file, 1024, 0.6);
             } catch (err) {
               console.warn('Compression failed, uploading original:', err);
             }
@@ -949,7 +948,7 @@ export function BookingForm() {
 
             {/* ORCR Photo 2 */}
             <div className="space-y-4 text-center">
-              <Label className={errors.orcrImage2 ? "text-red-500 font-bold" : "font-medium"}>ORCR Photo 2 *</Label>
+              <Label className={errors.orcrImage2 ? "text-red-500 font-bold" : "font-medium"}>ORCR Photo 2 (Optional)</Label>
               {orcrImage2 ? (
                 <div className="relative w-full mx-auto">
                   <div className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-primary/50 group">
@@ -983,7 +982,7 @@ export function BookingForm() {
                       <>
                         <ImageIcon className={`w-8 h-8 mb-2 ${errors.orcrImage2 ? 'text-red-500' : 'text-primary'}`} />
                         <p className={`text-xs ${errors.orcrImage2 ? 'text-red-500' : 'text-foreground font-medium'}`}>
-                          Click to upload ORCR Photo 2
+                          Click to upload ORCR Photo 2 (Optional)
                         </p>
                         {errors.orcrImage2 && <p className="text-[10px] text-red-600 font-bold mt-1 uppercase">{errors.orcrImage2}</p>}
                       </>
