@@ -36,11 +36,11 @@ export default function MaintenancePage() {
 
                 {/* Top Right Logo Area (Absolute on Desktop) */}
                 <div className="absolute top-6 right-6 md:top-10 md:right-10 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/20">
+                    <div className="w-16 h-16 flex items-center justify-center">
                         <img
                             src="/autoworxlogo.png"
                             alt="Autoworx Logo"
-                            className="w-8 h-8 object-contain"
+                            className="w-full h-full object-contain"
                         />
                     </div>
                     <span className="font-bold text-lg tracking-tight hidden sm:block">Autoworx Repairs and Gen. Merchandise</span>
