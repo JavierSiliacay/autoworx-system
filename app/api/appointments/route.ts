@@ -345,42 +345,57 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "ID required" }, { status: 400 })
   }
 
-  // Get the appointment to find image URLs for cleanup
-  const { data: appointment } = await supabase
-    .from("appointments")
-    .select("damage_images, orcr_image")
-    .eq("id", id)
-    .single()
+  const { searchParams } = new URL(request.url)
+  const isPermanent = searchParams.get("permanent") === "true"
 
-  // Delete images from storage if any
-  if (appointment?.damage_images && appointment.damage_images.length > 0) {
-    const imagePaths = appointment.damage_images
-      .map((url: string) => {
-        const match = url.match(/damage-images\/(.+)$/)
-        return match ? match[1] : null
-      })
-      .filter(Boolean)
+  if (isPermanent) {
+    // Get the appointment to find image URLs for cleanup
+    const { data: appointment } = await supabase
+      .from("appointments")
+      .select("damage_images, orcr_image")
+      .eq("id", id)
+      .single()
 
-    if (imagePaths.length > 0) {
-      await supabase.storage.from("damage-images").remove(imagePaths)
+    // Delete images from storage if any
+    if (appointment?.damage_images && appointment.damage_images.length > 0) {
+      const imagePaths = appointment.damage_images
+        .map((url: string) => {
+          const match = url.match(/damage-images\/(.+)$/)
+          return match ? match[1] : null
+        })
+        .filter(Boolean)
+
+      if (imagePaths.length > 0) {
+        await supabase.storage.from("damage-images").remove(imagePaths)
+      }
     }
-  }
 
-  // Delete ORCR image from storage if exists
-  if (appointment?.orcr_image) {
-    const orcrMatch = appointment.orcr_image.match(/damage-images\/(.+)$/)
-    if (orcrMatch) {
-      await supabase.storage.from("damage-images").remove([orcrMatch[1]])
+    // Delete ORCR image from storage if exists
+    if (appointment?.orcr_image) {
+      const orcrMatch = appointment.orcr_image.match(/damage-images\/(.+)$/)
+      if (orcrMatch) {
+        await supabase.storage.from("damage-images").remove([orcrMatch[1]])
+      }
     }
-  }
 
-  const { error } = await supabase
-    .from("appointments")
-    .delete()
-    .eq("id", id)
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("id", id)
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+  } else {
+    // Soft Delete
+    const { error } = await supabase
+      .from("appointments")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ success: true })
