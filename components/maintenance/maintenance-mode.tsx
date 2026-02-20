@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Wrench, Hammer, Cog, Timer } from "lucide-react"
+import { Cog } from "lucide-react"
 
 export default function MaintenancePage() {
     return (
@@ -23,8 +23,12 @@ export default function MaintenancePage() {
 
                     {/* Brand Logo / Identity Area */}
                     <div className="flex flex-col items-center space-y-4">
-                        <div className="w-20 h-20 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/30 shadow-[0_0_30px_rgba(var(--primary-rgb),0.3)]">
-                            <Wrench className="text-primary w-10 h-10 animate-bounce" />
+                        <div className="w-24 h-24 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/30 shadow-[0_0_30px_rgba(var(--primary-rgb),0.3)]">
+                            <img
+                                src="/autoworxlogo.png"
+                                alt="Autoworx Logo"
+                                className="w-20 h-20 object-contain animate-bounce"
+                            />
                         </div>
                         <h1 className="text-2xl font-bold tracking-tight text-white uppercase">
                             Autoworx Repairs
