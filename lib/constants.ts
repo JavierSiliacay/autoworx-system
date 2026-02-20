@@ -63,9 +63,9 @@ export const COST_ITEM_CATEGORIES = [
   "Mechanical Works",
   "Electrical",
   "Aircon",
-  "Tinsmith",
-  "Alignment",
+  "Tinsmith/Alignment",
   "Glassworks",
+  "Remove and Install",
   "Detailing",
   "Painting",
   "Others"
@@ -94,4 +94,6 @@ export interface CostingData {
   notes: string
   createdAt: string
   updatedAt: string
+  serviceAdvisor?: string
+  deliveryDate?: number
 }

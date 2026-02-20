@@ -196,6 +196,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     costing: apt.costing,
     damageImages: apt.damage_images,
     orcrImage: apt.orcr_image,
+    orcrImage2: apt.orcr_image_2,
     insurance: apt.insurance,
     estimateNumber: apt.estimate_number,
     paulNotes: apt.paul_notes,
@@ -262,6 +263,11 @@ export default function AdminDashboard() {
   const router = useRouter()
   const { status, data: session } = useSession()
   const { toast } = useToast()
+
+  // Track the last selected category to auto-fill new items
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined)
+  const [focusNewItem, setFocusNewItem] = useState<string | null>(null)
+
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [filter, setFilter] = useState<string>("all")
   const [vehicleBrandFilter, setVehicleBrandFilter] = useState<string>("all")
@@ -808,23 +814,54 @@ export default function AdminDashboard() {
   }
 
   const handleDownloadFullReport = (appointment: Appointment) => {
-    setSelectedDownloadAppointment(appointment)
-    setPdfServiceAdvisor("")
-    setPdfDeliveryDate("")
-    setIsPdfModalOpen(true)
+    // Check if we already have a saved S/A for this unit
+    const savedSA = appointment.costing?.serviceAdvisor
+    const savedDelivery = appointment.costing?.deliveryDate
+
+    if (savedSA) {
+      // If S/A exists, download immediately without showing modal
+      toast({
+        title: "Downloading Report...",
+        description: `Last S/A: ${savedSA}`,
+      })
+      handlePrintReport(appointment, {
+        serviceAdvisor: savedSA,
+        deliveryDate: savedDelivery?.toString() || ""
+      })
+    } else {
+      // First time: Show modal to capture inputs
+      setSelectedDownloadAppointment(appointment)
+      setPdfServiceAdvisor("")
+      setPdfDeliveryDate("")
+      setIsPdfModalOpen(true)
+    }
   }
 
   const confirmDownloadPdf = async () => {
     if (!selectedDownloadAppointment) return
 
     setIsPdfModalOpen(false)
+
+    // Save the entered values to the appointment for next time
+    if (selectedDownloadAppointment.costing) {
+      const newCosting: CostingData = {
+        ...selectedDownloadAppointment.costing,
+        serviceAdvisor: pdfServiceAdvisor,
+        deliveryDate: pdfDeliveryDate ? parseInt(pdfDeliveryDate) : undefined
+      }
+      updateCosting(selectedDownloadAppointment.id, newCosting, true)
+    }
+
     await handlePrintReport(selectedDownloadAppointment)
 
     // Clear selection
     setSelectedDownloadAppointment(null)
   }
 
-  const handlePrintReport = async (appointment: Appointment) => {
+  const handlePrintReport = async (
+    appointment: Appointment,
+    overrides?: { serviceAdvisor?: string, deliveryDate?: string }
+  ) => {
     // 1. Format professional filename for the document title
     const currentEstimateNumber = appointment.estimateNumber || "PENDING";
     const unitModel = `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim();
@@ -884,15 +921,17 @@ export default function AdminDashboard() {
       }
 
       // 5. Generate high-quality HTML content using the organizational filename
-      // Pass the extra data (S/A and Delivery Date)
+      // Pass the extra data (S/A and Delivery Date) - use overrides if provided, else fall back to state
+      const pdfOptions = {
+        serviceAdvisor: overrides?.serviceAdvisor !== undefined ? overrides.serviceAdvisor : pdfServiceAdvisor,
+        deliveryDate: overrides?.deliveryDate !== undefined ? overrides.deliveryDate : pdfDeliveryDate
+      }
+
       const htmlContent = await generateTrackingPDF(
         { ...appointment, estimateNumber: finalEstimateNumber },
         'admin',
         filename,
-        {
-          serviceAdvisor: pdfServiceAdvisor,
-          deliveryDate: pdfDeliveryDate
-        }
+        pdfOptions
       );
 
       // 6. Write to the new window and trigger print
@@ -922,6 +961,21 @@ export default function AdminDashboard() {
 
   const handleSaveFile = (appointment: Appointment) => handleDownloadFullReport(appointment);
 
+  // Focus effect for new items
+  useEffect(() => {
+    if (focusNewItem) {
+      // slight delay to allow render
+      setTimeout(() => {
+        const element = document.getElementById(`description-${focusNewItem}`)
+        if (element) {
+          element.focus()
+          // set cursor to end if needed, though mostly empty
+        }
+        setFocusNewItem(null)
+      }, 100)
+    }
+  }, [focusNewItem])
+
   const addCostItem = (appointmentId: string, type: CostItemType, category?: string) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
     const currentCosting = appointment?.costing || {
@@ -937,10 +991,22 @@ export default function AdminDashboard() {
       updatedAt: new Date().toISOString(),
     }
 
+    // Determine category: Explicit > Last Selected > Default (undefined)
+    // Only inherit for service_labor type items where category makes sense
+    let finalCategory = category;
+    if (!finalCategory && type === 'service_labor' && selectedCategory) {
+      finalCategory = selectedCategory;
+    }
+
+    // Update the state if we are explicitly setting a category (e.g. from future UI)
+    if (category) {
+      setSelectedCategory(category);
+    }
+
     const newItem: CostItem = {
       id: `item-${Date.now()}`,
       type,
-      category: category,
+      category: finalCategory,
       description: "",
       quantity: 1,
       unitPrice: 0,
@@ -953,6 +1019,7 @@ export default function AdminDashboard() {
     }
 
     updateCosting(appointmentId, newCosting, true)
+    setFocusNewItem(newItem.id)
   }
 
   const calculateTotal = (subtotal: number, discount: number, discountType: "fixed" | "percentage", vatEnabled: boolean) => {
@@ -975,6 +1042,11 @@ export default function AdminDashboard() {
 
     const updatedItems = appointment.costing.items.map((item) => {
       if (item.id === itemId) {
+        // Track category changes if needed (though UI handles global state now)
+        if (updates.category) {
+          setSelectedCategory(updates.category);
+        }
+
         const updatedItem = { ...item, ...updates }
         updatedItem.total = Math.round(updatedItem.quantity * updatedItem.unitPrice * 100) / 100
         return updatedItem
@@ -2166,6 +2238,22 @@ export default function AdminDashboard() {
                                       <h4 className="font-semibold text-foreground">Cost Breakdown</h4>
                                     </div>
                                     <div className="flex gap-2 flex-wrap">
+                                      <div className="mr-2">
+                                        <Select
+                                          value={selectedCategory || "default"}
+                                          onValueChange={(val) => setSelectedCategory(val === "default" ? undefined : val)}
+                                        >
+                                          <SelectTrigger className="h-8 w-[140px] text-xs">
+                                            <SelectValue placeholder="Category..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="default">Default (None)</SelectItem>
+                                            {COST_ITEM_CATEGORIES.map((cat) => (
+                                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
                                       {COST_ITEM_TYPES.map((type) => (
                                         <Button
                                           key={type.value}
@@ -2188,37 +2276,12 @@ export default function AdminDashboard() {
                                         <div key={item.id} className="p-3 bg-background rounded-lg border border-border">
                                           <div className="flex items-start gap-3">
                                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-6 gap-3">
-                                              {item.category !== undefined && (
-                                                <div className="sm:col-span-1">
-                                                  <label className="text-xs text-muted-foreground mb-1 block">Category</label>
-                                                  <Select
-                                                    value={item.category || ""}
-                                                    onValueChange={(value) => updateCostItem(appointment.id, item.id, { category: value }, true)}
-                                                  >
-                                                    <SelectTrigger
-                                                      className="h-8 text-[11px] px-2"
-                                                      onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                          e.preventDefault()
-                                                          addCostItem(appointment.id, item.type)
-                                                        }
-                                                      }}
-                                                    >
-                                                      <SelectValue placeholder="Select Category" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                      {COST_ITEM_CATEGORIES.map((cat) => (
-                                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                                      ))}
-                                                    </SelectContent>
-                                                  </Select>
-                                                </div>
-                                              )}
-                                              <div className={item.category !== undefined ? "sm:col-span-2" : "sm:col-span-3"}>
+                                              <div className="sm:col-span-3">
                                                 <label className="text-xs text-muted-foreground mb-1 block">
-                                                  {COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type)} Description
+                                                  {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
                                                 </label>
                                                 <Input
+                                                  id={`description-${item.id}`}
                                                   value={item.description}
                                                   onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
                                                   onKeyDown={(e) => {
@@ -3110,7 +3173,7 @@ export default function AdminDashboard() {
             <Button variant="outline" onClick={() => setIsPdfModalOpen(false)}>Cancel</Button>
             <Button
               onClick={confirmDownloadPdf}
-              disabled={!pdfServiceAdvisor.trim() || pdfServiceAdvisor.length < 2 || !pdfDeliveryDate || parseInt(pdfDeliveryDate) < 1}
+              disabled={!pdfServiceAdvisor.trim() || pdfServiceAdvisor.length < 2}
             >
               Download PDF
             </Button>

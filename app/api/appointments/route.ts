@@ -352,7 +352,7 @@ export async function DELETE(request: Request) {
     // Get the appointment to find image URLs for cleanup
     const { data: appointment } = await supabase
       .from("appointments")
-      .select("damage_images, orcr_image")
+      .select("damage_images, orcr_image, orcr_image_2")
       .eq("id", id)
       .single()
 
@@ -375,6 +375,13 @@ export async function DELETE(request: Request) {
       const orcrMatch = appointment.orcr_image.match(/damage-images\/(.+)$/)
       if (orcrMatch) {
         await supabase.storage.from("damage-images").remove([orcrMatch[1]])
+      }
+    }
+
+    if (appointment?.orcr_image_2) {
+      const orcrMatch2 = appointment.orcr_image_2.match(/damage-images\/(.+)$/)
+      if (orcrMatch2) {
+        await supabase.storage.from("damage-images").remove([orcrMatch2[1]])
       }
     }
 
