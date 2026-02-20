@@ -26,7 +26,7 @@ export default function MaintenancePage() {
                         <img
                             src="/autoworxlogo.png"
                             alt="Autoworx Logo"
-                            className="w-32 h-32 object-contain"
+                            className="w-40 h-40 object-contain"
                         />
                         <h1 className="text-2xl font-bold tracking-tight text-white uppercase">
                             Autoworx Repairs
