@@ -70,17 +70,41 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("appointments")
       .select("*")
       .order("created_at", { ascending: false })
 
+    const showDeleted = searchParams.get("deleted") === "true"
+
+    if (showDeleted) {
+      query = query.not("deleted_at", "is", null).order("deleted_at", { ascending: false })
+    } else {
+      query = query.is("deleted_at", null)
+    }
+
+    const { data, error } = await query
+
     if (error) {
+      // Check for missing column error (Postgres code 42703) to ensure existing data is still accessible
+      if (error.code === '42703' || error.message?.includes('does not exist')) {
+        console.warn("deleted_at column missing, falling back to standard query")
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("appointments")
+          .select("*")
+          .order("created_at", { ascending: false })
+
+        if (fallbackError) {
+          return NextResponse.json({ error: fallbackError.message }, { status: 500 })
+        }
+        return NextResponse.json(fallbackData)
+      }
+
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json(data)
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in GET appointments:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
@@ -259,6 +283,9 @@ export async function PUT(request: Request) {
   if (updates.assigneeDriver !== undefined) dbUpdates.assignee_driver = updates.assigneeDriver
   if (updates.service !== undefined) dbUpdates.service = updates.service
   if (updates.message !== undefined) dbUpdates.message = updates.message
+
+  // Soft delete support
+  if (updates.deletedAt !== undefined) dbUpdates.deleted_at = updates.deletedAt
 
   dbUpdates.updated_at = new Date().toISOString()
 

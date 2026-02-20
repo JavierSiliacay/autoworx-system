@@ -220,7 +220,12 @@ function getAppointmentStatusLabel(status: string): string {
   return statusMap[status] || status
 }
 
-export async function generateTrackingPDF(appointment: TrackingAppointment, role: 'admin' | 'user' = 'user', reportTitle?: string): Promise<string> {
+export interface PDFOptions {
+  serviceAdvisor?: string;
+  deliveryDate?: number | string;
+}
+
+export async function generateTrackingPDF(appointment: TrackingAppointment, role: 'admin' | 'user' = 'user', reportTitle?: string, options: PDFOptions = {}): Promise<string> {
   const isAdmin = role === 'admin'
   const repairStatus = getRepairStatusLabel(appointment.repairStatus)
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
@@ -403,6 +408,12 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         <td class="value-cell">${appointment.service}</td>
       </tr>
       <tr>
+        <td class="label-cell"></td>
+        <td class="value-cell"></td>
+        <td class="label-cell">S/A:</td>
+        <td class="value-cell" style="text-transform: uppercase;">${options.serviceAdvisor || "N/A"}</td>
+      </tr>
+      <tr>
         <td class="label-cell">CHASSIS NO:</td>
         <td class="value-cell">${appointment.chassisNumber || "N/A"}</td>
         <td class="label-cell" rowspan="2" style="text-align: center; font-size: 9px; vertical-align: middle; text-transform: uppercase;">SCAN TO TRACK:</td>
@@ -497,8 +508,12 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     </div>
     `}
 
-    <div class="delivery-date">DELIVERY DATE: ________ working days</div>
+
     `}
+
+    <div style="font-size: 10px; font-weight: bold; color: red; margin-bottom: 2px; text-transform: uppercase;">
+      DELIVERY DATE: <span style="text-decoration: underline; color: red;">${options.deliveryDate || "_______"}</span> working days
+    </div>
 
     <div class="footer-layout">
       <div class="terms-box">

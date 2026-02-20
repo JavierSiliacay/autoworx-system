@@ -130,6 +130,8 @@ interface Appointment {
   insurance?: string
   estimateNumber?: string
   paulNotes?: string
+  updatedAt?: string
+  source?: 'active' | 'history'
 }
 
 // History interface
@@ -297,6 +299,17 @@ export default function AdminDashboard() {
   const [newAnnouncement, setNewAnnouncement] = useState("")
   const [isPostingAnnouncement, setIsPostingAnnouncement] = useState(false)
 
+  // Trash / History States
+  const [showDeletedHistory, setShowDeletedHistory] = useState(false)
+  const [deletedAppointments, setDeletedAppointments] = useState<Appointment[]>([])
+  const [isLoadingDeleted, setIsLoadingDeleted] = useState(false)
+
+  // PDF Modal States
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false)
+  const [pdfServiceAdvisor, setPdfServiceAdvisor] = useState("")
+  const [pdfDeliveryDate, setPdfDeliveryDate] = useState<string>("")
+  const [selectedDownloadAppointment, setSelectedDownloadAppointment] = useState<Appointment | null>(null)
+
   // Refs for stabilizing typing and real-time updates
   const costingDebounceRef = useRef<Record<string, any>>({})
   const lastStateUpdateRef = useRef<Record<string, number>>({})
@@ -340,6 +353,71 @@ export default function AdminDashboard() {
       console.error("Error loading announcements:", error)
     }
   }, [])
+
+  const loadDeletedAppointments = useCallback(async () => {
+    setIsLoadingDeleted(true)
+    try {
+      const [appointmentsRes, historyRes] = await Promise.all([
+        fetch("/api/appointments?deleted=true"),
+        fetch("/api/history?deleted=true")
+      ])
+
+      let combined: Appointment[] = []
+
+      if (appointmentsRes.ok) {
+        const data = await appointmentsRes.json() as AppointmentDB[]
+        const mapped = data.map(dbToFrontend).map(a => ({ ...a, source: 'active' as const }))
+        combined = [...combined, ...mapped]
+      }
+
+      if (historyRes.ok) {
+        const data = await historyRes.json() as any[]
+        // History items need mapping to Appointment structure
+        const mapped = data.map((h: any) => ({
+          id: h.id,
+          trackingCode: h.tracking_code,
+          name: h.name,
+          email: h.email,
+          phone: h.phone,
+          vehicleMake: h.vehicle_make,
+          vehicleModel: h.vehicle_model,
+          vehicleYear: h.vehicle_year,
+          vehiclePlate: h.vehicle_plate,
+          vehicleColor: h.vehicle_color,
+          chassisNumber: h.chassis_number,
+          engineNumber: h.engine_number,
+          assigneeDriver: h.assignee_driver,
+          service: h.service,
+          preferredDate: h.preferred_date,
+          message: h.message,
+          status: h.final_status || "completed", // usually completed if in history
+          repairStatus: h.repair_status,
+          currentRepairPart: h.current_repair_part,
+          createdAt: h.original_created_at,
+          statusUpdatedAt: h.deleted_at || h.archived_at, // Use deleted_at for sorting
+          costing: h.costing,
+          insurance: h.insurance,
+          estimateNumber: h.estimate_number,
+          paulNotes: h.paul_notes,
+          source: 'history' as const
+        }))
+        combined = [...combined, ...mapped]
+      }
+
+      // Sort by deleted time (most recent first)
+      combined.sort((a, b) => new Date(b.statusUpdatedAt || b.updatedAt || 0).getTime() - new Date(a.statusUpdatedAt || a.updatedAt || 0).getTime())
+
+      setDeletedAppointments(combined)
+    } catch (error) {
+      console.error("Error loading deleted appointments:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load trash history.",
+        variant: "destructive",
+      })
+    }
+    setIsLoadingDeleted(false)
+  }, [toast])
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -471,18 +549,105 @@ export default function AdminDashboard() {
     })
   }
 
-  const deleteAppointment = async (id: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this appointment? This cannot be undone.")) {
+  const softDeleteAppointment = async (id: string) => {
+    if (!window.confirm("Are you sure you want to move this appointment to Trash?")) {
       return
     }
-    const updated = appointments.filter((apt) => apt.id !== id)
-    setAppointments(updated)
 
-    await fetch("/api/appointments", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    })
+    // Optimistic update
+    setAppointments((prev) => prev.filter((apt) => apt.id !== id))
+
+    try {
+      const response = await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, deletedAt: new Date().toISOString() }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Moved to Trash",
+          description: "Appointment has been moved to Delete History.",
+        })
+        loadDeletedAppointments() // Refresh trash
+      } else {
+        // Revert on failure (simplified)
+        loadAppointments()
+        toast({
+          title: "Error",
+          description: "Failed to delete appointment.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error deleting appointment:", error)
+    }
+  }
+
+  // Helper to distinguish source
+  const restoreAppointment = async (appointment: Appointment & { source?: 'active' | 'history' }) => {
+    if (!window.confirm("Restore this appointment?")) {
+      return
+    }
+
+    setDeletedAppointments((prev) => prev.filter((apt) => apt.id !== appointment.id))
+
+    try {
+      let endpoint = "/api/appointments"
+      if (appointment.source === 'history') {
+        endpoint = "/api/history"
+      }
+
+      const response = await fetch(endpoint, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: appointment.id, deletedAt: null }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Restored",
+          description: "Appointment restored successfully.",
+        })
+        if (appointment.source === 'history') {
+          loadHistory()
+        } else {
+          loadAppointments()
+        }
+      }
+    } catch (error) {
+      console.error("Error restoring appointment:", error)
+    }
+  }
+
+  const permanentDeleteAppointment = async (appointment: Appointment & { source?: 'active' | 'history' }) => {
+    if (!window.confirm("PERMANENTLY DELETE? This cannot be undone.")) {
+      return
+    }
+
+    setDeletedAppointments((prev) => prev.filter((apt) => apt.id !== appointment.id))
+
+    try {
+      let endpoint = "/api/appointments"
+      if (appointment.source === 'history') {
+        endpoint = "/api/history?permanent=true" // Pass flag for history hard delete
+      }
+
+      const response = await fetch(endpoint, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: appointment.id }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Deleted Permanently",
+          description: "Record has been removed from database.",
+        })
+      }
+    } catch (error) {
+      console.error("Error permanently deleting:", error)
+    }
   }
 
   const openArchiveModal = (id: string) => {
@@ -520,7 +685,7 @@ export default function AdminDashboard() {
   }
 
   const deleteHistoryRecord = async (id: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this history record?")) {
+    if (!window.confirm("Are you sure you want to move this history record to Trash?")) {
       return
     }
 
@@ -531,6 +696,10 @@ export default function AdminDashboard() {
         body: JSON.stringify({ id }),
       })
       setHistoryRecords((prev) => prev.filter((record) => record.id !== id))
+      toast({
+        title: "Moved to Trash",
+        description: "History record moved to Delete History."
+      })
     } catch (error) {
       console.error("Error deleting history record:", error)
     }
@@ -638,6 +807,23 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleDownloadFullReport = (appointment: Appointment) => {
+    setSelectedDownloadAppointment(appointment)
+    setPdfServiceAdvisor("")
+    setPdfDeliveryDate("")
+    setIsPdfModalOpen(true)
+  }
+
+  const confirmDownloadPdf = async () => {
+    if (!selectedDownloadAppointment) return
+
+    setIsPdfModalOpen(false)
+    await handlePrintReport(selectedDownloadAppointment)
+
+    // Clear selection
+    setSelectedDownloadAppointment(null)
+  }
+
   const handlePrintReport = async (appointment: Appointment) => {
     // 1. Format professional filename for the document title
     const currentEstimateNumber = appointment.estimateNumber || "PENDING";
@@ -698,10 +884,15 @@ export default function AdminDashboard() {
       }
 
       // 5. Generate high-quality HTML content using the organizational filename
+      // Pass the extra data (S/A and Delivery Date)
       const htmlContent = await generateTrackingPDF(
         { ...appointment, estimateNumber: finalEstimateNumber },
         'admin',
-        filename
+        filename,
+        {
+          serviceAdvisor: pdfServiceAdvisor,
+          deliveryDate: pdfDeliveryDate
+        }
       );
 
       // 6. Write to the new window and trigger print
@@ -717,7 +908,9 @@ export default function AdminDashboard() {
 
     } catch (error: any) {
       console.error("Print Error:", error);
-      printWindow.document.body.innerHTML = `<div style="color: red; padding: 20px;">Error generating report: ${error.message}</div>`;
+      if (printWindow) {
+        printWindow.document.body.innerHTML = `<div style="color: red; padding: 20px;">Error generating report: ${error.message}</div>`;
+      }
       toast({
         title: "Generation Failed",
         description: "Could not create the high-quality report.",
@@ -726,8 +919,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSaveFile = (appointment: Appointment) => handlePrintReport(appointment);
-  const handleDownloadFullReport = (appointment: Appointment) => handlePrintReport(appointment);
+
+  const handleSaveFile = (appointment: Appointment) => handleDownloadFullReport(appointment);
 
   const addCostItem = (appointmentId: string, type: CostItemType, category?: string) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
@@ -1254,17 +1447,33 @@ export default function AdminDashboard() {
             type="button"
             onClick={() => {
               setActiveTab("history")
+              setShowDeletedHistory(false)
               if (historyRecords.length === 0) {
                 loadHistory()
               }
             }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "history"
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "history" && !showDeletedHistory
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
           >
             <HistoryIcon className="w-4 h-4 inline-block mr-2" />
             History ({historyRecords.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("history")
+              setShowDeletedHistory(true)
+              loadDeletedAppointments()
+            }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "history" && showDeletedHistory
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            <Trash2 className="w-4 h-4 inline-block mr-2" />
+            Delete History ({deletedAppointments.length})
           </button>
         </div>
 
@@ -1769,10 +1978,10 @@ export default function AdminDashboard() {
                                   size="sm"
                                   variant="outline"
                                   className="text-red-500 hover:text-red-400 hover:bg-red-500/10 border-red-500/30 bg-transparent"
-                                  onClick={() => deleteAppointment(appointment.id)}
+                                  onClick={() => softDeleteAppointment(appointment.id)}
                                 >
                                   <Trash2 className="w-4 h-4 mr-1" />
-                                  Delete
+                                  Delete (Trash)
                                 </Button>
                                 <Button
                                   size="sm"
@@ -2166,7 +2375,71 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === "history" && (
+        {activeTab === "history" && showDeletedHistory && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center bg-destructive/10 p-4 rounded-lg border border-destructive/20 text-destructive mb-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                <span className="font-semibold">Trash (Delete History)</span>
+              </div>
+              <span className="text-sm">Items here are soft-deleted. You can restore them or permanently delete them.</span>
+            </div>
+
+            {isLoadingDeleted ? (
+              <div className="p-8 text-center animate-pulse">Loading trash...</div>
+            ) : deletedAppointments.length === 0 ? (
+              <div className="p-12 bg-card rounded-xl border border-border text-center">
+                <Trash2 className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                <h3 className="font-semibold text-foreground">Trash is empty</h3>
+                <p className="text-sm text-muted-foreground mt-1">No deleted items found.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {deletedAppointments.map((apt) => (
+                  <div key={apt.id} className="bg-card rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                        <Trash2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-foreground">{apt.name}</h4>
+                        <div className="text-xs text-muted-foreground flex flex-col sm:flex-row gap-x-3 gap-y-1">
+                          <span>{apt.vehiclePlate}</span>
+                          <span>{apt.vehicleMake} {apt.vehicleModel}</span>
+                          <span className="font-mono">{apt.trackingCode}</span>
+                          <span className="text-red-500">Deleted: {formatDate(apt.statusUpdatedAt || apt.createdAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 border-green-500/30 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => restoreAppointment(apt)}
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        Restore
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="gap-1"
+                        onClick={() => permanentDeleteAppointment(apt)}
+                      >
+                        <X className="w-3 h-3" />
+                        Delete Forever
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "history" && !showDeletedHistory && (
           <div className="space-y-6">
             {/* History Toolbar - Search, Filter, Sort */}
             <div className="space-y-4">
@@ -2789,6 +3062,57 @@ export default function AdminDashboard() {
                 <Send className="w-4 h-4" />
               )}
               Post Announcement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Download Input Modal */}
+      <Dialog open={isPdfModalOpen} onOpenChange={setIsPdfModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Download Full Report</DialogTitle>
+            <DialogDescription>
+              Please provide the Service Advisor and Delivery Date to include in the PDF.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="service-advisor" className="text-right">
+                S/A
+              </Label>
+              <Input
+                id="service-advisor"
+                placeholder="e.g. Paul"
+                className="col-span-3"
+                value={pdfServiceAdvisor}
+                onChange={(e) => setPdfServiceAdvisor(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="delivery-date" className="text-right">
+                Delivery
+              </Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <Input
+                  id="delivery-date"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 5"
+                  value={pdfDeliveryDate}
+                  onChange={(e) => setPdfDeliveryDate(e.target.value)}
+                />
+                <span className="text-sm text-muted-foreground whitespace-nowrap">working days</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPdfModalOpen(false)}>Cancel</Button>
+            <Button
+              onClick={confirmDownloadPdf}
+              disabled={!pdfServiceAdvisor.trim() || pdfServiceAdvisor.length < 2 || !pdfDeliveryDate || parseInt(pdfDeliveryDate) < 1}
+            >
+              Download PDF
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -11,16 +11,59 @@ export async function GET(request: Request) {
 
   const supabase = await createClient()
 
-  const { data, error } = await supabase
+  const { searchParams } = new URL(request.url)
+  const showDeleted = searchParams.get("deleted") === "true"
+
+  let query = supabase
     .from("appointment_history")
     .select("*")
     .order("archived_at", { ascending: false })
+
+  if (showDeleted) {
+    query = query.not("deleted_at", "is", null).order("deleted_at", { ascending: false })
+  } else {
+    query = query.is("deleted_at", null)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    // Fallback for missing column
+    if (error.code === '42703' || error.message?.includes('does not exist')) {
+      console.warn("deleted_at column missing in history, falling back")
+      const { data: fallback, error: fbError } = await supabase
+        .from("appointment_history")
+        .select("*")
+        .order("archived_at", { ascending: false })
+      if (fbError) return NextResponse.json({ error: fbError.message }, { status: 500 })
+      return NextResponse.json(fallback)
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(data)
+}
+
+export async function PUT(request: Request) {
+  const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!isAuthorizedAdminEmail(token?.email)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const supabase = await createClient()
+  const body = await request.json()
+  const { id, deletedAt } = body
+
+  const { error } = await supabase
+    .from("appointment_history")
+    .update({ deleted_at: deletedAt })
+    .eq("id", id)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json({ success: true })
 }
 
 export async function POST(request: Request) {
@@ -119,13 +162,25 @@ export async function DELETE(request: Request) {
   const body = await request.json()
   const { id } = body
 
-  const { error } = await supabase
-    .from("appointment_history")
-    .delete()
-    .eq("id", id)
+  // Soft delete by updating deleted_at
+  // If 'permanent' param is set, do hard delete
+  const { searchParams } = new URL(request.url)
+  const isPermanent = searchParams.get("permanent") === "true"
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (isPermanent) {
+    const { error } = await supabase
+      .from("appointment_history")
+      .delete()
+      .eq("id", id)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else {
+    const { error } = await supabase
+      .from("appointment_history")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

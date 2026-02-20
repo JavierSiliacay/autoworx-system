@@ -6,7 +6,8 @@ import type { JWT } from "next-auth/jwt"
 const AUTHORIZED_EMAILS = [
   "autoworxcagayan2025@gmail.com",
   "siliacay.javier@gmail.com",
-  "paulsuazo64@gmail.com"
+  "paulsuazo64@gmail.com",
+  "alfred_autoworks@yahoo.com"
 ]
 
 export function isAuthorizedAdminEmail(email?: string | null) {
