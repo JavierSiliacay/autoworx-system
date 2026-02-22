@@ -9,6 +9,7 @@ import { signOut, useSession } from "next-auth/react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast, toast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
+import { isDeveloperEmail } from "@/lib/auth"
 import {
   Wrench,
   LogOut,
@@ -42,6 +43,7 @@ import {
   ChevronLeft,
   Megaphone,
   Send,
+  Heart,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -278,9 +280,12 @@ export default function AdminDashboard() {
   const [zoomModalOpen, setZoomModalOpen] = useState(false)
   const [zoomImages, setZoomImages] = useState<string[]>([])
   const [zoomInitialIndex, setZoomInitialIndex] = useState(0)
-  const [activeTab, setActiveTab] = useState<"appointments" | "history">("appointments")
+  const [activeTab, setActiveTab] = useState<"appointments" | "history" | "recommendations">("appointments")
   const [historyRecords, setHistoryRecords] = useState<HistoryRecord[]>([])
+  const [recommendations, setRecommendations] = useState<any[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false)
+  const isDeveloperUser = isDeveloperEmail(session?.user?.email)
   const [archiveModalOpen, setArchiveModalOpen] = useState(false)
   const [archiveAppointmentId, setArchiveAppointmentId] = useState<string | null>(null)
   const [archiveReason, setArchiveReason] = useState("")
@@ -421,9 +426,57 @@ export default function AdminDashboard() {
         description: "Failed to load trash history.",
         variant: "destructive",
       })
+    } finally {
+      setIsLoadingDeleted(false)
     }
-    setIsLoadingDeleted(false)
-  }, [toast])
+  }, [toast, loadAppointments])
+
+  const loadRecommendations = useCallback(async () => {
+    setIsLoadingRecommendations(true)
+    try {
+      const response = await fetch("/api/developer/recommendations")
+      if (response.ok) {
+        const data = await response.json()
+        setRecommendations(data)
+      }
+    } catch (error) {
+      console.error("Error loading recommendations:", error)
+    }
+    setIsLoadingRecommendations(false)
+  }, [])
+
+  const updateRecommendation = async (id: string, updates: any) => {
+    try {
+      const response = await fetch("/api/developer/recommendations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updates }),
+      })
+      if (response.ok) {
+        setRecommendations((prev) =>
+          prev.map((rec) => (rec.id === id ? { ...rec, ...updates } : rec))
+        )
+      }
+    } catch (error) {
+      console.error("Error updating recommendation:", error)
+    }
+  }
+
+  const deleteRecommendation = async (id: string) => {
+    if (!window.confirm("Delete this recommendation?")) return
+    try {
+      const response = await fetch("/api/developer/recommendations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      if (response.ok) {
+        setRecommendations((prev) => prev.filter((rec) => rec.id !== id))
+      }
+    } catch (error) {
+      console.error("Error deleting recommendation:", error)
+    }
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -1547,6 +1600,23 @@ export default function AdminDashboard() {
             <Trash2 className="w-4 h-4 inline-block mr-2" />
             Delete History ({deletedAppointments.length})
           </button>
+
+          {isDeveloperUser && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("recommendations")
+                loadRecommendations()
+              }}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "recommendations"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              <Heart className="w-4 h-4 inline-block mr-2" />
+              Developer Hub ({recommendations.length})
+            </button>
+          )}
         </div>
 
         {activeTab === "appointments" && (
@@ -2845,8 +2915,83 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-        )
-        }
+        )}
+
+        {activeTab === "recommendations" && isDeveloperUser && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-foreground">Recommendations & Feedback</h3>
+                <p className="text-sm text-muted-foreground">User-submitted improvement ideas and bug reports</p>
+              </div>
+              <Button onClick={loadRecommendations} variant="outline" size="sm" disabled={isLoadingRecommendations}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingRecommendations ? 'animate-spin' : ''}`} />
+                Refresh {isLoadingRecommendations && 'ing...'}
+              </Button>
+            </div>
+
+            {isLoadingRecommendations ? (
+              <div className="p-24 text-center">
+                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-muted-foreground">Fetching recommendations...</p>
+              </div>
+            ) : recommendations.length === 0 ? (
+              <div className="p-12 bg-card rounded-xl border border-border text-center">
+                <Heart className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-30" />
+                <h3 className="font-semibold text-foreground">No recommendations yet</h3>
+                <p className="text-sm text-muted-foreground mt-1">Feedback from the About page will appear here.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {recommendations.map((rec) => (
+                  <div key={rec.id} className={`p-6 rounded-xl border transition-all ${rec.is_solved ? 'bg-secondary/30 border-secondary' : 'bg-card border-border shadow-sm'}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <Badge variant={
+                            rec.type === 'Bug' ? 'destructive' :
+                              rec.type === 'Feature' ? 'default' :
+                                'secondary'
+                          }>
+                            {rec.type}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{formatDate(rec.created_at)}</span>
+                          {rec.is_solved && (
+                            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                              <CheckCircle2 className="w-3 h-3 mr-1" /> Solved
+                            </Badge>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-foreground">{rec.name} ({rec.email})</h4>
+                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{rec.message}</p>
+                      </div>
+
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant={rec.is_solved ? 'outline' : 'default'}
+                          onClick={() => updateRecommendation(rec.id, { is_solved: !rec.is_solved })}
+                          className="h-8"
+                        >
+                          {rec.is_solved ? 'Reopen' : 'Mark Solved'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteRecommendation(rec.id)}
+                          className="h-8 text-red-500 hover:text-red-400 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main >
 
       {/* Image Zoom Modal */}

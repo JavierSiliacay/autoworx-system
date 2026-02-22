@@ -1,7 +1,11 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import Image from "next/image"
+import React from "react"
 import { ArrowRight, Shield, Award, Users, Heart, Wrench, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DeveloperForm } from "@/components/developer/developer-form"
+import { DonationQR } from "@/components/developer/donation-qr"
 
 export const metadata: Metadata = {
   title: "About Us | Autoworx Repairs",
@@ -309,27 +313,62 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 animate-fade-in">
+      {/* Developer Support Section */}
+      <section className="py-24 bg-primary/5 border-t border-primary/10 animate-fade-in">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto animate-slide-up">
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-foreground">
-              Ready to Experience the Difference?
-            </h2>
-            <p className="mt-4 text-muted-foreground leading-relaxed">
-              Join thousands of satisfied customers who trust Autoworx Repairs
-              for all their automotive needs. Schedule your appointment today.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" asChild>
-                <Link href="/contact">
-                  Book Appointment
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/services">View Our Services</Link>
-              </Button>
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
+            {/* Recommendation Form */}
+            <div className="bg-card p-8 rounded-2xl border border-border shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Wrench className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground font-serif">Support the Developer</h2>
+                  <p className="text-sm text-muted-foreground">Help us build the future of Autoworx Digital</p>
+                </div>
+              </div>
+
+              <DeveloperForm />
+            </div>
+
+            {/* Donation QR Section */}
+            <div className="space-y-6">
+              <div className="p-8 bg-blue-600 rounded-2xl text-white shadow-lg overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <Heart className="w-32 h-32 rotate-12" />
+                </div>
+
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-bold mb-4">Buy the Dev a Coffee ☕</h3>
+                  <p className="text-blue-100 mb-8 leading-relaxed">
+                    Autoworx Digital is built with passion to modernize automotive services.
+                    If you love what we&apos;re building, feel free to show some appreciation!
+                    Your support helps us keep improving the platform for everyone.
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-8 items-center bg-white/10 backdrop-blur-md p-6 rounded-xl border border-white/20">
+                    <DonationQR />
+                    <div className="flex-1 space-y-4 text-center sm:text-left">
+                      <div>
+                        <p className="text-xs uppercase tracking-widest text-blue-200 font-bold">Primary Method</p>
+                        <p className="text-xl font-bold">GCash (Philippines)</p>
+                      </div>
+                      <div className="pt-4 border-t border-white/10">
+                        <p className="text-sm italic text-blue-100">
+                          &quot;Every small contribution fuels our late-night coding sessions!&quot;
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border border-dashed border-primary/30 rounded-xl bg-primary/5">
+                <p className="text-sm text-center text-muted-foreground italic">
+                  Looking for business inquiries or partnerships? <Link href="/contact" className="text-primary font-bold hover:underline">Contact us here</Link>.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -337,3 +376,4 @@ export default function AboutPage() {
     </>
   )
 }
+
