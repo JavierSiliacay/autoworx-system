@@ -11,6 +11,7 @@ export const SERVICES = [
   "General Overhauling",
   "Wash Over & Car Detailing",
   "24/7 Towing Service",
+  "Insurance Claim",
   "Other",
 ]
 

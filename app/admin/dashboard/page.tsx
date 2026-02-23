@@ -320,10 +320,6 @@ export default function AdminDashboard() {
   const [deletedAppointments, setDeletedAppointments] = useState<Appointment[]>([])
   const [isLoadingDeleted, setIsLoadingDeleted] = useState(false)
 
-  // PDF Modal States
-  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false)
-  const [pdfServiceAdvisor, setPdfServiceAdvisor] = useState("")
-  const [pdfDeliveryDate, setPdfDeliveryDate] = useState<string>("")
   const [selectedDownloadAppointment, setSelectedDownloadAppointment] = useState<Appointment | null>(null)
 
   // Refs for stabilizing typing and real-time updates
@@ -873,49 +869,21 @@ export default function AdminDashboard() {
   }
 
   const handleDownloadFullReport = (appointment: Appointment) => {
-    // Check if we already have a saved S/A for this unit
-    const savedSA = appointment.costing?.serviceAdvisor || appointment.serviceAdvisor
+    // Download immediately using existing S/A
+    const savedSA = appointment.costing?.serviceAdvisor || appointment.serviceAdvisor || "N/A"
     const savedDelivery = appointment.costing?.deliveryDate
 
-    if (savedSA) {
-      // If S/A exists, download immediately without showing modal
-      toast({
-        title: "Downloading Report...",
-        description: `Last S/A: ${savedSA}`,
-      })
-      handlePrintReport(appointment, {
-        serviceAdvisor: savedSA,
-        deliveryDate: savedDelivery?.toString() || ""
-      })
-    } else {
-      // First time: Show modal to capture inputs
-      setSelectedDownloadAppointment(appointment)
-      setPdfServiceAdvisor(appointment.serviceAdvisor || "")
-      setPdfDeliveryDate("")
-      setIsPdfModalOpen(true)
-    }
+    toast({
+      title: "Downloading Report...",
+      description: `Service Advisor: ${savedSA}`,
+    })
+
+    handlePrintReport(appointment, {
+      serviceAdvisor: savedSA,
+      deliveryDate: savedDelivery?.toString() || ""
+    })
   }
 
-  const confirmDownloadPdf = async () => {
-    if (!selectedDownloadAppointment) return
-
-    setIsPdfModalOpen(false)
-
-    // Save the entered values to the appointment for next time
-    if (selectedDownloadAppointment.costing) {
-      const newCosting: CostingData = {
-        ...selectedDownloadAppointment.costing,
-        serviceAdvisor: pdfServiceAdvisor,
-        deliveryDate: pdfDeliveryDate ? parseInt(pdfDeliveryDate) : undefined
-      }
-      updateCosting(selectedDownloadAppointment.id, newCosting, true)
-    }
-
-    await handlePrintReport(selectedDownloadAppointment)
-
-    // Clear selection
-    setSelectedDownloadAppointment(null)
-  }
 
   const handlePrintReport = async (
     appointment: Appointment,
@@ -980,10 +948,10 @@ export default function AdminDashboard() {
       }
 
       // 5. Generate high-quality HTML content using the organizational filename
-      // Pass the extra data (S/A and Delivery Date) - use overrides if provided, else fall back to state
+      // Pass the extra data (S/A and Delivery Date) - use overrides if provided
       const pdfOptions = {
-        serviceAdvisor: overrides?.serviceAdvisor !== undefined ? overrides.serviceAdvisor : pdfServiceAdvisor,
-        deliveryDate: overrides?.deliveryDate !== undefined ? overrides.deliveryDate : pdfDeliveryDate
+        serviceAdvisor: overrides?.serviceAdvisor || "N/A",
+        deliveryDate: overrides?.deliveryDate || ""
       }
 
       const htmlContent = await generateTrackingPDF(
@@ -3305,56 +3273,7 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* PDF Download Input Modal */}
-      <Dialog open={isPdfModalOpen} onOpenChange={setIsPdfModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{selectedDownloadAppointment?.status === 'pending' ? 'Appointment Confirmation' : 'Download Full Report'}</DialogTitle>
-            <DialogDescription>
-              Please provide the Service Advisor and Delivery Date to include in the PDF.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="service-advisor" className="text-right">
-                S/A
-              </Label>
-              <Input
-                id="service-advisor"
-                placeholder="e.g. Paul"
-                className="col-span-3"
-                value={pdfServiceAdvisor}
-                onChange={(e) => setPdfServiceAdvisor(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="delivery-date" className="text-right">
-                Delivery
-              </Label>
-              <div className="col-span-3 flex items-center gap-2">
-                <Input
-                  id="delivery-date"
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 5"
-                  value={pdfDeliveryDate}
-                  onChange={(e) => setPdfDeliveryDate(e.target.value)}
-                />
-                <span className="text-sm text-muted-foreground whitespace-nowrap">working days</span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPdfModalOpen(false)}>Cancel</Button>
-            <Button
-              onClick={confirmDownloadPdf}
-              disabled={!pdfServiceAdvisor.trim() || pdfServiceAdvisor.length < 2}
-            >
-              Download PDF
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </div >
   )
 }
