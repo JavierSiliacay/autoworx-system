@@ -89,7 +89,7 @@ export default function PosterPage() {
                             </div>
                             <div>
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Our Location</p>
-                                <p className="text-sm font-bold text-gray-900">Sepulvida St. Kauswagan, CDO City</p>
+                                <p className="text-sm font-bold text-gray-900">Zone 7 Sepulvida St. Kauswagan, CDO City</p>
                             </div>
                         </div>
                     </div>
