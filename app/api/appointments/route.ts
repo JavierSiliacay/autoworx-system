@@ -189,6 +189,7 @@ export async function POST(request: Request) {
         orcr_image: body.orcrImage || null,
         orcr_image_2: body.orcrImage2 || null,
         insurance: body.insurance || null,
+        service_advisor: body.serviceAdvisor || null,
         estimate_number: estimateNumber,
         status: "pending",
       })
@@ -224,7 +225,8 @@ export async function POST(request: Request) {
           chassisNumber: data.chassis_number,
           engineNumber: data.engine_number,
           assigneeDriver: data.assignee_driver,
-          estimateNumber: data.estimate_number
+          estimateNumber: data.estimate_number,
+          serviceAdvisor: data.service_advisor
         });
         console.log(`Confirmation email sent to ${data.email}`);
       } catch (emailError) {
@@ -268,6 +270,7 @@ export async function PUT(request: Request) {
   if (updates.paulNotes !== undefined) dbUpdates.paul_notes = updates.paulNotes
   if (updates.orcrImage !== undefined) dbUpdates.orcr_image = updates.orcrImage
   if (updates.orcrImage2 !== undefined) dbUpdates.orcr_image_2 = updates.orcrImage2
+  if (updates.serviceAdvisor !== undefined) dbUpdates.service_advisor = updates.serviceAdvisor
 
   // New editable fields
   if (updates.name !== undefined) dbUpdates.name = updates.name

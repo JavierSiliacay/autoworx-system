@@ -44,6 +44,8 @@ import {
   Megaphone,
   Send,
   Heart,
+  Package,
+  LayoutDashboard
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -101,6 +103,7 @@ interface AppointmentDB {
   insurance?: string
   estimate_number?: string
   paul_notes?: string
+  service_advisor?: string
 }
 
 // Frontend interface (camelCase)
@@ -132,6 +135,7 @@ interface Appointment {
   insurance?: string
   estimateNumber?: string
   paulNotes?: string
+  serviceAdvisor?: string
   updatedAt?: string
   source?: 'active' | 'history'
 }
@@ -202,6 +206,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     insurance: apt.insurance,
     estimateNumber: apt.estimate_number,
     paulNotes: apt.paul_notes,
+    serviceAdvisor: apt.service_advisor,
   }
 }
 
@@ -832,6 +837,7 @@ export default function AdminDashboard() {
           service: editingAppointment.service,
           message: editingAppointment.message,
           insurance: editingAppointment.insurance,
+          serviceAdvisor: editingAppointment.serviceAdvisor,
         }),
       })
 
@@ -868,7 +874,7 @@ export default function AdminDashboard() {
 
   const handleDownloadFullReport = (appointment: Appointment) => {
     // Check if we already have a saved S/A for this unit
-    const savedSA = appointment.costing?.serviceAdvisor
+    const savedSA = appointment.costing?.serviceAdvisor || appointment.serviceAdvisor
     const savedDelivery = appointment.costing?.deliveryDate
 
     if (savedSA) {
@@ -884,7 +890,7 @@ export default function AdminDashboard() {
     } else {
       // First time: Show modal to capture inputs
       setSelectedDownloadAppointment(appointment)
-      setPdfServiceAdvisor("")
+      setPdfServiceAdvisor(appointment.serviceAdvisor || "")
       setPdfDeliveryDate("")
       setIsPdfModalOpen(true)
     }
@@ -1443,6 +1449,22 @@ export default function AdminDashboard() {
                 </div>
               </Link>
             </div>
+
+            {/* Center Teleport Button */}
+            <div className="hidden md:flex items-center bg-muted/50 p-1 rounded-full border border-border">
+              <Button variant="secondary" size="sm" className="rounded-full shadow-sm">
+                <LayoutDashboard className="w-4 h-4 mr-2" />
+                Office / Admin
+              </Button>
+              <div className="w-px h-4 bg-border mx-1" />
+              <Link href="/admin/parts">
+                <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-primary transition-all">
+                  <Package className="w-4 h-4 mr-2" />
+                  Parts Room
+                </Button>
+              </Link>
+            </div>
+
             <Button variant="outline" size="sm" onClick={handleLogout} className="bg-transparent">
               <LogOut className="mr-2 h-4 w-4" />
               Logout
@@ -2132,7 +2154,7 @@ export default function AdminDashboard() {
                                   onClick={() => handleDownloadFullReport(appointment)}
                                 >
                                   <Download className="w-4 h-4 mr-1" />
-                                  Download Full Report
+                                  {appointment.status === 'pending' ? 'Appointment Confirmation' : 'Download Full Report'}
                                 </Button>
                               </div>
                             </div>
@@ -3160,6 +3182,14 @@ export default function AdminDashboard() {
                   onChange={(e) => setEditingAppointment({ ...editingAppointment, insurance: e.target.value })}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-sa">Service Advisor (S/A)</Label>
+                <Input
+                  id="edit-sa"
+                  value={editingAppointment.serviceAdvisor || ""}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, serviceAdvisor: e.target.value })}
+                />
+              </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="edit-service">Service Type</Label>
                 <Input
@@ -3279,7 +3309,7 @@ export default function AdminDashboard() {
       <Dialog open={isPdfModalOpen} onOpenChange={setIsPdfModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Download Full Report</DialogTitle>
+            <DialogTitle>{selectedDownloadAppointment?.status === 'pending' ? 'Appointment Confirmation' : 'Download Full Report'}</DialogTitle>
             <DialogDescription>
               Please provide the Service Advisor and Delivery Date to include in the PDF.
             </DialogDescription>

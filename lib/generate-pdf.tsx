@@ -29,6 +29,7 @@ interface TrackingAppointment {
   costing?: CostingData
   insurance?: string
   estimateNumber?: string
+  serviceAdvisor?: string
 }
 
 export async function generateConfirmationPDF(options: PDFGeneratorOptions): Promise<string> {
@@ -158,6 +159,8 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       <tr>
         <td class="label-cell">ENGINE:</td>
         <td class="value-cell">${appointmentData.engineNumber || "N/A"}</td>
+        <td class="label-cell">S/A:</td>
+        <td class="value-cell" style="text-transform: uppercase;">${appointmentData.serviceAdvisor || "N/A"}</td>
       </tr>
     </table>
 
@@ -230,7 +233,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const repairStatus = getRepairStatusLabel(appointment.repairStatus)
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
-  const displayTitle = reportTitle || (isAdmin ? "Repair Estimate" : "Repair Status Report")
+  const displayTitle = reportTitle || (appointment.status === 'pending' ? "Appointment Confirmation" : (isAdmin ? "Repair Estimate" : "Repair Status Report"))
 
   const laborCategories = ["Mechanical Works", "Electrical", "Aircon", "Painting", "Detailing", "Service", "Labor", "Glassworks", "Alignment", "Tinsmith"]
   const hasCosting = !!appointment.costing
@@ -364,16 +367,21 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       </div>
     </div>
     
-    <div class="estimate-bar">${isAdmin ? 'REPAIR ESTIMATE' : 'REPAIR STATUS REPORT'}</div>
+    <div class="estimate-bar">${appointment.status === 'pending' ? 'APPOINTMENT CONFIRMATION' : (isAdmin ? 'REPAIR ESTIMATE' : 'REPAIR STATUS REPORT')}</div>
     
-    ${isAdmin ? `
+    ${appointment.status === 'pending' ? `
+    <div class="estimate-meta">
+      <div>DATE: ${new Date().toLocaleDateString("en-PH", { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
+      <div>TRACKING NO: ${appointment.trackingCode}</div>
+    </div>
+    ` : (isAdmin ? `
     <div class="estimate-meta">
       <div>DATE: ${new Date().toLocaleDateString("en-PH", { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
       <div>ESTIMATE NUMBER: ${appointment.estimateNumber || "PENDING"}</div>
     </div>
     ` : `
     <div style="height: 4px;"></div>
-    `}
+    `)}
 
     <div class="section-title">Customer & Vehicle Information</div>
     <table class="info-table">
@@ -411,7 +419,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         <td class="label-cell"></td>
         <td class="value-cell"></td>
         <td class="label-cell">S/A:</td>
-        <td class="value-cell" style="text-transform: uppercase;">${options.serviceAdvisor || "N/A"}</td>
+        <td class="value-cell" style="text-transform: uppercase;">${options.serviceAdvisor || appointment.serviceAdvisor || "N/A"}</td>
       </tr>
       <tr>
         <td class="label-cell">CHASSIS NO:</td>

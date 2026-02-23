@@ -18,6 +18,7 @@ interface EmailParams {
     engineNumber?: string;
     assigneeDriver?: string;
     estimateNumber?: string;
+    serviceAdvisor?: string;
 }
 
 export async function sendAppointmentEmail({
@@ -35,7 +36,8 @@ export async function sendAppointmentEmail({
     chassisNumber,
     engineNumber,
     assigneeDriver,
-    estimateNumber
+    estimateNumber,
+    serviceAdvisor
 }: EmailParams) {
     console.log(`[Email Utility] Preparing to send ${type} email to: ${email}`);
 
@@ -150,6 +152,7 @@ export async function sendAppointmentEmail({
                                 <td style="padding: 6px 0; color: #1a1a1a;">${services}</td>
                             </tr>
                             ${assigneeDriver ? `<tr><td style="padding: 6px 0; color: #666;">ASSIGNEE/DRIVER:</td><td style="padding: 6px 0; color: #1a1a1a;">${assigneeDriver}</td></tr>` : ''}
+                            ${serviceAdvisor ? `<tr><td style="padding: 6px 0; color: #666;">SERVICE ADVISOR (S/A):</td><td style="padding: 6px 0; color: #1a1a1a; text-transform: uppercase;">${serviceAdvisor}</td></tr>` : ''}
                             ${chassisNumber ? `<tr><td style="padding: 6px 0; color: #666;">Chassis #:</td><td style="padding: 6px 0; color: #1a1a1a;">${chassisNumber}</td></tr>` : ''}
                             ${engineNumber ? `<tr><td style="padding: 6px 0; color: #666;">Engine #:</td><td style="padding: 6px 0; color: #1a1a1a;">${engineNumber}</td></tr>` : ''}
                             ${estimateNumber ? `<tr><td style="padding: 6px 0; color: #666;">ESTIMATE #:</td><td style="padding: 6px 0; color: #1a1a1a; font-weight: bold;">${estimateNumber}</td></tr>` : ''}

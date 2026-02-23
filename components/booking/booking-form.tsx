@@ -51,6 +51,7 @@ export interface BookingFormData {
   orcrImage?: string
   orcrImage2?: string
   insurance?: string
+  serviceAdvisor?: string
 }
 
 export function BookingForm() {
@@ -75,6 +76,7 @@ export function BookingForm() {
     service: "",
     message: "",
     insurance: "",
+    serviceAdvisor: "",
   })
   const [damageImages, setDamageImages] = useState<string[]>([])
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -574,6 +576,16 @@ export function BookingForm() {
                 value={formData.assigneeDriver}
                 onChange={(e) => updateField("assigneeDriver", e.target.value)}
                 placeholder="Person processing the document"
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
+              />
+            </div>
+            <div className="space-y-2 group">
+              <Label htmlFor="serviceAdvisor" className="group-hover:text-primary transition-colors">Service Advisor (S/A) - Optional</Label>
+              <Input
+                id="serviceAdvisor"
+                value={formData.serviceAdvisor}
+                onChange={(e) => updateField("serviceAdvisor", e.target.value)}
+                placeholder="Name of Service Advisor"
                 className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
               />
             </div>
