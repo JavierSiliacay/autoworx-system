@@ -98,6 +98,7 @@ export interface CostingData {
   serviceAdvisor?: string
   deliveryDate?: string
   includePaulSignature?: boolean
+  includeAlfredSignature?: boolean
 }
 
 export const PRODUCTION_URL = "https://autoworxcagayan.com"

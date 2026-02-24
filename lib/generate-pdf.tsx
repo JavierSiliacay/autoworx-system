@@ -581,7 +581,8 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
                 </div>
               </td>
               <td style="width: 50%; border: none; padding: 0; text-align: right; vertical-align: bottom;">
-                <div style="padding-top: 35px;">
+                <div style="position: relative; padding-top: 35px;">
+                  ${appointment.costing?.includeAlfredSignature ? `<img src="/signature_alfred.png" style="position: absolute; width: 60px; top: -5px; right: 5px; z-index: 10;" />` : ""}
                   <span class="signature-name" style="margin-top: 0 !important; display: block;">Alfred N. Agbong</span>
                   <p class="signature-title">Gen. & Op. Manager</p>
                 </div>

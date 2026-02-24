@@ -9,7 +9,7 @@ import { signOut, useSession } from "next-auth/react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast, toast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
-import { isDeveloperEmail } from "@/lib/auth"
+import { isAuthorizedAdminEmail, isDeveloperEmail } from "@/lib/auth"
 import {
   Wrench,
   LogOut,
@@ -1189,6 +1189,16 @@ export default function AdminDashboard() {
     updateCosting(appointmentId, {
       ...appointment.costing,
       includePaulSignature: include,
+    }, true)
+  }
+
+  const setIncludeAlfredSignature = (appointmentId: string, include: boolean) => {
+    const appointment = appointments.find((apt) => apt.id === appointmentId)
+    if (!appointment?.costing) return
+
+    updateCosting(appointmentId, {
+      ...appointment.costing,
+      includeAlfredSignature: include,
     }, true)
   }
 
@@ -2531,44 +2541,85 @@ export default function AdminDashboard() {
                                           />
                                         </div>
 
-                                        {/* E-Signature Toggle - relocated here */}
-                                        {(session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
-                                          <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                                            <div className="flex items-center gap-2 text-sm font-medium">
-                                              <ShieldCheck className="w-4 h-4 text-primary" />
-                                              Include E-Signature in Report for Paul D. Suazo?
+                                        {/* E-Signature Toggles */}
+                                        <div className="space-y-3">
+                                          {/* Paul D. Suazo Signature Toggle */}
+                                          {isAuthorizedAdminEmail(session?.user?.email) && (
+                                            <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                                              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                                                <ShieldCheck className="w-4 h-4" />
+                                                Include E-Signature for Paul D. Suazo?
+                                                {!(session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+                                                  <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground ml-2">READ-ONLY</span>
+                                                )}
+                                              </div>
+                                              <div className="flex gap-2">
+                                                <Button
+                                                  size="sm"
+                                                  variant={appointment.costing?.includePaulSignature ? "default" : "outline"}
+                                                  onClick={() => setIncludePaulSignature(appointment.id, true)}
+                                                  className="h-7 px-3 text-[10px]"
+                                                  disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                >
+                                                  Yes
+                                                </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant={appointment.costing?.includePaulSignature === false ? "destructive" : "outline"}
+                                                  onClick={() => setIncludePaulSignature(appointment.id, false)}
+                                                  className="h-7 px-3 text-[10px]"
+                                                  disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                >
+                                                  No
+                                                </Button>
+                                              </div>
                                             </div>
-                                            <div className="flex gap-2">
-                                              <Button
-                                                size="sm"
-                                                variant={appointment.costing?.includePaulSignature ? "default" : "outline"}
-                                                onClick={() => setIncludePaulSignature(appointment.id, true)}
-                                                className="h-7 px-3 text-[10px]"
-                                              >
-                                                Yes
-                                              </Button>
-                                              <Button
-                                                size="sm"
-                                                variant={appointment.costing?.includePaulSignature === false ? "destructive" : "outline"}
-                                                onClick={() => setIncludePaulSignature(appointment.id, false)}
-                                                className="h-7 px-3 text-[10px]"
-                                              >
-                                                No
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
+                                          )}
 
-                                      {/* Notes */}
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-medium text-foreground">Notes (visible to customer)</label>
-                                        <textarea
-                                          value={appointment.costing?.notes || ""}
-                                          onChange={(e) => updateCostingNotes(appointment.id, e.target.value)}
-                                          placeholder="Add any notes about the costing..."
-                                          className="w-full h-20 px-3 py-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                                        />
+                                          {/* Alfred N. Agbong Signature Toggle */}
+                                          {isAuthorizedAdminEmail(session?.user?.email) && (
+                                            <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                                              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                                                <ShieldCheck className="w-4 h-4" />
+                                                Include E-Signature for Alfred N. Agbong?
+                                                {!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+                                                  <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground ml-2">READ-ONLY</span>
+                                                )}
+                                              </div>
+                                              <div className="flex gap-2">
+                                                <Button
+                                                  size="sm"
+                                                  variant={appointment.costing?.includeAlfredSignature ? "default" : "outline"}
+                                                  onClick={() => setIncludeAlfredSignature(appointment.id, true)}
+                                                  className="h-7 px-3 text-[10px]"
+                                                  disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                >
+                                                  Yes
+                                                </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant={appointment.costing?.includeAlfredSignature === false ? "destructive" : "outline"}
+                                                  onClick={() => setIncludeAlfredSignature(appointment.id, false)}
+                                                  className="h-7 px-3 text-[10px]"
+                                                  disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                >
+                                                  No
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Notes */}
+                                        <div className="space-y-2">
+                                          <label className="text-sm font-medium text-foreground">Notes (visible to customer)</label>
+                                          <textarea
+                                            value={appointment.costing?.notes || ""}
+                                            onChange={(e) => updateCostingNotes(appointment.id, e.target.value)}
+                                            placeholder="Add any notes about the costing..."
+                                            className="w-full h-20 px-3 py-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                          />
+                                        </div>
                                       </div>
                                     </div>
                                   ) : (
@@ -2584,16 +2635,14 @@ export default function AdminDashboard() {
                             )}
                           </div>
                         </div>
-                      )
-                      }
+                      )}
                     </div>
                   )
                 })}
               </div>
             )}
           </div>
-        )
-        }
+        )}
 
         {
           activeTab === "history" && showDeletedHistory && (
@@ -3085,10 +3134,10 @@ export default function AdminDashboard() {
             </div>
           )
         }
-      </main >
+      </main>
 
       {/* Image Zoom Modal */}
-      < ImageZoomModal
+      <ImageZoomModal
         images={zoomImages}
         initialIndex={zoomInitialIndex}
         isOpen={zoomModalOpen}
