@@ -2,6 +2,7 @@
   "name": "autoworx-system",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.24.0",
   "main": "main/main.js",
   "scripts": {
     "build": "next build",
