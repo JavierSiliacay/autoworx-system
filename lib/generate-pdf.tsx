@@ -520,7 +520,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     `}
 
     <div style="font-size: 10px; font-weight: bold; color: red; margin-bottom: 2px; text-transform: uppercase;">
-      DELIVERY DATE: <span style="text-decoration: underline; color: red;">${options.deliveryDate || "_______"}</span> working days
+      DELIVERY DATE: <span style="text-decoration: underline; color: red;">${appointment.costing?.deliveryDate || options.deliveryDate || "_______"}</span> WORKING DAYS
     </div>
 
     <div class="footer-layout">
@@ -572,13 +572,18 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
           <p style="font-size: 9px; font-weight: bold; margin-top: 10px; margin-bottom: 4px;">Noted by:</p>
           <table style="width: 100%; border-collapse: collapse; border: none;">
             <tr>
-              <td style="width: 50%; border: none; padding: 0;">
-                <span class="signature-name" style="margin-top: 20px;">Paul D. Suazo</span>
-                <p class="signature-title">Service Manager</p>
+              <td style="width: 50%; border: none; padding: 0; vertical-align: bottom;">
+                <div style="position: relative; padding-top: 35px; text-align: left;">
+                  ${appointment.costing?.includePaulSignature ? `<img src="/paulsignature.png" style="position: absolute; width: 80px; top: -10px; left: -15px; z-index: 10;" />` : ""}
+                  <span class="signature-name" style="margin-top: 0 !important; display: block;">Paul D. Suazo</span>
+                  <p class="signature-title">Service Advisor / Manager</p>
+                </div>
               </td>
-              <td style="width: 50%; border: none; padding: 0; text-align: right;">
-                <span class="signature-name" style="margin-top: 20px;">Alfred N. Agbong</span>
-                <p class="signature-title">Gen. & Op. Manager</p>
+              <td style="width: 50%; border: none; padding: 0; text-align: right; vertical-align: bottom;">
+                <div style="padding-top: 35px;">
+                  <span class="signature-name" style="margin-top: 0 !important; display: block;">Alfred N. Agbong</span>
+                  <p class="signature-title">Gen. & Op. Manager</p>
+                </div>
               </td>
             </tr>
           </table>

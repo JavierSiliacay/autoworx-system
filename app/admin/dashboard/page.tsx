@@ -1172,6 +1172,26 @@ export default function AdminDashboard() {
     }, false)
   }
 
+  const updateDeliveryDate = (appointmentId: string, deliveryDate: string) => {
+    const appointment = appointments.find((apt) => apt.id === appointmentId)
+    if (!appointment?.costing) return
+
+    updateCosting(appointmentId, {
+      ...appointment.costing,
+      deliveryDate,
+    }, false)
+  }
+
+  const setIncludePaulSignature = (appointmentId: string, include: boolean) => {
+    const appointment = appointments.find((apt) => apt.id === appointmentId)
+    if (!appointment?.costing) return
+
+    updateCosting(appointmentId, {
+      ...appointment.costing,
+      includePaulSignature: include,
+    }, true)
+  }
+
   const updatePaulNotes = (appointmentId: string, notes: string) => {
     // Track that we are manually updating this record
     lastStateUpdateRef.current[appointmentId] = Date.now()
@@ -2288,19 +2308,29 @@ export default function AdminDashboard() {
                                     <Megaphone className="w-4 h-4" />
                                     <h4 className="font-semibold text-foreground">Sir Paul&apos;s Notes</h4>
                                   </div>
-                                  {session?.user?.email === "paulsuazo64@gmail.com" ? (
-                                    <Textarea
-                                      value={appointment.paulNotes || ""}
-                                      onChange={(e) => updatePaulNotes(appointment.id, e.target.value)}
-                                      placeholder="Type notes or special instructions for this unit..."
-                                      className="min-h-[80px] text-sm bg-primary/5 border-primary/20 focus-visible:ring-primary resize-none"
-                                    />
+                                  {session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email) ? (
+                                    <div className="space-y-3">
+                                      <Textarea
+                                        value={appointment.paulNotes || ""}
+                                        onChange={(e) => updatePaulNotes(appointment.id, e.target.value)}
+                                        placeholder="Type notes or special instructions for this unit..."
+                                        className="min-h-[80px] text-sm bg-primary/5 border-primary/20 focus-visible:ring-primary resize-none"
+                                      />
+                                    </div>
                                   ) : (
                                     <div className="p-3 bg-primary/5 border border-primary/10 rounded-lg">
                                       {appointment.paulNotes ? (
-                                        <p className="text-sm text-foreground italic whitespace-pre-wrap">
-                                          &ldquo;{appointment.paulNotes}&rdquo;
-                                        </p>
+                                        <div className="space-y-2">
+                                          <p className="text-sm text-foreground italic whitespace-pre-wrap">
+                                            &ldquo;{appointment.paulNotes}&rdquo;
+                                          </p>
+                                          {appointment.costing?.includePaulSignature && (
+                                            <div className="flex items-center gap-1.5 text-[10px] text-primary font-medium bg-primary/10 w-fit px-2 py-0.5 rounded-full">
+                                              <CheckCircle2 className="w-3 h-3" />
+                                              Signed by Sir Paul
+                                            </div>
+                                          )}
+                                        </div>
                                       ) : (
                                         <p className="text-sm text-muted-foreground italic">
                                           No specific notes from Sir Paul yet.
@@ -2476,16 +2506,58 @@ export default function AdminDashboard() {
                                               +P{(appointment.costing?.vatAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                             </span>
                                           )}
+                                          <div className="flex items-center justify-between pt-2 border-t border-green-500/30">
+                                            <span className="font-semibold text-foreground flex items-center gap-2">
+                                              <DollarSign className="w-4 h-4 text-green-500" />
+                                              Total {appointment.costing?.vatEnabled && <span className="text-xs font-normal text-muted-foreground">(VAT inclusive)</span>}
+                                            </span>
+                                            <span className="font-mono text-xl font-bold text-green-500">
+                                              P{(appointment.costing?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                            </span>
+                                          </div>
                                         </div>
-                                        <div className="flex items-center justify-between pt-2 border-t border-green-500/30">
-                                          <span className="font-semibold text-foreground flex items-center gap-2">
-                                            <DollarSign className="w-4 h-4 text-green-500" />
-                                            Total {appointment.costing?.vatEnabled && <span className="text-xs font-normal text-muted-foreground">(VAT inclusive)</span>}
-                                          </span>
-                                          <span className="font-mono text-xl font-bold text-green-500">
-                                            P{(appointment.costing?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                          </span>
+                                      </div>
+
+                                      {/* Delivery Info */}
+                                      <div className="grid grid-cols-1 gap-4">
+                                        <div className="space-y-2">
+                                          <label className="text-sm font-medium text-foreground uppercase tracking-widest text-[10px]">Delivery Date (Working Days)</label>
+                                          <Input
+                                            type="text"
+                                            value={appointment.costing?.deliveryDate || ""}
+                                            onChange={(e) => updateDeliveryDate(appointment.id, e.target.value)}
+                                            placeholder="e.g. 5-7"
+                                            className="h-9 text-sm bg-background border-border"
+                                          />
                                         </div>
+
+                                        {/* E-Signature Toggle - relocated here */}
+                                        {(session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+                                          <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                                            <div className="flex items-center gap-2 text-sm font-medium">
+                                              <ShieldCheck className="w-4 h-4 text-primary" />
+                                              Include E-Signature in Report for Paul D. Suazo?
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <Button
+                                                size="sm"
+                                                variant={appointment.costing?.includePaulSignature ? "default" : "outline"}
+                                                onClick={() => setIncludePaulSignature(appointment.id, true)}
+                                                className="h-7 px-3 text-[10px]"
+                                              >
+                                                Yes
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant={appointment.costing?.includePaulSignature === false ? "destructive" : "outline"}
+                                                onClick={() => setIncludePaulSignature(appointment.id, false)}
+                                                className="h-7 px-3 text-[10px]"
+                                              >
+                                                No
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
 
                                       {/* Notes */}
@@ -2512,499 +2584,507 @@ export default function AdminDashboard() {
                             )}
                           </div>
                         </div>
-                      )}
+                      )
+                      }
                     </div>
                   )
                 })}
               </div>
             )}
           </div>
-        )}
+        )
+        }
 
-        {activeTab === "history" && showDeletedHistory && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center bg-destructive/10 p-4 rounded-lg border border-destructive/20 text-destructive mb-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" />
-                <span className="font-semibold">Trash (Delete History)</span>
+        {
+          activeTab === "history" && showDeletedHistory && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-destructive/10 p-4 rounded-lg border border-destructive/20 text-destructive mb-4">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="font-semibold">Trash (Delete History)</span>
+                </div>
+                <span className="text-sm">Items here are soft-deleted. You can restore them or permanently delete them.</span>
               </div>
-              <span className="text-sm">Items here are soft-deleted. You can restore them or permanently delete them.</span>
-            </div>
 
-            {isLoadingDeleted ? (
-              <div className="p-8 text-center animate-pulse">Loading trash...</div>
-            ) : deletedAppointments.length === 0 ? (
-              <div className="p-12 bg-card rounded-xl border border-border text-center">
-                <Trash2 className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                <h3 className="font-semibold text-foreground">Trash is empty</h3>
-                <p className="text-sm text-muted-foreground mt-1">No deleted items found.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {deletedAppointments.map((apt) => (
-                  <div key={apt.id} className="bg-card rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
-                        <Trash2 className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-foreground">{apt.name}</h4>
-                        <div className="text-xs text-muted-foreground flex flex-col sm:flex-row gap-x-3 gap-y-1">
-                          <span>{apt.vehiclePlate}</span>
-                          <span>{apt.vehicleMake} {apt.vehicleModel}</span>
-                          <span className="font-mono">{apt.trackingCode}</span>
-                          <span className="text-red-500">Deleted: {formatDate(apt.statusUpdatedAt || apt.createdAt)}</span>
+              {isLoadingDeleted ? (
+                <div className="p-8 text-center animate-pulse">Loading trash...</div>
+              ) : deletedAppointments.length === 0 ? (
+                <div className="p-12 bg-card rounded-xl border border-border text-center">
+                  <Trash2 className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                  <h3 className="font-semibold text-foreground">Trash is empty</h3>
+                  <p className="text-sm text-muted-foreground mt-1">No deleted items found.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {deletedAppointments.map((apt) => (
+                    <div key={apt.id} className="bg-card rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                          <Trash2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-foreground">{apt.name}</h4>
+                          <div className="text-xs text-muted-foreground flex flex-col sm:flex-row gap-x-3 gap-y-1">
+                            <span>{apt.vehiclePlate}</span>
+                            <span>{apt.vehicleMake} {apt.vehicleModel}</span>
+                            <span className="font-mono">{apt.trackingCode}</span>
+                            <span className="text-red-500">Deleted: {formatDate(apt.statusUpdatedAt || apt.createdAt)}</span>
+                          </div>
                         </div>
                       </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 border-green-500/30 text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => restoreAppointment(apt)}
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Restore
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="gap-1"
+                          onClick={() => permanentDeleteAppointment(apt)}
+                        >
+                          <X className="w-3 h-3" />
+                          Delete Forever
+                        </Button>
+                      </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 border-green-500/30 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => restoreAppointment(apt)}
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                        Restore
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="gap-1"
-                        onClick={() => permanentDeleteAppointment(apt)}
-                      >
-                        <X className="w-3 h-3" />
-                        Delete Forever
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "history" && !showDeletedHistory && (
-          <div className="space-y-6">
-            {/* History Toolbar - Search, Filter, Sort */}
-            <div className="space-y-4">
-              {/* Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by tracking code, name, email, phone, plate, vehicle, insurance, or estimate #..."
-                  value={historySearchQuery}
-                  onChange={(e) => setHistorySearchQuery(e.target.value)}
-                  className="pl-10 pr-10 w-full"
-                />
-                {historySearchQuery && (
-                  <button
-                    onClick={() => setHistorySearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Filters and Sort */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Select value={historyServiceFilter} onValueChange={setHistoryServiceFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Service Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Services</SelectItem>
-                    <SelectItem value="Full Service">Full Service</SelectItem>
-                    <SelectItem value="Oil Change">Oil Change</SelectItem>
-                    <SelectItem value="Brake Service">Brake Service</SelectItem>
-                    <SelectItem value="Tire Replacement">Tire Replacement</SelectItem>
-                    <SelectItem value="Engine Repair">Engine Repair</SelectItem>
-                    <SelectItem value="Transmission Repair">Transmission Repair</SelectItem>
-                    <SelectItem value="Electrical">Electrical</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={historyDateRangeFilter} onValueChange={setHistoryDateRangeFilter}>
-                  <SelectTrigger className="w-full sm:w-[140px]">
-                    <SelectValue placeholder="Date Range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dateRanges.map((range) => (
-                      <SelectItem key={range.value} value={range.value}>
-                        {range.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={historySortBy} onValueChange={(value) => setHistorySortBy(value as typeof historySortBy)}>
-                  <SelectTrigger className="w-full sm:w-[140px]">
-                    <SelectValue placeholder="Sort By" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="latest">Latest First</SelectItem>
-                    <SelectItem value="oldest">Oldest First</SelectItem>
-                    <SelectItem value="name">Owner Name</SelectItem>
-                    <SelectItem value="status">Status</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Search Result Summary Feedack */}
-              {historySearchQuery.trim() && (
-                <div className="animate-in fade-in slide-in-from-top-1 duration-300">
-                  <p className="text-sm font-bold text-primary">
-                    {filteredAndSortedHistory.length === 0
-                      ? `No results found for "${historySearchQuery}"`
-                      : `${filteredAndSortedHistory.length} result${filteredAndSortedHistory.length !== 1 ? 's' : ''} for "${historySearchQuery}"`}
-                  </p>
+                  ))}
                 </div>
               )}
-
-              <div className="text-sm text-muted-foreground">
-                Found {filteredAndSortedHistory.length} record{filteredAndSortedHistory.length !== 1 ? "s" : ""}
-              </div>
             </div>
+          )
+        }
 
-            {/* History Records */}
-            {filteredAndSortedHistory.length === 0 ? (
-              <div className="p-12 bg-card rounded-xl border border-border text-center">
-                {historySearchQuery.trim() ? (
-                  <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                ) : (
-                  <HistoryIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                )}
-                <h3 className="font-semibold text-foreground">
-                  {historySearchQuery.trim() ? "No history records found" : "No history records found"}
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {historySearchQuery.trim()
-                    ? `No historical records found matching "${historySearchQuery}"`
-                    : "No completed repairs archived yet."}
-                </p>
-              </div>
-            ) : (
+        {
+          activeTab === "history" && !showDeletedHistory && (
+            <div className="space-y-6">
+              {/* History Toolbar - Search, Filter, Sort */}
               <div className="space-y-4">
-                {filteredAndSortedHistory.map((record) => {
-                  const isExpanded = expandedCards.has(record.id)
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by tracking code, name, email, phone, plate, vehicle, insurance, or estimate #..."
+                    value={historySearchQuery}
+                    onChange={(e) => setHistorySearchQuery(e.target.value)}
+                    className="pl-10 pr-10 w-full"
+                  />
+                  {historySearchQuery && (
+                    <button
+                      onClick={() => setHistorySearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
 
-                  return (
-                    <div key={record.id} className="bg-card rounded-xl border border-border overflow-hidden mb-2">
-                      {/* Folder Header */}
-                      <div
-                        onClick={() => toggleCardExpanded(record.id)}
-                        className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-primary"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                        )}
+                {/* Filters and Sort */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Select value={historyServiceFilter} onValueChange={setHistoryServiceFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Service Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Services</SelectItem>
+                      <SelectItem value="Full Service">Full Service</SelectItem>
+                      <SelectItem value="Oil Change">Oil Change</SelectItem>
+                      <SelectItem value="Brake Service">Brake Service</SelectItem>
+                      <SelectItem value="Tire Replacement">Tire Replacement</SelectItem>
+                      <SelectItem value="Engine Repair">Engine Repair</SelectItem>
+                      <SelectItem value="Transmission Repair">Transmission Repair</SelectItem>
+                      <SelectItem value="Electrical">Electrical</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm uppercase">
-                          <span className="font-mono font-bold text-primary">
-                            {record.estimate_number || "NO-ESTIMATE"}
-                          </span>
-                          <span className="font-bold text-foreground">
-                            {record.vehicle_plate}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {record.vehicle_make} {record.vehicle_model}
-                          </span>
-                          {record.insurance && (
-                            <span className="text-emerald-600 font-medium px-2 py-0.5 bg-emerald-500/10 rounded-full text-xs">
-                              {record.insurance}
-                            </span>
+                  <Select value={historyDateRangeFilter} onValueChange={setHistoryDateRangeFilter}>
+                    <SelectTrigger className="w-full sm:w-[140px]">
+                      <SelectValue placeholder="Date Range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dateRanges.map((range) => (
+                        <SelectItem key={range.value} value={range.value}>
+                          {range.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={historySortBy} onValueChange={(value) => setHistorySortBy(value as typeof historySortBy)}>
+                    <SelectTrigger className="w-full sm:w-[140px]">
+                      <SelectValue placeholder="Sort By" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="latest">Latest First</SelectItem>
+                      <SelectItem value="oldest">Oldest First</SelectItem>
+                      <SelectItem value="name">Owner Name</SelectItem>
+                      <SelectItem value="status">Status</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Search Result Summary Feedack */}
+                {historySearchQuery.trim() && (
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-300">
+                    <p className="text-sm font-bold text-primary">
+                      {filteredAndSortedHistory.length === 0
+                        ? `No results found for "${historySearchQuery}"`
+                        : `${filteredAndSortedHistory.length} result${filteredAndSortedHistory.length !== 1 ? 's' : ''} for "${historySearchQuery}"`}
+                    </p>
+                  </div>
+                )}
+
+                <div className="text-sm text-muted-foreground">
+                  Found {filteredAndSortedHistory.length} record{filteredAndSortedHistory.length !== 1 ? "s" : ""}
+                </div>
+              </div>
+
+              {/* History Records */}
+              {filteredAndSortedHistory.length === 0 ? (
+                <div className="p-12 bg-card rounded-xl border border-border text-center">
+                  {historySearchQuery.trim() ? (
+                    <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  ) : (
+                    <HistoryIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  )}
+                  <h3 className="font-semibold text-foreground">
+                    {historySearchQuery.trim() ? "No history records found" : "No history records found"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {historySearchQuery.trim()
+                      ? `No historical records found matching "${historySearchQuery}"`
+                      : "No completed repairs archived yet."}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredAndSortedHistory.map((record) => {
+                    const isExpanded = expandedCards.has(record.id)
+
+                    return (
+                      <div key={record.id} className="bg-card rounded-xl border border-border overflow-hidden mb-2">
+                        {/* Folder Header */}
+                        <div
+                          onClick={() => toggleCardExpanded(record.id)}
+                          className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-primary"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5 text-muted-foreground" />
                           )}
-                          <span className="font-medium text-foreground">
-                            {record.name}
-                          </span>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm uppercase">
+                            <span className="font-mono font-bold text-primary">
+                              {record.estimate_number || "NO-ESTIMATE"}
+                            </span>
+                            <span className="font-bold text-foreground">
+                              {record.vehicle_plate}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {record.vehicle_make} {record.vehicle_model}
+                            </span>
+                            {record.insurance && (
+                              <span className="text-emerald-600 font-medium px-2 py-0.5 bg-emerald-500/10 rounded-full text-xs">
+                                {record.insurance}
+                              </span>
+                            )}
+                            <span className="font-medium text-foreground">
+                              {record.name}
+                            </span>
+                          </div>
+
+                          <div className="ml-auto flex items-center gap-2">
+                            <Badge variant="default" className="mr-2">
+                              Completed
+                            </Badge>
+                          </div>
                         </div>
 
-                        <div className="ml-auto flex items-center gap-2">
-                          <Badge variant="default" className="mr-2">
-                            Completed
-                          </Badge>
-                        </div>
-                      </div>
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className="border-t border-border animate-in slide-in-from-top-2 duration-200">
+                            <div className="p-6">
+                              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                                {/* Main Info */}
+                                <div className="flex-1 space-y-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <h3 className="font-semibold text-foreground">{record.name}</h3>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        Tracking: <span className="font-mono text-primary">{record.tracking_code}</span>
+                                      </p>
+                                    </div>
+                                  </div>
 
-                      {/* Expanded Details */}
-                      {isExpanded && (
-                        <div className="border-t border-border animate-in slide-in-from-top-2 duration-200">
-                          <div className="p-6">
-                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                              {/* Main Info */}
-                              <div className="flex-1 space-y-3">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <h3 className="font-semibold text-foreground">{record.name}</h3>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Tracking: <span className="font-mono text-primary">{record.tracking_code}</span>
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Phone className="w-4 h-4 shrink-0" />
-                                    <a href={`tel:${record.phone}`} className="hover:text-foreground">
-                                      {record.phone}
-                                    </a>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Mail className="w-4 h-4 shrink-0" />
-                                    <a href={`mailto:${record.email}`} className="hover:text-foreground truncate">
-                                      {record.email}
-                                    </a>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Car className="w-4 h-4 shrink-0" />
-                                    <span>
-                                      {record.vehicle_year} {record.vehicle_make}{" "}
-                                      {record.vehicle_model}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <span className="font-mono font-semibold text-foreground">{record.vehicle_plate}</span>
-                                  </div>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-4 text-sm">
-                                  <div className="flex items-center gap-2">
-                                    <Wrench className="w-4 h-4 text-primary" />
-                                    <span className="text-foreground">{record.service}</span>
-                                  </div>
-                                  {record.preferred_date && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
                                     <div className="flex items-center gap-2 text-muted-foreground">
-                                      <Calendar className="w-4 h-4" />
-                                      <span>Preferred: {record.preferred_date}</span>
+                                      <Phone className="w-4 h-4 shrink-0" />
+                                      <a href={`tel:${record.phone}`} className="hover:text-foreground">
+                                        {record.phone}
+                                      </a>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <Mail className="w-4 h-4 shrink-0" />
+                                      <a href={`mailto:${record.email}`} className="hover:text-foreground truncate">
+                                        {record.email}
+                                      </a>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <Car className="w-4 h-4 shrink-0" />
+                                      <span>
+                                        {record.vehicle_year} {record.vehicle_make}{" "}
+                                        {record.vehicle_model}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <span className="font-mono font-semibold text-foreground">{record.vehicle_plate}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Wrench className="w-4 h-4 text-primary" />
+                                      <span className="text-foreground">{record.service}</span>
+                                    </div>
+                                    {record.preferred_date && (
+                                      <div className="flex items-center gap-2 text-muted-foreground">
+                                        <Calendar className="w-4 h-4" />
+                                        <span>Preferred: {record.preferred_date}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <Clock className="w-4 h-4" />
+                                      <span>Submitted: {formatDate(record.original_created_at)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <Clock className="w-4 h-4" />
+                                      <span>Completed: {formatDate(record.completed_at)}</span>
+                                    </div>
+                                  </div>
+
+                                  {record.message && (
+                                    <div className="p-3 bg-secondary rounded-lg">
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                                        <User className="w-3 h-3" />
+                                        Additional Details
+                                      </div>
+                                      <p className="text-sm text-foreground">{record.message}</p>
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Clock className="w-4 h-4" />
-                                    <span>Submitted: {formatDate(record.original_created_at)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Clock className="w-4 h-4" />
-                                    <span>Completed: {formatDate(record.completed_at)}</span>
-                                  </div>
-                                </div>
 
-                                {record.message && (
-                                  <div className="p-3 bg-secondary rounded-lg">
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                                      <User className="w-3 h-3" />
-                                      Additional Details
-                                    </div>
-                                    <p className="text-sm text-foreground">{record.message}</p>
-                                  </div>
-                                )}
+                                  {/* Cost Estimation */}
+                                  {record.costing && (
+                                    <div className="p-4 bg-green-500/5 rounded-lg border border-green-500/20 space-y-2">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <DollarSign className="w-4 h-4 text-green-500" />
+                                        <span className="text-sm font-semibold text-foreground">Final Cost Estimation</span>
+                                      </div>
 
-                                {/* Cost Estimation */}
-                                {record.costing && (
-                                  <div className="p-4 bg-green-500/5 rounded-lg border border-green-500/20 space-y-2">
-                                    <div className="flex items-center gap-2 mb-3">
-                                      <DollarSign className="w-4 h-4 text-green-500" />
-                                      <span className="text-sm font-semibold text-foreground">Final Cost Estimation</span>
-                                    </div>
+                                      {record.costing.items && record.costing.items.length > 0 && (
+                                        <div className="space-y-1 text-sm">
+                                          <div className="text-xs text-muted-foreground font-medium">Items:</div>
+                                          {record.costing.items.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center text-sm">
+                                              <span className="text-muted-foreground">{item.description}</span>
+                                              <span className="font-mono font-semibold text-foreground">
+                                                P{item.total?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
 
-                                    {record.costing.items && record.costing.items.length > 0 && (
-                                      <div className="space-y-1 text-sm">
-                                        <div className="text-xs text-muted-foreground font-medium">Items:</div>
-                                        {record.costing.items.map((item, idx) => (
-                                          <div key={idx} className="flex justify-between items-center text-sm">
-                                            <span className="text-muted-foreground">{item.description}</span>
-                                            <span className="font-mono font-semibold text-foreground">
-                                              P{item.total?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
+                                      <div className="pt-2 border-t border-green-500/20 space-y-1 text-sm">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-muted-foreground">Subtotal</span>
+                                          <span className="font-mono font-semibold">
+                                            P{record.costing.subtotal?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
+                                          </span>
+                                        </div>
+
+                                        {record.costing.discount > 0 && (
+                                          <div className="flex justify-between items-center text-orange-500">
+                                            <span>Discount ({record.costing.discountType === "percentage" ? `${record.costing.discount}%` : "Fixed"})</span>
+                                            <span className="font-mono font-semibold">
+                                              -P{(
+                                                record.costing.discountType === "percentage"
+                                                  ? (record.costing.subtotal * record.costing.discount) / 100
+                                                  : record.costing.discount
+                                              ).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                             </span>
                                           </div>
-                                        ))}
-                                      </div>
-                                    )}
+                                        )}
 
-                                    <div className="pt-2 border-t border-green-500/20 space-y-1 text-sm">
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground">Subtotal</span>
-                                        <span className="font-mono font-semibold">
-                                          P{record.costing.subtotal?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
-                                        </span>
-                                      </div>
+                                        {record.costing.vatEnabled && (
+                                          <div className="flex justify-between items-center text-blue-500">
+                                            <span>VAT (12%)</span>
+                                            <span className="font-mono font-semibold">
+                                              +P{record.costing.vatAmount?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
+                                            </span>
+                                          </div>
+                                        )}
 
-                                      {record.costing.discount > 0 && (
-                                        <div className="flex justify-between items-center text-orange-500">
-                                          <span>Discount ({record.costing.discountType === "percentage" ? `${record.costing.discount}%` : "Fixed"})</span>
-                                          <span className="font-mono font-semibold">
-                                            -P{(
-                                              record.costing.discountType === "percentage"
-                                                ? (record.costing.subtotal * record.costing.discount) / 100
-                                                : record.costing.discount
-                                            ).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                        <div className="flex justify-between items-center pt-2 border-t border-green-500/30 font-semibold text-foreground">
+                                          <span>Total</span>
+                                          <span className="font-mono text-lg text-green-600">
+                                            P{record.costing.total?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
                                           </span>
                                         </div>
-                                      )}
+                                      </div>
 
-                                      {record.costing.vatEnabled && (
-                                        <div className="flex justify-between items-center text-blue-500">
-                                          <span>VAT (12%)</span>
-                                          <span className="font-mono font-semibold">
-                                            +P{record.costing.vatAmount?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
-                                          </span>
+                                      {record.costing.notes && (
+                                        <div className="pt-2 text-xs text-muted-foreground border-t border-green-500/20 italic">
+                                          {record.costing.notes}
                                         </div>
                                       )}
-
-                                      <div className="flex justify-between items-center pt-2 border-t border-green-500/30 font-semibold text-foreground">
-                                        <span>Total</span>
-                                        <span className="font-mono text-lg text-green-600">
-                                          P{record.costing.total?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
-                                        </span>
-                                      </div>
                                     </div>
+                                  )}
+                                </div>
 
-                                    {record.costing.notes && (
-                                      <div className="pt-2 text-xs text-muted-foreground border-t border-green-500/20 italic">
-                                        {record.costing.notes}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Actions */}
-                              <div className="flex flex-row lg:flex-col gap-2 shrink-0">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-red-500 hover:text-red-400 hover:bg-red-500/10 border-red-500/30 bg-transparent"
-                                  onClick={() => deleteHistoryRecord(record.id)}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-1" />
-                                  Delete
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-primary hover:text-primary/80 border-primary/30 bg-transparent"
-                                  onClick={() => handleDownloadFullReport({
-                                    id: record.id,
-                                    trackingCode: record.tracking_code,
-                                    name: record.name,
-                                    email: record.email,
-                                    phone: record.phone,
-                                    vehicleMake: record.vehicle_make,
-                                    vehicleModel: record.vehicle_model,
-                                    vehicleYear: record.vehicle_year,
-                                    vehiclePlate: record.vehicle_plate,
-                                    vehicleColor: "N/A",
-                                    chassisNumber: "N/A",
-                                    engineNumber: "N/A",
-                                    assigneeDriver: "N/A",
-                                    service: record.service,
-                                    message: record.message,
-                                    status: "completed",
-                                    createdAt: record.original_created_at,
-                                    repairStatus: record.repair_status as any,
-                                    currentRepairPart: record.current_repair_part,
-                                    statusUpdatedAt: record.completed_at,
-                                    costing: record.costing,
-                                    insurance: record.insurance,
-                                    estimateNumber: record.estimate_number,
-                                    paulNotes: record.paul_notes
-                                  } as any)}
-                                >
-                                  <Download className="w-4 h-4 mr-1" />
-                                  Download Full Report
-                                </Button>
+                                {/* Actions */}
+                                <div className="flex flex-row lg:flex-col gap-2 shrink-0">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-red-500 hover:text-red-400 hover:bg-red-500/10 border-red-500/30 bg-transparent"
+                                    onClick={() => deleteHistoryRecord(record.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-primary hover:text-primary/80 border-primary/30 bg-transparent"
+                                    onClick={() => handleDownloadFullReport({
+                                      id: record.id,
+                                      trackingCode: record.tracking_code,
+                                      name: record.name,
+                                      email: record.email,
+                                      phone: record.phone,
+                                      vehicleMake: record.vehicle_make,
+                                      vehicleModel: record.vehicle_model,
+                                      vehicleYear: record.vehicle_year,
+                                      vehiclePlate: record.vehicle_plate,
+                                      vehicleColor: "N/A",
+                                      chassisNumber: "N/A",
+                                      engineNumber: "N/A",
+                                      assigneeDriver: "N/A",
+                                      service: record.service,
+                                      message: record.message,
+                                      status: "completed",
+                                      createdAt: record.original_created_at,
+                                      repairStatus: record.repair_status as any,
+                                      currentRepairPart: record.current_repair_part,
+                                      statusUpdatedAt: record.completed_at,
+                                      costing: record.costing,
+                                      insurance: record.insurance,
+                                      estimateNumber: record.estimate_number,
+                                      paulNotes: record.paul_notes
+                                    } as any)}
+                                  >
+                                    <Download className="w-4 h-4 mr-1" />
+                                    Download Full Report
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "recommendations" && isDeveloperUser && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-foreground">Recommendations & Feedback</h3>
-                <p className="text-sm text-muted-foreground">User-submitted improvement ideas and bug reports</p>
-              </div>
-              <Button onClick={loadRecommendations} variant="outline" size="sm" disabled={isLoadingRecommendations}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingRecommendations ? 'animate-spin' : ''}`} />
-                Refresh {isLoadingRecommendations && 'ing...'}
-              </Button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
+          )
+        }
 
-            {isLoadingRecommendations ? (
-              <div className="p-24 text-center">
-                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-                <p className="text-muted-foreground">Fetching recommendations...</p>
+        {
+          activeTab === "recommendations" && isDeveloperUser && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-foreground">Recommendations & Feedback</h3>
+                  <p className="text-sm text-muted-foreground">User-submitted improvement ideas and bug reports</p>
+                </div>
+                <Button onClick={loadRecommendations} variant="outline" size="sm" disabled={isLoadingRecommendations}>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingRecommendations ? 'animate-spin' : ''}`} />
+                  Refresh {isLoadingRecommendations && 'ing...'}
+                </Button>
               </div>
-            ) : recommendations.length === 0 ? (
-              <div className="p-12 bg-card rounded-xl border border-border text-center">
-                <Heart className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-30" />
-                <h3 className="font-semibold text-foreground">No recommendations yet</h3>
-                <p className="text-sm text-muted-foreground mt-1">Feedback from the About page will appear here.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {recommendations.map((rec) => (
-                  <div key={rec.id} className={`p-6 rounded-xl border transition-all ${rec.is_solved ? 'bg-secondary/30 border-secondary' : 'bg-card border-border shadow-sm'}`}>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-3">
-                          <Badge variant={
-                            rec.type === 'Bug' ? 'destructive' :
-                              rec.type === 'Feature' ? 'default' :
-                                'secondary'
-                          }>
-                            {rec.type}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">{formatDate(rec.created_at)}</span>
-                          {rec.is_solved && (
-                            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
-                              <CheckCircle2 className="w-3 h-3 mr-1" /> Solved
+
+              {isLoadingRecommendations ? (
+                <div className="p-24 text-center">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                  <p className="text-muted-foreground">Fetching recommendations...</p>
+                </div>
+              ) : recommendations.length === 0 ? (
+                <div className="p-12 bg-card rounded-xl border border-border text-center">
+                  <Heart className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-30" />
+                  <h3 className="font-semibold text-foreground">No recommendations yet</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Feedback from the About page will appear here.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {recommendations.map((rec) => (
+                    <div key={rec.id} className={`p-6 rounded-xl border transition-all ${rec.is_solved ? 'bg-secondary/30 border-secondary' : 'bg-card border-border shadow-sm'}`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-3">
+                            <Badge variant={
+                              rec.type === 'Bug' ? 'destructive' :
+                                rec.type === 'Feature' ? 'default' :
+                                  'secondary'
+                            }>
+                              {rec.type}
                             </Badge>
-                          )}
+                            <span className="text-xs text-muted-foreground">{formatDate(rec.created_at)}</span>
+                            {rec.is_solved && (
+                              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                                <CheckCircle2 className="w-3 h-3 mr-1" /> Solved
+                              </Badge>
+                            )}
+                          </div>
+                          <h4 className="font-bold text-foreground">{rec.name} ({rec.email})</h4>
+                          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{rec.message}</p>
                         </div>
-                        <h4 className="font-bold text-foreground">{rec.name} ({rec.email})</h4>
-                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{rec.message}</p>
-                      </div>
 
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          variant={rec.is_solved ? 'outline' : 'default'}
-                          onClick={() => updateRecommendation(rec.id, { is_solved: !rec.is_solved })}
-                          className="h-8"
-                        >
-                          {rec.is_solved ? 'Reopen' : 'Mark Solved'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => deleteRecommendation(rec.id)}
-                          className="h-8 text-red-500 hover:text-red-400 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Delete
-                        </Button>
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant={rec.is_solved ? 'outline' : 'default'}
+                            onClick={() => updateRecommendation(rec.id, { is_solved: !rec.is_solved })}
+                            className="h-8"
+                          >
+                            {rec.is_solved ? 'Reopen' : 'Mark Solved'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteRecommendation(rec.id)}
+                            className="h-8 text-red-500 hover:text-red-400 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        }
       </main >
 
       {/* Image Zoom Modal */}

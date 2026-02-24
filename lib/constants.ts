@@ -96,5 +96,6 @@ export interface CostingData {
   createdAt: string
   updatedAt: string
   serviceAdvisor?: string
-  deliveryDate?: number
+  deliveryDate?: string
+  includePaulSignature?: boolean
 }
