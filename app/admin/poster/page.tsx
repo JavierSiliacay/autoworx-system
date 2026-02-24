@@ -2,9 +2,10 @@
 
 import React from "react"
 import { QrCode, Phone, MapPin, CheckCircle2, CalendarDays } from "lucide-react"
+import { PRODUCTION_URL } from "@/lib/constants"
 
 export default function PosterPage() {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : PRODUCTION_URL
 
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 sm:p-10 font-sans">

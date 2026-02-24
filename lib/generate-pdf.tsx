@@ -1,5 +1,6 @@
 import { BookingFormData } from "@/components/booking/booking-form"
 import type { CostingData, RepairStatus } from "@/lib/constants"
+import { PRODUCTION_URL } from "./constants"
 
 interface PDFGeneratorOptions {
   trackingCode: string
@@ -36,7 +37,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
   const { trackingCode, appointmentData } = options
 
   // Use current origin if in browser, otherwise fallback to production URL
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : PRODUCTION_URL
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -232,7 +233,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const isAdmin = role === 'admin'
   const repairStatus = getRepairStatusLabel(appointment.repairStatus)
   const appointmentStatus = getAppointmentStatusLabel(appointment.status)
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autoworx-system.vercel.app'
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : PRODUCTION_URL
   const displayTitle = reportTitle || (appointment.status === 'pending' ? "Appointment Confirmation" : (isAdmin ? "Repair Estimate" : "Repair Status Report"))
 
   const laborCategories = ["Mechanical Works", "Electrical", "Aircon", "Painting", "Detailing", "Service", "Labor", "Glassworks", "Alignment", "Tinsmith"]

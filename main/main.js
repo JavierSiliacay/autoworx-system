@@ -27,7 +27,7 @@ function createWindow() {
 
     const startUrl = isDev
         ? 'http://127.0.0.1:3000/admin'
-        : 'https://autoworx-system.vercel.app/admin';
+        : 'https://autoworxcagayan.com/admin';
 
     // If you use a full Next server in prod, you'd point to that instead.
     // For now, let's keep it simple for development.

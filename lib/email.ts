@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { PRODUCTION_URL } from './constants';
 
 export type EmailType = 'submission' | 'completed';
 
@@ -104,7 +105,7 @@ export async function sendAppointmentEmail({
                     </div>
 
                     <div style="text-align: center; margin-top: 30px;">
-                        <a href="https://autoworx-system.vercel.app/track?code=${trackingCode}" 
+                        <a href="${PRODUCTION_URL}/track?code=${trackingCode}" 
                            style="background-color: #1a1a1a; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
                            Track Status Online
                         </a>
@@ -181,7 +182,7 @@ export async function sendAppointmentEmail({
 
                     <div style="text-align: center; margin-top: 30px;">
                         <p style="font-size: 14px; margin-bottom: 15px;">For more information or updates, visit our website:</p>
-                        <a href="https://autoworx-system.vercel.app" 
+                        <a href="${PRODUCTION_URL}" 
                            style="background-color: #1a1a1a; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
                            Visit Autoworx
                         </a>
