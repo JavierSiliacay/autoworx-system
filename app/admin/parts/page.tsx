@@ -62,7 +62,7 @@ export default function PartsRoom() {
     const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [inventorySearch, setInventorySearch] = useState("")
-    const [categories, setCategories] = useState<string[]>([])
+    const [categories, setCategories] = useState<string[]>(['Engine Oil', 'Filters', 'Brake Pads', 'Coolant', 'Electrical'])
     const [isAddingCategory, setIsAddingCategory] = useState(false)
     const [newCategory, setNewCategory] = useState("")
     const [isElectron, setIsElectron] = useState(false)
@@ -206,7 +206,9 @@ export default function PartsRoom() {
             const res = await fetch("/api/inventory/categories")
             if (res.ok) {
                 const data = await res.json()
-                setCategories(data.map((c: any) => c.name))
+                if (Array.isArray(data) && data.length > 0) {
+                    setCategories(data.map((c: any) => c.name))
+                }
             }
         } catch (error) {
             console.error("Error fetching categories:", error)
@@ -235,11 +237,19 @@ export default function PartsRoom() {
                 setNewCategory("");
                 setIsAddingCategory(false);
             } else {
-                const err = await res.json()
-                toast({ title: "Error", description: err.error || "Failed to save category", variant: "destructive" })
+                let errorMessage = "Failed to save category";
+                try {
+                    const err = await res.json()
+                    errorMessage = err.error || errorMessage;
+                } catch (e) {
+                    // Body is not JSON
+                    if (res.status === 401) errorMessage = "Unauthorized session. Please re-login.";
+                    if (res.status === 404) errorMessage = "API endpoint not found.";
+                }
+                toast({ title: "Error", description: errorMessage, variant: "destructive" })
             }
         } catch (error) {
-            toast({ title: "Error", description: "Connection error", variant: "destructive" })
+            toast({ title: "Error", description: "Network or Server error", variant: "destructive" })
         }
     }
 
