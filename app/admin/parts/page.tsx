@@ -390,16 +390,11 @@ export default function PartsRoom() {
                                     size="sm"
                                     className="hidden sm:flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/5 shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all mr-2"
                                     onClick={() => {
-                                        const link = document.createElement('a');
-                                        link.href = '/Autoworx-System.zip';
-                                        link.download = 'Autoworx-System.zip';
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
+                                        window.open('https://drive.google.com/file/d/1QKgR1ooGJLMrUXAh5ZGtSOPnnAKMz4mW/view?usp=sharing', '_blank');
 
                                         toast({
-                                            title: "Download Started",
-                                            description: "The Windows desktop app is downloading. Once finished, extract the ZIP and run 'electron.exe'.",
+                                            title: "Redirecting to Download",
+                                            description: "Opening Google Drive. Once downloaded, extract the ZIP and run 'electron.exe'.",
                                         })
                                     }}
                                 >
