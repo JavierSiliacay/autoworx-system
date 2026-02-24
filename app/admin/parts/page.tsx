@@ -77,7 +77,7 @@ export default function PartsRoom() {
             name: formData.get("name"),
             brand: formData.get("brand"),
             part_type: formData.get("part_type"),
-            price: parseFloat(formData.get("price") as string) || 0,
+            price: 0,
             quantity: parseInt(formData.get("quantity") as string) || 1,
             status: formData.get("status") || 'pending',
             inventory_id: editingPart?.inventory_id || null
@@ -273,8 +273,8 @@ export default function PartsRoom() {
             sku: formData.get("sku"),
             category: formData.get("category"),
             brand: formData.get("brand"),
-            cost_price: parseFloat(formData.get("cost_price") as string) || 0,
-            selling_price: parseFloat(formData.get("selling_price") as string) || 0,
+            cost_price: 0,
+            selling_price: 0,
             quantity: parseInt(formData.get("quantity") as string) || 0,
             min_stock_level: parseInt(formData.get("min_stock_level") as string) || 2,
             location: formData.get("location"),
@@ -629,7 +629,6 @@ export default function PartsRoom() {
                                                     <thead>
                                                         <tr className="bg-slate-50 border-b border-slate-200">
                                                             <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Item Details</th>
-                                                            <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Price (P)</th>
                                                             <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center">Quantity</th>
                                                             <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center">Actions</th>
                                                         </tr>
@@ -666,9 +665,6 @@ export default function PartsRoom() {
                                                                     <div className="text-[10px] text-slate-500">Type: {part.part_type} • Brand: {part.brand || 'No Brand'}</div>
                                                                 </td>
                                                                 <td className="p-4 text-center font-bold text-slate-900">
-                                                                    {part.price.toLocaleString()}
-                                                                </td>
-                                                                <td className="p-4 text-center font-bold text-slate-900">
                                                                     {part.quantity}
                                                                 </td>
                                                                 <td className="p-4">
@@ -698,12 +694,6 @@ export default function PartsRoom() {
                                                         ))}
                                                     </tbody>
                                                 </table>
-                                                <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-                                                    <span className="text-sm font-bold text-slate-600 uppercase tracking-widest">Total Parts Cost</span>
-                                                    <span className="text-2xl font-serif font-bold text-slate-900">
-                                                        P {unitParts.reduce((acc, p) => acc + (p.price * p.quantity), 0).toLocaleString()}
-                                                    </span>
-                                                </div>
                                             </>
                                         )}
                                     </div>
@@ -798,7 +788,6 @@ export default function PartsRoom() {
                                                 <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Stock Details</th>
                                                 <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center">Status</th>
                                                 <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center">Quantity</th>
-                                                <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center">Selling Price</th>
                                                 <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center">Actions</th>
                                             </tr>
                                         </thead>
@@ -827,10 +816,6 @@ export default function PartsRoom() {
                                                         <div className="font-bold text-lg text-slate-900">{item.quantity}</div>
                                                         <div className="text-[10px] text-slate-400">Loc: {item.location}</div>
                                                     </td>
-                                                    <td className="p-4 text-center">
-                                                        <div className="font-bold text-slate-900">P {item.selling_price.toLocaleString()}</div>
-                                                        <div className="text-[10px] text-slate-400">Profit: P {(item.selling_price - item.cost_price).toLocaleString()}</div>
-                                                    </td>
                                                     <td className="p-4">
                                                         <div className="flex justify-center gap-1.5">
                                                             {selectedUnit && (
@@ -844,7 +829,7 @@ export default function PartsRoom() {
                                                                             name: item.name,
                                                                             brand: item.brand,
                                                                             part_type: item.category,
-                                                                            price: item.selling_price,
+                                                                            price: 0,
                                                                             quantity: 1,
                                                                             status: 'available'
                                                                         });
@@ -927,10 +912,6 @@ export default function PartsRoom() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="price">Price (P)</Label>
-                                <Input id="price" name="price" type="number" defaultValue={editingPart?.price} placeholder="5000" required />
-                            </div>
-                            <div className="grid gap-2">
                                 <Label htmlFor="quantity">Quantity</Label>
                                 <Input id="quantity" name="quantity" type="number" defaultValue={editingPart?.quantity || 1} required />
                             </div>
@@ -993,16 +974,6 @@ export default function PartsRoom() {
                             <div className="grid gap-2">
                                 <Label htmlFor="location">Warehouse Location</Label>
                                 <Input id="location" name="location" defaultValue={editingItem?.location} placeholder="Rack A, Shelf 2" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="cost_price">Cost Price (P)</Label>
-                                <Input id="cost_price" name="cost_price" type="number" defaultValue={editingItem?.cost_price} placeholder="2000" required />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="selling_price">Selling Price (P)</Label>
-                                <Input id="selling_price" name="selling_price" type="number" defaultValue={editingItem?.selling_price} placeholder="3500" required />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">

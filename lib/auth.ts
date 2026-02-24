@@ -14,7 +14,11 @@ const AUTHORIZED_EMAILS = [
 
 const DEVELOPER_EMAILS = [
   "siliacay.javier@gmail.com",
-  "javiersiliacaysiliacay1234@gmail.com"
+  "javiersiliacaysiliacay1234@gmail.com",
+  "emelybingat37@gmail.com",
+  "paulsuazo64@gmail.com",
+  "alfred_autoworks@yahoo.com",
+  "autoworxcagayan2025@gmail.com"
 ]
 
 export function isAuthorizedAdminEmail(email?: string | null) {
