@@ -45,7 +45,8 @@ import {
   Send,
   Heart,
   Package,
-  LayoutDashboard
+  LayoutDashboard,
+  Monitor
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -321,6 +322,7 @@ export default function AdminDashboard() {
   const [isLoadingDeleted, setIsLoadingDeleted] = useState(false)
 
   const [selectedDownloadAppointment, setSelectedDownloadAppointment] = useState<Appointment | null>(null)
+  const [isElectron, setIsElectron] = useState(false)
 
   // Refs for stabilizing typing and real-time updates
   const costingDebounceRef = useRef<Record<string, any>>({})
@@ -492,6 +494,7 @@ export default function AdminDashboard() {
     if (status === "authenticated") {
       loadAppointments()
       loadAnnouncements()
+      setIsElectron(typeof window !== 'undefined' && !!(window as any).electron)
     }
   }, [router, loadAppointments, loadAnnouncements, status, session?.user?.role])
 
@@ -1433,10 +1436,35 @@ export default function AdminDashboard() {
               </Link>
             </div>
 
-            <Button variant="outline" size="sm" onClick={handleLogout} className="bg-transparent">
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-2">
+              {!isElectron && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/5 shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = '/Autoworx-System.zip';
+                    link.download = 'Autoworx-System.zip';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    toast({
+                      title: "Download Started",
+                      description: "The Windows desktop app is downloading. Once finished, extract the ZIP and run 'electron.exe'.",
+                    })
+                  }}
+                >
+                  <Monitor className="w-4 h-4" />
+                  <span className="hidden lg:inline">Get Windows App</span>
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={handleLogout} className="bg-transparent">
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>

@@ -27,7 +27,8 @@ import {
     Copy,
     ArrowLeft,
     X,
-    ShoppingBag
+    ShoppingBag,
+    Monitor
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -61,9 +62,10 @@ export default function PartsRoom() {
     const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [inventorySearch, setInventorySearch] = useState("")
-    const [categories, setCategories] = useState<string[]>(['Engine Oil', 'Filters', 'Brake Pads', 'Coolant', 'Electrical'])
+    const [categories, setCategories] = useState<string[]>([])
     const [isAddingCategory, setIsAddingCategory] = useState(false)
     const [newCategory, setNewCategory] = useState("")
+    const [isElectron, setIsElectron] = useState(false)
 
     const handleSavePart = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -199,6 +201,48 @@ export default function PartsRoom() {
         setIsLoading(false)
     }, [])
 
+    const fetchCategories = useCallback(async () => {
+        try {
+            const res = await fetch("/api/inventory/categories")
+            if (res.ok) {
+                const data = await res.json()
+                setCategories(data.map((c: any) => c.name))
+            }
+        } catch (error) {
+            console.error("Error fetching categories:", error)
+        }
+    }, [])
+
+    const handleAddNewCategory = async () => {
+        if (!newCategory.trim()) return;
+        if (categories.some(c => c.toLowerCase() === newCategory.trim().toLowerCase())) {
+            toast({ title: "Already exists", description: "This category is already in your list." })
+            setNewCategory("");
+            setIsAddingCategory(false);
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/inventory/categories", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: newCategory.trim() }),
+            })
+
+            if (res.ok) {
+                toast({ title: "Category Saved", description: `"${newCategory.trim()}" has been added to the warehouse.` })
+                fetchCategories()
+                setNewCategory("");
+                setIsAddingCategory(false);
+            } else {
+                const err = await res.json()
+                toast({ title: "Error", description: err.error || "Failed to save category", variant: "destructive" })
+            }
+        } catch (error) {
+            toast({ title: "Error", description: "Connection error", variant: "destructive" })
+        }
+    }
+
     useEffect(() => {
         if (selectedUnit) {
             fetchUnitParts(selectedUnit.id)
@@ -277,21 +321,9 @@ export default function PartsRoom() {
 
         fetchUnits()
         fetchInventory()
-    }, [status, session, router, fetchUnits, fetchInventory])
-
-    useEffect(() => {
-        if (status === "unauthenticated") {
-            router.push("/admin")
-            return
-        }
-        if (status === "authenticated" && session?.user?.role !== "admin") {
-            router.push("/admin")
-            return
-        }
-
-        fetchUnits()
-        fetchInventory()
-    }, [status, session, router, fetchUnits, fetchInventory])
+        fetchCategories()
+        setIsElectron(typeof window !== 'undefined' && !!(window as any).electron)
+    }, [status, session, router, fetchUnits, fetchInventory, fetchCategories])
 
     const filteredUnits = units.filter(unit =>
         unit.vehicle_plate.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -352,6 +384,29 @@ export default function PartsRoom() {
                                 <span className="text-xs font-bold text-slate-900">{session?.user?.name}</span>
                                 <span className="text-[10px] text-slate-500">Parts In-Charge</span>
                             </div>
+                            {!isElectron && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="hidden sm:flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/5 shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all mr-2"
+                                    onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = '/Autoworx-System.zip';
+                                        link.download = 'Autoworx-System.zip';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+
+                                        toast({
+                                            title: "Download Started",
+                                            description: "The Windows desktop app is downloading. Once finished, extract the ZIP and run 'electron.exe'.",
+                                        })
+                                    }}
+                                >
+                                    <Monitor className="w-4 h-4" />
+                                    <span className="hidden lg:inline">Get Windows App</span>
+                                </Button>
+                            )}
                             <Button variant="outline" size="sm" onClick={handleLogout} className="border-slate-200 hover:bg-slate-50 text-slate-700">
                                 <LogOut className="mr-2 h-4 w-4" />
                                 Logout
@@ -450,27 +505,15 @@ export default function PartsRoom() {
                                                 value={newCategory}
                                                 onChange={(e) => setNewCategory(e.target.value)}
                                                 onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && newCategory.trim()) {
-                                                        if (!categories.includes(newCategory.trim())) {
-                                                            setCategories([...categories, newCategory.trim()]);
-                                                        }
-                                                        setNewCategory("");
-                                                        setIsAddingCategory(false);
+                                                    if (e.key === 'Enter') {
+                                                        handleAddNewCategory();
                                                     }
                                                 }}
                                             />
                                             <Button
                                                 size="sm"
                                                 className="h-8 px-2 bg-slate-900"
-                                                onClick={() => {
-                                                    if (newCategory.trim()) {
-                                                        if (!categories.includes(newCategory.trim())) {
-                                                            setCategories([...categories, newCategory.trim()]);
-                                                        }
-                                                        setNewCategory("");
-                                                        setIsAddingCategory(false);
-                                                    }
-                                                }}
+                                                onClick={handleAddNewCategory}
                                             >
                                                 Add
                                             </Button>
