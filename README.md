@@ -1,89 +1,91 @@
-# Autoworx System 🚗💨
+# Autoworx System
 
-A modern, high-performance **Vehicle Repair Management System** designed for professional auto workshops. This system bridges the gap between automotive expertise and cutting-edge software engineering, providing a seamless experience for both shop owners and vehicle owners.
+A professional, high-performance Vehicle Repair Management System designed for modern auto workshops. This platform integrates automotive technical expertise with advanced software engineering to provide a comprehensive management solution for workshop administrators and a seamless experience for vehicle owners.
 
-Built by **Javier Siliacay** (Autotronics Student, USTP).
-
----
-
-## 🌟 Key Features
-
-### 🤖 **AI Integration (The Future of Repair)**
-- **AI Mini-Chatbot**: A 24/7 intelligent assistant on the landing page that helps customers with booking, explains repair services, and answers common vehicle maintenance questions.
-- **Business Analyst AI**: A specialized dashboard for Admins that analyzes workshop performance, identifies revenue trends, and provides data-driven recommendations for business growth.
-
-### ⚡ **Real-time Admin Dashboard**
-The command center features **live data synchronization** powered by Supabase Realtime.
-- **Instant Updates**: New bookings appear automatically without page refreshes.
-- **Audio Notifications**: A professional "ding" sound alert for immediate shop awareness.
-- **Heads-up Toasts**: Floating notifications for new appointments and status changes.
-
-### 🔍 **Advanced Intelligent Search**
-Finding customer records is now faster and more forgiving than ever.
-- **Normalized Matching**: Ignores spaces, casing, and common separators (e.g., `ASD3156` matches `ASD-3156`).
-- **Flexible Search**: Works across names, emails, phone numbers, plate numbers, and vehicle models.
-
-### 🛡️ **Premium Booking Experience**
-A re-engineered form validation system to ensure high-quality data.
-- **Visual Validation**: Required fields highlight in red with helpful inline messages.
-- **Smart Scrolling**: Automatically scrolls to the first error if a submission fails.
-- **Document Verification**: Mandatory ORCR attachment for secure vehicle identity.
+Designed and developed by Javier Siliacay (Autotronics Student, USTP).
 
 ---
 
-## 🛠️ Features
+## Core Features
 
-### **For Vehicle Owners**
-- **AI-Powered Support**: Instant answers to common repair questions while booking.
-- **Sleek Booking Form**: Mobile-optimized interface with photo management.
-- **Instant Tracking**: Check repair status anytime using a unique tracking code.
-- **Automated Alerts**: Professional confirmation emails sent via **Resend**.
-- **PDF Confirmation**: Download a formatted summary of your appointment.
+### Administration and Command Center
+The administrative dashboard serves as the central hub for workshop operations, featuring live data synchronization and granular control over the repair lifecycle.
+- **Real-time Synchronization**: Powered by Supabase Realtime, new bookings and status updates reflect across all admin sessions instantly without page refreshes.
+- **Auditory and Visual Alerts**: Integrated notification system providing immediate awareness of new appointments through audio cues and floating UI notifications.
+- **Appointment Lifecycle Management**: Comprehensive tools to manage appointments from initial booking through completion and archiving.
 
-### **For Admin & Staff**
-- **Business Analyst AI**: Get insights on your busiest days and most popular services.
-- **Command Center**: Manage appointments, update repair progress (Parts, Labor), and set estimated costs.
-- **Automated Billing**: Itemized costing with automatic VAT (12%) calculations.
-- **History Archiving**: Seamlessly move completed jobs to a searchable history database.
-- **Analytics**: Built-in **Vercel Analytics** to track site traffic and customer behavior.
+### Granular Costing and Billing
+The system features a detailed costing engine that automates the financial aspects of vehicle repair.
+- **Itemized Cost Breakdown**: Separate management for services, parts, and labor with flexible category assignments.
+- **Automated Tax Calculations**: Built-in 12% VAT calculation logic with the ability to enable or disable as needed for specific quotes.
+- **Discount Management**: Support for both fixed-amount and percentage-based discounts applied in real-time.
+- **UX-Optimized Entry**: Keyboard shortcuts (e.g., Enter key to rapidly add multiple items) for efficient data entry during busy shop hours.
+
+### Digital Authorization and E-Signatures
+Professional authorization system to ensure transparency and accountability in the repair process.
+- **Permission-Based Toggles**: Integrated e-signature inclusion logic for General and Operation Managers.
+- **Role-Based Access Control**: Strict unauthorized access prevention; specific signatures (e.g., Paul D. Suazo or Alfred N. Agbong) can only be toggled by their respective owners or verified developers.
+- **Visual Auditing**: Read-only status indicators for administrators who lack specific toggle permissions.
+
+### Automated Reporting and Documentation
+Generates professional, shop-branded documentation for both internal use and customer records.
+- **Compact PDF Reports**: Optimized single-page report generation including vehicle details, comprehensive cost breakdowns, delivery estimates, and authorized signatures.
+- **Automated Document Generation**: One-click "Save File" functionality to export complete appointment records.
+- **Customer Portability**: Customers can download simplified appointment summaries and tracking confirmations.
+
+### Intelligent Search and Data Normalization
+Advanced search capabilities designed for accuracy in a workshop environment.
+- **Format-Agnostic Matching**: The system ignores spaces, hyphens, and casing during searches (e.g., `ABC1234` matches `ABC-1234`).
+- **Multi-Field Querying**: Search across plate numbers, customer names, chassis numbers, insurance providers, and engine numbers.
+- **Match Visibility**: Highlighting and categorization of search results to show exactly why a record matched a query.
+
+### Customer Engagement and AI
+- **Automated Communication**: Instant booking confirmations and status updates delivered via Resend email integration.
+- **Live Repair Tracking**: Specialized public portal where vehicle owners can monitor repair progress in real-time using unique tracking codes.
+- **AI-Powered Assistance**: Intelligent interface on the landing page to assist customers with service inquiries and booking procedures.
+- **Business Analyst AI**: Backend analytical tools for shop owners to identify revenue trends and optimize workshop performance.
 
 ---
 
-## 💻 Tech Stack
+## Technical Architecture
 
-- **Framework**: [Next.js 16](https://nextjs.org/) (React 19, TypeScript)
-- **AI Models**: Integration for intelligent chat and business analysis.
-- **Database & Realtime**: [Supabase](https://supabase.com/) (PostgreSQL + WebSockets)
-- **Styling**: Tailwind CSS + shadcn/ui + Vanilla CSS Animations
-- **Email**: [Resend](https://resend.com/)
-- **Analytics**: [Vercel Analytics](https://vercel.com/analytics)
-- **Auth**: [NextAuth.js](https://next-auth.js.org/) (Google OAuth)
+- **Framework**: Next.js (React 19, TypeScript)
+- **Database**: Supabase (PostgreSQL)
+- **Real-time Layer**: Supabase Realtime (WebSockets)
+- **Styling**: Tailwind CSS, shadcn/ui, and custom CSS animations
+- **Communication**: Resend API for transactional email
+- **Documentation**: jsPDF and html2canvas for PDF generation
+- **Authentication**: NextAuth.js with Google OAuth integration
+- **Geospatial**: OpenStreetMap and Leaflet for workshop location accuracy
 
 ---
 
-## 🛠️ Installation & Setup
+## Installation and Setup
 
 ### Prerequisites
-- Node.js 18.17+
-- A Supabase Project (Database + Storage enabled)
-- A Resend API Key
+- Node.js 20.x or higher
+- Supabase Project (with Database and Storage)
+- Resend API Key
+- Google Cloud Console Project (for OAuth)
 
-### Quick Start
-1. **Clone & Install**
+### Setup Instructions
+1. **Clone the Repository**
    ```bash
    git clone https://github.com/JavierSiliacay/autoworx-system.git
    cd autoworx-system
    npm install
    ```
 
-2. **Environment Variables** (`.env.local`)
+2. **Configure Environment Variables**
+   Create a `.env.local` file in the root directory:
    ```env
    # Supabase
-   NEXT_PUBLIC_SUPABASE_URL="your_supabase_url"
-   NEXT_PUBLIC_SUPABASE_ANON_KEY="your_anon_key"
+   NEXT_PUBLIC_SUPABASE_URL="your_url"
+   NEXT_PUBLIC_SUPABASE_ANON_KEY="your_key"
    
    # NextAuth
-   NEXTAUTH_SECRET="your_secret_string"
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="your_secret"
    GOOGLE_CLIENT_ID="your_google_id"
    GOOGLE_CLIENT_SECRET="your_google_secret"
    
@@ -91,23 +93,17 @@ A re-engineered form validation system to ensure high-quality data.
    RESEND_API_KEY="your_resend_key"
    ```
 
-3. **Database Configuration**
-   Enable **Realtime** for the `appointments` table in your Supabase Dashboard:
-   `Database` -> `Publications` -> `supabase_realtime` -> Toggle `appointments` ON.
+3. **Database Realtime Configuration**
+   In the Supabase Dashboard, enable replication for the `appointments` table under Database -> Replication -> supabase_realtime.
 
-4. **Launch**
+4. **Development Server**
    ```bash
    npm run dev
    ```
 
 ---
 
-## 👨‍💻 About the Developer
-**Javier Siliacay**  
-*Autotronics Student from USTP*  
-This system was built to combine automotive expertise with modern software engineering, creating a more efficient and data-driven repair shop experience.
+## About the Project
+The Autoworx System was developed to bridge the gap between traditional automotive repair and modern digital efficiency. By automating administrative overhead and providing transparent tracking for customers, it enables workshop staff to focus on high-quality technical service while the system handles the data.
 
----
-**Built with ❤️ for the future of Automotive Service Management.**  
-*Autoworx: Excellence in Motion.*
-
+**Autoworx: Excellence in Motion.**
