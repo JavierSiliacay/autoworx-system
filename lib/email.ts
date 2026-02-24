@@ -200,8 +200,8 @@ export async function sendAppointmentEmail({
     console.log(`[Email Utility] Executing resend.emails.send for: ${email}`);
 
     return await resend.emails.send({
-        from: 'onboarding@resend.dev',//from: "Autoworx System <notifications@yourdomain.com>"
-        to: email, // Changed from array [email] to string email to match working test
+        from: 'Autoworx Repairs <notifications@autoworxcagayan.com>',
+        to: email,
         subject: subject,
         html: htmlContent,
     });
