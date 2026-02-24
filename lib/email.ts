@@ -57,6 +57,7 @@ export async function sendAppointmentEmail({
         htmlContent = `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; line-height: 1.6;">
                 <div style="background-color: #1a1a1a; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                    <img src="${PRODUCTION_URL}/autoworxlogo.png" alt="Autoworx Logo" style="width: 100px; height: auto; margin-bottom: 20px; display: block; margin-left: auto; margin-right: auto;" />
                     <h1 style="color: #ffffff; margin: 0; letter-spacing: 2px; font-size: 24px;">AUTOWORX REPAIRS</h1>
                     <p style="color: #cccccc; margin: 5px 0 0 0; font-size: 14px;">& GEN. MERCHANDISE</p>
                 </div>
@@ -123,6 +124,7 @@ export async function sendAppointmentEmail({
         htmlContent = `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; line-height: 1.6;">
                 <div style="background-color: #1a1a1a; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                    <img src="${PRODUCTION_URL}/autoworxlogo.png" alt="Autoworx Logo" style="width: 100px; height: auto; margin-bottom: 20px; display: block; margin-left: auto; margin-right: auto;" />
                     <h1 style="color: #ffffff; margin: 0; letter-spacing: 2px; font-size: 24px;">AUTOWORX REPAIRS</h1>
                     <p style="color: #cccccc; margin: 5px 0 0 0; font-size: 14px;">& GEN. MERCHANDISE</p>
                 </div>
