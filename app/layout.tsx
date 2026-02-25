@@ -8,12 +8,9 @@ export const metadata: Metadata = {
   title: "Autoworx Repairs - Vehicle Repair Management System",
   description: "Professional vehicle repair appointment booking and management system",
   icons: {
-    icon: [
-      { url: "/autoworxlogo.png" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-    apple: "/autoworxlogo.png",
+    icon: "/autoworxlogo.png",
     shortcut: "/autoworxlogo.png",
+    apple: "/autoworxlogo.png",
   },
 }
 
