@@ -502,9 +502,14 @@ export default function AdminDashboard() {
     if (status === "authenticated") {
       loadAppointments()
       loadAnnouncements()
+      loadHistory()
+      loadDeletedAppointments()
+      if (isDeveloperUser) {
+        loadRecommendations()
+      }
       setIsElectron(typeof window !== 'undefined' && !!(window as any).electron)
     }
-  }, [router, loadAppointments, loadAnnouncements, status, session?.user?.role])
+  }, [router, loadAppointments, loadAnnouncements, loadHistory, loadDeletedAppointments, loadRecommendations, status, session?.user?.role, isDeveloperUser])
 
   // Real-time updates subscription
   useEffect(() => {
