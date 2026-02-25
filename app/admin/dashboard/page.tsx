@@ -46,7 +46,10 @@ import {
   Heart,
   Package,
   LayoutDashboard,
-  Monitor
+  Monitor,
+  Check,
+  FileUp,
+  FileCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -73,6 +76,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { cn, compressImage } from "@/lib/utils"
 
 // Database response interface (snake_case from Supabase)
 interface AppointmentDB {
@@ -105,6 +109,7 @@ interface AppointmentDB {
   estimate_number?: string
   paul_notes?: string
   service_advisor?: string
+  loa_attachment?: string
 }
 
 // Frontend interface (camelCase)
@@ -139,6 +144,7 @@ interface Appointment {
   serviceAdvisor?: string
   updatedAt?: string
   source?: 'active' | 'history'
+  loaAttachment?: string
 }
 
 // History interface
@@ -208,6 +214,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     estimateNumber: apt.estimate_number,
     paulNotes: apt.paul_notes,
     serviceAdvisor: apt.service_advisor,
+    loaAttachment: apt.loa_attachment || apt.costing?.loaAttachment,
   }
 }
 
@@ -323,6 +330,7 @@ export default function AdminDashboard() {
 
   const [selectedDownloadAppointment, setSelectedDownloadAppointment] = useState<Appointment | null>(null)
   const [isElectron, setIsElectron] = useState(false)
+  const [isUploadingLOA, setIsUploadingLOA] = useState<Record<string, boolean>>({})
 
   // Refs for stabilizing typing and real-time updates
   const costingDebounceRef = useRef<Record<string, any>>({})
@@ -590,6 +598,156 @@ export default function AdminDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, repairStatus, statusUpdatedAt }),
     })
+  }
+
+  const handleLOAUpload = async (appointmentId: string, file: File) => {
+    setIsUploadingLOA((prev) => ({ ...prev, [appointmentId]: true }))
+    try {
+      // 1. Compress only if it's an image
+      let fileToUpload = file;
+      if (file.type.startsWith('image/')) {
+        try {
+          fileToUpload = await compressImage(file)
+        } catch (err) {
+          console.warn("Compression failed, uploading original:", err)
+        }
+      }
+
+      // 2. Upload to Supabase Storage
+      const supabase = createClient()
+      const fileExt = fileToUpload.name.split('.').pop()
+      const fileName = `loa-${appointmentId}-${Date.now()}.${fileExt}`
+      const filePath = `damage-images/${fileName}`
+
+      const { data, error } = await supabase.storage
+        .from("damage-images")
+        .upload(filePath, fileToUpload)
+
+      if (error) throw error
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("damage-images")
+        .getPublicUrl(filePath)
+
+      // 3. Update appointment costing with loaAttachment
+      const appointment = appointments.find(a => a.id === appointmentId)
+      if (appointment) {
+        const updatedCosting = {
+          ...(appointment.costing || {
+            items: [],
+            subtotal: 0,
+            discount: 0,
+            discountType: "fixed",
+            vatEnabled: false,
+            vatAmount: 0,
+            total: 0,
+            notes: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          } as CostingData),
+          loaAttachment: publicUrl,
+          updatedAt: new Date().toISOString()
+        }
+
+        const updated = appointments.map((apt) =>
+          apt.id === appointmentId
+            ? {
+              ...apt,
+              costing: updatedCosting,
+              loaAttachment: publicUrl,
+              repairStatus: 'insurance_approved' as RepairStatus,
+              statusUpdatedAt: new Date().toISOString()
+            }
+            : apt
+        )
+        setAppointments(updated)
+
+        await fetch("/api/appointments", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: appointmentId,
+            costing: updatedCosting,
+            loaAttachment: publicUrl,
+            repairStatus: 'insurance_approved',
+            statusUpdatedAt: new Date().toISOString()
+          }),
+        })
+      }
+
+      toast({
+        title: "LOA Attached",
+        description: "The Letter of Authorization has been uploaded and attached.",
+      })
+    } catch (error: any) {
+      console.error("LOA upload error:", error)
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: error.message || "Could not upload LOA file.",
+      })
+    } finally {
+      setIsUploadingLOA((prev) => ({ ...prev, [appointmentId]: false }))
+    }
+  }
+
+  const handleRemoveLOA = async (appointmentId: string) => {
+    if (!confirm("Are you sure you want to remove the LOA attachment?")) return;
+
+    try {
+      const appointment = appointments.find(a => a.id === appointmentId)
+      if (appointment) {
+        const updatedCosting = {
+          ...(appointment.costing || {
+            items: [],
+            subtotal: 0,
+            discount: 0,
+            discountType: "fixed",
+            vatEnabled: false,
+            vatAmount: 0,
+            total: 0,
+            notes: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          } as CostingData),
+          loaAttachment: undefined,
+          updatedAt: new Date().toISOString()
+        }
+
+        const updated = appointments.map((apt) =>
+          apt.id === appointmentId
+            ? {
+              ...apt,
+              costing: updatedCosting,
+              loaAttachment: undefined,
+            }
+            : apt
+        )
+        setAppointments(updated)
+
+        await fetch("/api/appointments", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: appointmentId,
+            costing: updatedCosting,
+            loaAttachment: null
+          }),
+        })
+
+        toast({
+          title: "LOA Removed",
+          description: "The Letter of Authorization attachment has been removed.",
+        })
+      }
+    } catch (error: any) {
+      console.error("Error removing LOA:", error)
+      toast({
+        variant: "destructive",
+        title: "Remove Failed",
+        description: "Could not remove the LOA attachment.",
+      })
+    }
   }
 
   const updateCurrentRepairPart = async (id: string, currentRepairPart: string) => {
@@ -1531,7 +1689,7 @@ export default function AdminDashboard() {
                 <Megaphone className="w-5 h-5 fill-primary/10" />
                 <h2 className="font-serif text-xl font-bold">Admin Announcements</h2>
               </div>
-              {session?.user?.email === "paulsuazo64@gmail.com" && (
+              {(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com") && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1561,7 +1719,7 @@ export default function AdminDashboard() {
                   <p className="text-sm text-foreground line-clamp-3 leading-relaxed">
                     {ann.content}
                   </p>
-                  {session?.user?.email === "paulsuazo64@gmail.com" && (
+                  {(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com") && (
                     <button
                       onClick={async () => {
                         if (confirm("Delete this announcement?")) {
@@ -1580,7 +1738,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {announcements.length === 0 && session?.user?.email === "paulsuazo64@gmail.com" && (
+        {announcements.length === 0 && (session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com") && (
           <div className="mb-8 p-6 bg-primary/5 border border-dashed border-primary/20 rounded-xl text-center">
             <Megaphone className="w-8 h-8 mx-auto text-primary/40 mb-3" />
             <h3 className="font-semibold text-primary/80">No current announcements</h3>
@@ -2200,7 +2358,7 @@ export default function AdminDashboard() {
 
                             {isExpanded && (
                               <div className="px-6 pb-6 pt-2 space-y-4 bg-secondary/30">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                                   {/* Repair Status Dropdown */}
                                   <div className="space-y-2">
                                     <label className="text-sm font-medium text-foreground">
@@ -2214,13 +2372,163 @@ export default function AdminDashboard() {
                                         <SelectValue placeholder="Select repair status" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        {REPAIR_STATUS_OPTIONS.map((option) => (
+                                        {REPAIR_STATUS_OPTIONS.filter(opt => !['waiting_for_insurance', 'insurance_approved'].includes(opt.value)).map((option) => (
                                           <SelectItem key={option.value} value={option.value}>
                                             {option.label}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
                                     </Select>
+                                  </div>
+
+                                  {/* Insurance Monitoring UI */}
+                                  <div className="space-y-3">
+                                    {(() => {
+                                      const isWaiting = appointment.repairStatus === 'waiting_for_insurance' || appointment.repairStatus === 'insurance_approved' || appointment.repairStatus === 'completed_ready';
+                                      const isApproved = appointment.repairStatus === 'insurance_approved' || appointment.repairStatus === 'completed_ready';
+                                      const isCompleted = appointment.repairStatus === 'completed_ready';
+
+                                      return (
+                                        <>
+                                          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                            <ShieldCheck className="w-3.5 h-3.5" />
+                                            Insurance Monitoring (Admin Only)
+                                          </label>
+                                          <div className="flex items-center justify-between p-4 bg-background/50 rounded-xl border border-border/50 shadow-sm relative overflow-hidden">
+                                            <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
+
+                                            <div className="flex flex-1 items-center justify-between gap-2 max-w-full">
+                                              {/* Waiting Approval */}
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className={cn(
+                                                  "h-auto flex flex-col gap-1.5 py-2 px-3 border transition-all flex-1 min-w-0",
+                                                  isWaiting ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
+                                                )}
+                                                onClick={() => updateRepairStatus(appointment.id, 'waiting_for_insurance')}
+                                              >
+                                                <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isWaiting ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
+                                                  {isWaiting ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                                                </div>
+                                                <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Waiting Approval</span>
+                                              </Button>
+
+                                              <ChevronRight className="w-3 h-3 text-muted-foreground/30 shrink-0" />
+
+                                              {/* Approved Step */}
+                                              <div className="flex-1 min-w-0">
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className={cn(
+                                                    "h-auto w-full flex flex-col gap-1.5 py-2 px-3 border transition-all relative overflow-hidden",
+                                                    isApproved ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
+                                                  )}
+                                                  onClick={() => {
+                                                    if (!appointment.loaAttachment) {
+                                                      document.getElementById(`loa-upload-${appointment.id}`)?.click();
+                                                    } else {
+                                                      updateRepairStatus(appointment.id, 'insurance_approved');
+                                                    }
+                                                  }}
+                                                >
+                                                  <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isApproved ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
+                                                    {isApproved ? <Check className="w-3.5 h-3.5" /> : (isUploadingLOA[appointment.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />)}
+                                                  </div>
+                                                  <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Approved by Ins.</span>
+                                                  {appointment.loaAttachment && <div className="absolute top-0 right-0 bg-emerald-500 text-[8px] text-white px-1 font-bold">LOA</div>}
+                                                </Button>
+                                              </div>
+
+                                              <ChevronRight className="w-3 h-3 text-muted-foreground/30 shrink-0" />
+
+                                              {/* Completed Step */}
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className={cn(
+                                                  "h-auto flex flex-col gap-1.5 py-2 px-3 border transition-all flex-1 min-w-0",
+                                                  isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
+                                                )}
+                                                onClick={() => updateRepairStatus(appointment.id, 'completed_ready')}
+                                              >
+                                                <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isCompleted ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
+                                                  {isCompleted ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                                                </div>
+                                                <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Completed</span>
+                                              </Button>
+                                            </div>
+                                          </div>
+
+                                          {/* LOA Actions if attached */}
+                                          <div className="flex items-center gap-2 min-h-[20px] w-full">
+                                            {appointment.loaAttachment ? (
+                                              <div className="flex items-center gap-3 w-full">
+                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-700">
+                                                  <FileCheck className="w-3.5 h-3.5" />
+                                                  <span className="text-[10px] font-bold uppercase tracking-tight">LOA Ready</span>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 ml-auto">
+                                                  {appointment.loaAttachment?.toLowerCase().endsWith('.pdf') ? (
+                                                    <a
+                                                      href={appointment.loaAttachment}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                                                    >
+                                                      <FileText className="w-3 h-3" /> View PDF
+                                                    </a>
+                                                  ) : (
+                                                    <button
+                                                      onClick={() => {
+                                                        setZoomImages([appointment.loaAttachment!]);
+                                                        setZoomInitialIndex(0);
+                                                        setZoomModalOpen(true);
+                                                      }}
+                                                      className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                                                    >
+                                                      <Search className="w-3 h-3" /> Preview
+                                                    </button>
+                                                  )}
+
+                                                  <div className="w-[1px] h-3 bg-border" />
+
+                                                  <button
+                                                    onClick={() => document.getElementById(`loa-upload-${appointment.id}`)?.click()}
+                                                    className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
+                                                  >
+                                                    <RefreshCw className="w-3 h-3" /> Replace
+                                                  </button>
+
+                                                  <div className="w-[1px] h-3 bg-border" />
+
+                                                  <button
+                                                    onClick={() => handleRemoveLOA(appointment.id)}
+                                                    className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors cursor-pointer"
+                                                  >
+                                                    <Trash2 className="w-3 h-3" /> Remove
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <p className="text-[10px] text-muted-foreground italic">No LOA attachment found. Click 'Approved' to upload.</p>
+                                            )}
+                                          </div>
+                                          <input
+                                            id={`loa-upload-${appointment.id}`}
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*,application/pdf"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) handleLOAUpload(appointment.id, file);
+                                            }}
+                                          />
+                                        </>
+                                      );
+                                    })()}
                                   </div>
 
                                   {/* Current Part Being Repaired */}
@@ -2318,7 +2626,7 @@ export default function AdminDashboard() {
                                     <Megaphone className="w-4 h-4" />
                                     <h4 className="font-semibold text-foreground">Sir Paul&apos;s Notes</h4>
                                   </div>
-                                  {session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email) ? (
+                                  {session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email) ? (
                                     <div className="space-y-3">
                                       <Textarea
                                         value={appointment.paulNotes || ""}
@@ -2349,7 +2657,7 @@ export default function AdminDashboard() {
                                     </div>
                                   )}
                                   <p className="text-[10px] text-muted-foreground">
-                                    * Visible to all administrators. Only Sir Paul can edit this field.
+                                    * Visible to all administrators. Authorized personnel only.
                                   </p>
                                 </div>
 
@@ -2549,7 +2857,7 @@ export default function AdminDashboard() {
                                               <div className="flex items-center gap-2 text-sm font-medium text-primary">
                                                 <ShieldCheck className="w-4 h-4" />
                                                 Include E-Signature for Paul D. Suazo?
-                                                {!(session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+                                                {!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
                                                   <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground ml-2">READ-ONLY</span>
                                                 )}
                                               </div>
@@ -2559,7 +2867,7 @@ export default function AdminDashboard() {
                                                   variant={appointment.costing?.includePaulSignature ? "default" : "outline"}
                                                   onClick={() => setIncludePaulSignature(appointment.id, true)}
                                                   className="h-7 px-3 text-[10px]"
-                                                  disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                  disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
                                                 >
                                                   Yes
                                                 </Button>
@@ -2568,7 +2876,7 @@ export default function AdminDashboard() {
                                                   variant={appointment.costing?.includePaulSignature === false ? "destructive" : "outline"}
                                                   onClick={() => setIncludePaulSignature(appointment.id, false)}
                                                   className="h-7 px-3 text-[10px]"
-                                                  disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                  disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
                                                 >
                                                   No
                                                 </Button>
@@ -2582,7 +2890,7 @@ export default function AdminDashboard() {
                                               <div className="flex items-center gap-2 text-sm font-medium text-primary">
                                                 <ShieldCheck className="w-4 h-4" />
                                                 Include E-Signature for Alfred N. Agbong?
-                                                {!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+                                                {!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
                                                   <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground ml-2">READ-ONLY</span>
                                                 )}
                                               </div>
@@ -2592,7 +2900,7 @@ export default function AdminDashboard() {
                                                   variant={appointment.costing?.includeAlfredSignature ? "default" : "outline"}
                                                   onClick={() => setIncludeAlfredSignature(appointment.id, true)}
                                                   className="h-7 px-3 text-[10px]"
-                                                  disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                  disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
                                                 >
                                                   Yes
                                                 </Button>
@@ -2601,7 +2909,7 @@ export default function AdminDashboard() {
                                                   variant={appointment.costing?.includeAlfredSignature === false ? "destructive" : "outline"}
                                                   onClick={() => setIncludeAlfredSignature(appointment.id, false)}
                                                   className="h-7 px-3 text-[10px]"
-                                                  disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                  disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
                                                 >
                                                   No
                                                 </Button>

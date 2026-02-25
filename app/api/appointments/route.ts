@@ -271,6 +271,7 @@ export async function PUT(request: Request) {
   if (updates.orcrImage !== undefined) dbUpdates.orcr_image = updates.orcrImage
   if (updates.orcrImage2 !== undefined) dbUpdates.orcr_image_2 = updates.orcrImage2
   if (updates.serviceAdvisor !== undefined) dbUpdates.service_advisor = updates.serviceAdvisor
+  if (updates.loaAttachment !== undefined) dbUpdates.loa_attachment = updates.loaAttachment
 
   // New editable fields
   if (updates.name !== undefined) dbUpdates.name = updates.name

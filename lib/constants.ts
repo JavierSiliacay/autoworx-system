@@ -99,6 +99,7 @@ export interface CostingData {
   deliveryDate?: string
   includePaulSignature?: boolean
   includeAlfredSignature?: boolean
+  loaAttachment?: string
 }
 
 export const PRODUCTION_URL = "https://autoworxcagayan.com"
