@@ -573,6 +573,10 @@ export default function AdminDashboard() {
   }
 
   const updateStatus = async (id: string, newStatus: "pending" | "contacted" | "completed") => {
+    if (newStatus === "completed") {
+      const confirmed = window.confirm("Are you sure that this unit is completed?")
+      if (!confirmed) return
+    }
     const updated = appointments.map((apt) =>
       apt.id === id ? { ...apt, status: newStatus } : apt
     )
@@ -586,6 +590,10 @@ export default function AdminDashboard() {
   }
 
   const updateRepairStatus = async (id: string, repairStatus: RepairStatus) => {
+    if (repairStatus === "completed_ready") {
+      const confirmed = window.confirm("Are you sure that this unit is completed and ready for pickup?")
+      if (!confirmed) return
+    }
     const statusUpdatedAt = new Date().toISOString()
     const updated = appointments.map((apt) =>
       apt.id === id
