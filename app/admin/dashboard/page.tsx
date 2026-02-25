@@ -1689,7 +1689,7 @@ export default function AdminDashboard() {
                 <Megaphone className="w-5 h-5 fill-primary/10" />
                 <h2 className="font-serif text-xl font-bold">Admin Announcements</h2>
               </div>
-              {(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com") && (
+              {(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1719,7 +1719,7 @@ export default function AdminDashboard() {
                   <p className="text-sm text-foreground line-clamp-3 leading-relaxed">
                     {ann.content}
                   </p>
-                  {(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com") && (
+                  {(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
                     <button
                       onClick={async () => {
                         if (confirm("Delete this announcement?")) {
@@ -1738,7 +1738,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {announcements.length === 0 && (session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com") && (
+        {announcements.length === 0 && (session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
           <div className="mb-8 p-6 bg-primary/5 border border-dashed border-primary/20 rounded-xl text-center">
             <Megaphone className="w-8 h-8 mx-auto text-primary/40 mb-3" />
             <h3 className="font-semibold text-primary/80">No current announcements</h3>
