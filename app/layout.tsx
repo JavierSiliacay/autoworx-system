@@ -4,11 +4,16 @@ import { Analytics } from "@vercel/analytics/react"
 import "./globals.css"
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.autoworxcagayan.com"),
   title: "Autoworx Repairs - Vehicle Repair Management System",
   description: "Professional vehicle repair appointment booking and management system",
   icons: {
-    icon: "/autoworxlogo.png",
+    icon: [
+      { url: "/autoworxlogo.png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
     apple: "/autoworxlogo.png",
+    shortcut: "/autoworxlogo.png",
   },
 }
 
