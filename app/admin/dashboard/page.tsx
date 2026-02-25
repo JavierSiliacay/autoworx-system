@@ -49,6 +49,7 @@ import {
   Monitor,
   Check,
   FileUp,
+  PlusCircle,
   FileCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -110,6 +111,8 @@ interface AppointmentDB {
   paul_notes?: string
   service_advisor?: string
   loa_attachment?: string
+  loa_attachment_2?: string
+  loa_attachments?: string[]
 }
 
 // Frontend interface (camelCase)
@@ -145,6 +148,8 @@ interface Appointment {
   updatedAt?: string
   source?: 'active' | 'history'
   loaAttachment?: string
+  loaAttachment2?: string
+  loaAttachments?: string[]
 }
 
 // History interface
@@ -214,7 +219,10 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     estimateNumber: apt.estimate_number,
     paulNotes: apt.paul_notes,
     serviceAdvisor: apt.service_advisor,
+    updatedAt: apt.status_updated_at || apt.created_at,
     loaAttachment: apt.loa_attachment || apt.costing?.loaAttachment,
+    loaAttachment2: apt.loa_attachment_2 || apt.costing?.loaAttachment2,
+    loaAttachments: apt.loa_attachments || apt.costing?.loaAttachments || []
   }
 }
 
@@ -642,9 +650,15 @@ export default function AdminDashboard() {
         .from("damage-images")
         .getPublicUrl(filePath)
 
-      // 3. Update appointment costing with loaAttachment
+      // 3. Update appointment costing with loaAttachments array
       const appointment = appointments.find(a => a.id === appointmentId)
       if (appointment) {
+        // Handle migration/merging of old fields into the new array
+        const currentLOAs = appointment.loaAttachments || [];
+        // Extract from old fields if they exist and aren't in the array yet
+        const legacyLOAs = [appointment.loaAttachment, appointment.loaAttachment2].filter(Boolean) as string[];
+        const combinedLOAs = Array.from(new Set([...currentLOAs, ...legacyLOAs, publicUrl]));
+
         const updatedCosting = {
           ...(appointment.costing || {
             items: [],
@@ -658,7 +672,7 @@ export default function AdminDashboard() {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           } as CostingData),
-          loaAttachment: publicUrl,
+          loaAttachments: combinedLOAs,
           updatedAt: new Date().toISOString()
         }
 
@@ -667,7 +681,7 @@ export default function AdminDashboard() {
             ? {
               ...apt,
               costing: updatedCosting,
-              loaAttachment: publicUrl,
+              loaAttachments: combinedLOAs,
               repairStatus: 'insurance_approved' as RepairStatus,
               statusUpdatedAt: new Date().toISOString()
             }
@@ -681,7 +695,7 @@ export default function AdminDashboard() {
           body: JSON.stringify({
             id: appointmentId,
             costing: updatedCosting,
-            loaAttachment: publicUrl,
+            loaAttachments: combinedLOAs,
             repairStatus: 'insurance_approved',
             statusUpdatedAt: new Date().toISOString()
           }),
@@ -704,12 +718,15 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleRemoveLOA = async (appointmentId: string) => {
-    if (!confirm("Are you sure you want to remove the LOA attachment?")) return;
+  const handleRemoveLOA = async (appointmentId: string, urlToRemove: string) => {
+    if (!confirm("Are you sure you want to remove this LOA attachment?")) return;
 
     try {
       const appointment = appointments.find(a => a.id === appointmentId)
       if (appointment) {
+        const currentLOAs = appointment.loaAttachments || [];
+        const updatedLOAs = currentLOAs.filter(url => url !== urlToRemove);
+
         const updatedCosting = {
           ...(appointment.costing || {
             items: [],
@@ -723,7 +740,7 @@ export default function AdminDashboard() {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           } as CostingData),
-          loaAttachment: undefined,
+          loaAttachments: updatedLOAs,
           updatedAt: new Date().toISOString()
         }
 
@@ -732,7 +749,7 @@ export default function AdminDashboard() {
             ? {
               ...apt,
               costing: updatedCosting,
-              loaAttachment: undefined,
+              loaAttachments: updatedLOAs,
             }
             : apt
         )
@@ -744,7 +761,10 @@ export default function AdminDashboard() {
           body: JSON.stringify({
             id: appointmentId,
             costing: updatedCosting,
-            loaAttachment: null
+            loaAttachments: updatedLOAs,
+            // Also nullify legacy fields if this was one of them
+            loaAttachment: urlToRemove === appointment.loaAttachment ? null : undefined,
+            loaAttachment2: urlToRemove === appointment.loaAttachment2 ? null : undefined,
           }),
         })
 
@@ -2474,60 +2494,79 @@ export default function AdminDashboard() {
                                             </div>
                                           </div>
 
-                                          {/* LOA Actions if attached */}
-                                          <div className="flex items-center gap-2 min-h-[20px] w-full">
-                                            {appointment.loaAttachment ? (
-                                              <div className="flex items-center gap-3 w-full">
-                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-700">
-                                                  <FileCheck className="w-3.5 h-3.5" />
-                                                  <span className="text-[10px] font-bold uppercase tracking-tight">LOA Ready</span>
+                                          {/* LOA Actions - Unlimited Array Support */}
+                                          <div className="flex flex-col gap-3 min-h-[20px] w-full mt-1">
+                                            {/* List of current LOAs */}
+                                            {(() => {
+                                              const allLOAs = Array.from(new Set([
+                                                ...(appointment.loaAttachments || []),
+                                                ...(appointment.loaAttachment ? [appointment.loaAttachment] : []),
+                                                ...(appointment.loaAttachment2 ? [appointment.loaAttachment2] : [])
+                                              ])).filter(Boolean) as string[];
+
+                                              return allLOAs.length > 0 ? (
+                                                <div className="space-y-2">
+                                                  {allLOAs.map((url, idx) => (
+                                                    <div key={idx} className="flex items-center gap-3 w-full bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/10">
+                                                      <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-700">
+                                                        <FileCheck className="w-3.5 h-3.5" />
+                                                        <span className="text-[10px] font-bold uppercase tracking-tight">LOA {idx + 1}</span>
+                                                      </div>
+
+                                                      <div className="flex items-center gap-2 ml-auto">
+                                                        {url.toLowerCase().endsWith('.pdf') ? (
+                                                          <a
+                                                            href={url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                                                          >
+                                                            <FileText className="w-3 h-3" /> View
+                                                          </a>
+                                                        ) : (
+                                                          <button
+                                                            onClick={() => {
+                                                              setZoomImages([url]);
+                                                              setZoomInitialIndex(0);
+                                                              setZoomModalOpen(true);
+                                                            }}
+                                                            className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                                                          >
+                                                            <Search className="w-3 h-3" /> Preview
+                                                          </button>
+                                                        )}
+
+                                                        <div className="w-[1px] h-3 bg-border" />
+
+                                                        <button
+                                                          onClick={() => handleRemoveLOA(appointment.id, url)}
+                                                          className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors cursor-pointer"
+                                                        >
+                                                          <Trash2 className="w-3 h-3" /> Remove
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  ))}
                                                 </div>
+                                              ) : (
+                                                <p className="text-[10px] text-muted-foreground italic">No LOA attachment found. Click &apos;Approved&apos; to upload.</p>
+                                              );
+                                            })()}
 
-                                                <div className="flex items-center gap-2 ml-auto">
-                                                  {appointment.loaAttachment?.toLowerCase().endsWith('.pdf') ? (
-                                                    <a
-                                                      href={appointment.loaAttachment}
-                                                      target="_blank"
-                                                      rel="noopener noreferrer"
-                                                      className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
-                                                    >
-                                                      <FileText className="w-3 h-3" /> View PDF
-                                                    </a>
-                                                  ) : (
-                                                    <button
-                                                      onClick={() => {
-                                                        setZoomImages([appointment.loaAttachment!]);
-                                                        setZoomInitialIndex(0);
-                                                        setZoomModalOpen(true);
-                                                      }}
-                                                      className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
-                                                    >
-                                                      <Search className="w-3 h-3" /> Preview
-                                                    </button>
-                                                  )}
-
-                                                  <div className="w-[1px] h-3 bg-border" />
-
-                                                  <button
-                                                    onClick={() => document.getElementById(`loa-upload-${appointment.id}`)?.click()}
-                                                    className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
-                                                  >
-                                                    <RefreshCw className="w-3 h-3" /> Replace
-                                                  </button>
-
-                                                  <div className="w-[1px] h-3 bg-border" />
-
-                                                  <button
-                                                    onClick={() => handleRemoveLOA(appointment.id)}
-                                                    className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors cursor-pointer"
-                                                  >
-                                                    <Trash2 className="w-3 h-3" /> Remove
-                                                  </button>
-                                                </div>
-                                              </div>
-                                            ) : (
-                                              <p className="text-[10px] text-muted-foreground italic">No LOA attachment found. Click 'Approved' to upload.</p>
-                                            )}
+                                            {/* Upload Trigger */}
+                                            <div className="flex items-center justify-between w-full border-t border-dashed border-border pt-2 mt-1">
+                                              <p className="text-[9px] text-muted-foreground italic flex items-center gap-1">
+                                                <PlusCircle className="w-3 h-3" /> Need more LOAs?
+                                              </p>
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-6 px-2 text-[9px] font-bold border-dashed border-emerald-500/40 text-emerald-600 hover:bg-emerald-50"
+                                                onClick={() => document.getElementById(`loa-upload-${appointment.id}`)?.click()}
+                                              >
+                                                Upload LOA
+                                              </Button>
+                                            </div>
                                           </div>
                                           <input
                                             id={`loa-upload-${appointment.id}`}
@@ -2537,6 +2576,7 @@ export default function AdminDashboard() {
                                             onChange={(e) => {
                                               const file = e.target.files?.[0];
                                               if (file) handleLOAUpload(appointment.id, file);
+                                              e.target.value = ''; // Reset for next selection
                                             }}
                                           />
                                         </>

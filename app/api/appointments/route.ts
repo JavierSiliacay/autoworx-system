@@ -272,6 +272,8 @@ export async function PUT(request: Request) {
   if (updates.orcrImage2 !== undefined) dbUpdates.orcr_image_2 = updates.orcrImage2
   if (updates.serviceAdvisor !== undefined) dbUpdates.service_advisor = updates.serviceAdvisor
   if (updates.loaAttachment !== undefined) dbUpdates.loa_attachment = updates.loaAttachment
+  if (updates.loaAttachment2 !== undefined) dbUpdates.loa_attachment_2 = updates.loaAttachment2
+  if (updates.loaAttachments !== undefined) dbUpdates.loa_attachments = updates.loaAttachments
 
   // New editable fields
   if (updates.name !== undefined) dbUpdates.name = updates.name
@@ -356,7 +358,7 @@ export async function DELETE(request: Request) {
     // Get the appointment to find image URLs for cleanup
     const { data: appointment } = await supabase
       .from("appointments")
-      .select("damage_images, orcr_image, orcr_image_2")
+      .select("damage_images, orcr_image, orcr_image_2, loa_attachment, loa_attachment_2, loa_attachments")
       .eq("id", id)
       .single()
 
@@ -386,6 +388,29 @@ export async function DELETE(request: Request) {
       const orcrMatch2 = appointment.orcr_image_2.match(/damage-images\/(.+)$/)
       if (orcrMatch2) {
         await supabase.storage.from("damage-images").remove([orcrMatch2[1]])
+      }
+    }
+
+    if (appointment?.loa_attachment) {
+      const loaMatch = appointment.loa_attachment.match(/damage-images\/(.+)$/)
+      if (loaMatch) {
+        await supabase.storage.from("damage-images").remove([loaMatch[1]])
+      }
+    }
+
+    if (appointment?.loa_attachment_2) {
+      const loaMatch2 = appointment.loa_attachment_2.match(/damage-images\/(.+)$/)
+      if (loaMatch2) {
+        await supabase.storage.from("damage-images").remove([loaMatch2[1]])
+      }
+    }
+
+    if (appointment?.loa_attachments && Array.isArray(appointment.loa_attachments)) {
+      for (const url of appointment.loa_attachments) {
+        const match = url.match(/damage-images\/(.+)$/)
+        if (match) {
+          await supabase.storage.from("damage-images").remove([match[1]])
+        }
       }
     }
 

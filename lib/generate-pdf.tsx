@@ -31,6 +31,9 @@ interface TrackingAppointment {
   insurance?: string
   estimateNumber?: string
   serviceAdvisor?: string
+  loaAttachment?: string
+  loaAttachment2?: string
+  loaAttachments?: string[]
 }
 
 export async function generateConfirmationPDF(options: PDFGeneratorOptions): Promise<string> {

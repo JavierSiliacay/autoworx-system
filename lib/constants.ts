@@ -100,6 +100,8 @@ export interface CostingData {
   includePaulSignature?: boolean
   includeAlfredSignature?: boolean
   loaAttachment?: string
+  loaAttachment2?: string
+  loaAttachments?: string[]
 }
 
 export const PRODUCTION_URL = "https://autoworxcagayan.com"

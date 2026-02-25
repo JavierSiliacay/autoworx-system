@@ -26,6 +26,7 @@ import {
   Tag,
   Download,
   Star,
+  FileCheck,
 } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -67,6 +68,9 @@ interface AppointmentDB {
   orcr_image_2?: string
   insurance?: string
   estimate_number?: string
+  loa_attachment?: string
+  loa_attachment_2?: string
+  loa_attachments?: string[]
 }
 
 // Helper to convert DB response to frontend format
@@ -94,6 +98,9 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     orcrImage2: apt.orcr_image_2,
     insurance: apt.insurance,
     estimateNumber: apt.estimate_number,
+    loaAttachment: apt.loa_attachment || apt.costing?.loaAttachment,
+    loaAttachment2: apt.loa_attachment_2 || apt.costing?.loaAttachment2,
+    loaAttachments: apt.loa_attachments || apt.costing?.loaAttachments || [],
   }
 }
 
@@ -123,6 +130,9 @@ interface Appointment {
   orcrImage2?: string
   insurance?: string
   estimateNumber?: string
+  loaAttachment?: string
+  loaAttachment2?: string
+  loaAttachments?: string[]
 }
 
 import { Suspense } from "react"
@@ -681,6 +691,66 @@ function TrackingContent() {
                   </p>
                 </div>
               )}
+
+              {/* LOA Attachments - Array Support */}
+              {(() => {
+                const allLOAs = Array.from(new Set([
+                  ...(appointment.loaAttachments || []),
+                  ...(appointment.loaAttachment ? [appointment.loaAttachment] : []),
+                  ...(appointment.loaAttachment2 ? [appointment.loaAttachment2] : [])
+                ])).filter(Boolean) as string[];
+
+                return allLOAs.length > 0 ? (
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
+                      <FileCheck className="w-4 h-4" />
+                      Letter of Authorization (LOA)
+                    </p>
+                    <div className="flex flex-col gap-3">
+                      {allLOAs.map((url, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                              <FileText className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-foreground">LOA Document {idx + 1}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-tight font-bold">Insurance Approved</p>
+                            </div>
+                          </div>
+                          {url.toLowerCase().endsWith('.pdf') ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 text-xs border-emerald-500/30 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              asChild
+                            >
+                              <a href={url} target="_blank" rel="noopener noreferrer">
+                                <Download className="w-3.5 h-3.5" />
+                                View PDF
+                              </a>
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 text-xs border-emerald-500/30 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              onClick={() => {
+                                setZoomImages([url])
+                                setZoomInitialIndex(0)
+                                setZoomModalOpen(true)
+                              }}
+                            >
+                              <Search className="w-3.5 h-3.5" />
+                              Preview Image
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             {/* Cost Breakdown - Only show if costing data exists */}
