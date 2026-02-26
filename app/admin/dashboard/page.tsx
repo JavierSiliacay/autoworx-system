@@ -324,6 +324,19 @@ export default function AdminDashboard() {
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
+  const [widenedItems, setWidenedItems] = useState<Set<string>>(new Set())
+
+  const toggleWidenItem = (itemId: string) => {
+    setWidenedItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+      }
+      return next
+    })
+  }
 
   // Announcement states
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
@@ -2760,24 +2773,50 @@ export default function AdminDashboard() {
                                         <div key={item.id} className="p-3 bg-background rounded-lg border border-border">
                                           <div className="flex items-start gap-3">
                                             <div className="flex-1 grid grid-cols-1 sm:grid-cols-6 gap-3">
-                                              <div className="sm:col-span-3">
-                                                <label className="text-xs text-muted-foreground mb-1 block">
-                                                  {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
-                                                </label>
-                                                <Input
-                                                  id={`description-${item.id}`}
-                                                  value={item.description}
-                                                  onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
-                                                  onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                      e.preventDefault()
-                                                      addCostItem(appointment.id, item.type)
-                                                    }
-                                                  }}
-                                                  placeholder="Enter description..."
-                                                  className="h-8 text-sm"
-                                                />
-                                              </div>
+                                              {(() => {
+                                                const isWidened = widenedItems.has(item.id) || item.description?.includes('\n')
+                                                return (
+                                                  <div className={cn(isWidened ? "sm:col-span-6" : "sm:col-span-3")}>
+                                                    <label className="text-xs text-muted-foreground mb-1 block">
+                                                      {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
+                                                    </label>
+                                                    {isWidened ? (
+                                                      <Textarea
+                                                        id={`description-${item.id}`}
+                                                        value={item.description}
+                                                        onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                                        onKeyDown={(e) => {
+                                                          if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault()
+                                                            addCostItem(appointment.id, item.type)
+                                                          }
+                                                          // Shift+Enter will naturally add a newline in Textarea
+                                                        }}
+                                                        placeholder="Enter long description..."
+                                                        className="min-h-[80px] text-sm bg-background whitespace-pre-wrap"
+                                                      />
+                                                    ) : (
+                                                      <Input
+                                                        id={`description-${item.id}`}
+                                                        value={item.description}
+                                                        onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                                        onKeyDown={(e) => {
+                                                          if (e.key === 'Enter' && e.shiftKey) {
+                                                            e.preventDefault()
+                                                            toggleWidenItem(item.id)
+                                                            updateCostItem(appointment.id, item.id, { description: item.description + "\n" }, true)
+                                                          } else if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault()
+                                                            addCostItem(appointment.id, item.type)
+                                                          }
+                                                        }}
+                                                        placeholder="Enter description..."
+                                                        className="h-8 text-sm"
+                                                      />
+                                                    )}
+                                                  </div>
+                                                )
+                                              })()}
                                               <div>
                                                 <label className="text-xs text-muted-foreground mb-1 block">Qty</label>
                                                 <Input
@@ -2785,6 +2824,12 @@ export default function AdminDashboard() {
                                                   min="1"
                                                   value={item.quantity}
                                                   onChange={(e) => updateCostItem(appointment.id, item.id, { quantity: parseInt(e.target.value) || 1 })}
+                                                  onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                                      e.preventDefault()
+                                                      addCostItem(appointment.id, item.type)
+                                                    }
+                                                  }}
                                                   className="h-8 text-sm"
                                                 />
                                               </div>
@@ -2797,7 +2842,7 @@ export default function AdminDashboard() {
                                                   value={item.unitPrice}
                                                   onChange={(e) => updateCostItem(appointment.id, item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
                                                   onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
+                                                    if (e.key === 'Enter' && !e.shiftKey) {
                                                       e.preventDefault()
                                                       addCostItem(appointment.id, item.type)
                                                     }
@@ -2823,9 +2868,12 @@ export default function AdminDashboard() {
                                               </div>
                                             </div>
                                             {/* Keyboard Shortcut Hint */}
-                                            <div className="mt-1 flex justify-end">
+                                            <div className="mt-1 flex justify-between items-center">
                                               <p className="text-[10px] text-muted-foreground italic">
-                                                Press <kbd className="bg-muted px-1 rounded font-sans not-italic">Enter</kbd> to add another item of same category
+                                                <kbd className="bg-muted px-1 rounded font-sans not-italic border border-border">Shift+Enter</kbd> to add new line (in-cell)
+                                              </p>
+                                              <p className="text-[10px] text-muted-foreground italic">
+                                                Press <kbd className="bg-muted px-1 rounded font-sans not-italic border border-border">Enter</kbd> to duplicate row
                                               </p>
                                             </div>
                                           </div>
