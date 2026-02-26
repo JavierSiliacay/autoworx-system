@@ -50,7 +50,8 @@ import {
   Check,
   FileUp,
   PlusCircle,
-  FileCheck
+  FileCheck,
+  Copy
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -62,8 +63,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
-import { getRepairStatusInfo } from "@/lib/appointment-tracking"
+import { SERVICES, VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
+import { getRepairStatusInfo, generateTrackingCode } from "@/lib/appointment-tracking"
 import { generateTrackingPDF } from "@/lib/generate-pdf"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
@@ -324,6 +325,31 @@ export default function AdminDashboard() {
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
+  const [isSubmittingCopy, setIsSubmittingCopy] = useState(false)
+  const [copyFormData, setCopyFormData] = useState<any>({
+    name: "",
+    email: "",
+    phone: "",
+    vehicleMake: "",
+    vehicleModel: "",
+    vehicleYear: "",
+    vehiclePlate: "",
+    vehicleColor: "",
+    chassisNumber: "",
+    engineNumber: "",
+    assigneeDriver: "",
+    service: "",
+    message: "",
+    insurance: "",
+    serviceAdvisor: "",
+    damageImages: [],
+    orcrImage: "",
+    orcrImage2: "",
+  })
+  const [copyDamageFiles, setCopyDamageFiles] = useState<File[]>([])
+  const [copyOrcrFile, setCopyOrcrFile] = useState<File | null>(null)
+  const [copyOrcrFile2, setCopyOrcrFile2] = useState<File | null>(null)
   const [widenedItems, setWidenedItems] = useState<Set<string>>(new Set())
 
   const toggleWidenItem = (itemId: string) => {
@@ -1193,7 +1219,159 @@ export default function AdminDashboard() {
   };
 
 
-  const handleSaveFile = (appointment: Appointment) => handleDownloadFullReport(appointment);
+  const handleCopyAppointment = (appointment: Appointment) => {
+    setCopyFormData({
+      name: appointment.name || "",
+      email: appointment.email || "",
+      phone: appointment.phone || "",
+      vehicleMake: appointment.vehicleMake || "",
+      vehicleModel: appointment.vehicleModel || "",
+      vehicleYear: appointment.vehicleYear || "",
+      vehiclePlate: appointment.vehiclePlate || "",
+      vehicleColor: appointment.vehicleColor || "",
+      chassisNumber: appointment.chassisNumber || "",
+      engineNumber: appointment.engineNumber || "",
+      assigneeDriver: appointment.assigneeDriver || "",
+      service: appointment.service || "",
+      message: appointment.message || "",
+      insurance: appointment.insurance || "",
+      serviceAdvisor: appointment.serviceAdvisor || "",
+      damageImages: appointment.damageImages || [],
+      orcrImage: appointment.orcrImage || "",
+      orcrImage2: appointment.orcrImage2 || "",
+    })
+    setCopyDamageFiles([])
+    setCopyOrcrFile(null)
+    setCopyOrcrFile2(null)
+    setIsCopyModalOpen(true)
+  }
+
+  const saveCopyAppointment = async () => {
+    setIsSubmittingCopy(true)
+    try {
+      const trackingCode = generateTrackingCode()
+      let finalDamageImages = [...copyFormData.damageImages]
+      let finalOrcrImage = copyFormData.orcrImage
+      let finalOrcrImage2 = copyFormData.orcrImage2
+
+      const supabase = createClient()
+
+      // Upload new damage photos if any
+      if (copyDamageFiles.length > 0) {
+        const uploadPromises = copyDamageFiles.map(async (file) => {
+          let fileToUpload: Blob = file
+          if (file.type.startsWith('image/')) {
+            try {
+              fileToUpload = await compressImage(file, 1024, 0.6)
+            } catch (err) {
+              console.warn('Compression failed, uploading original:', err)
+            }
+          }
+
+          const fileExt = file.name.split(".").pop()
+          const fileName = `${trackingCode}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+          const { data, error } = await supabase.storage
+            .from("damage-images")
+            .upload(fileName, fileToUpload)
+
+          if (error) throw error
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("damage-images")
+            .getPublicUrl(data.path)
+
+          return publicUrl
+        })
+
+        const newUrls = await Promise.all(uploadPromises)
+        finalDamageImages = [...finalDamageImages, ...newUrls]
+      }
+
+      // Upload new ORCR 1 if pending
+      if (copyOrcrFile) {
+        let fileToUpload: Blob = copyOrcrFile
+        if (copyOrcrFile.type.startsWith('image/')) {
+          try {
+            fileToUpload = await compressImage(copyOrcrFile, 1024, 0.6)
+          } catch (err) {
+            console.warn('Compression failed, uploading original:', err)
+          }
+        }
+        const fileExt = copyOrcrFile.name.split(".").pop()
+        const fileName = `${trackingCode}/orcr-${Date.now()}.${fileExt}`
+        const { data, error } = await supabase.storage.from("damage-images").upload(fileName, fileToUpload)
+        if (error) throw error
+        const { data: { publicUrl } } = supabase.storage.from("damage-images").getPublicUrl(data.path)
+        finalOrcrImage = publicUrl
+      }
+
+      // Upload new ORCR 2 if pending
+      if (copyOrcrFile2) {
+        let fileToUpload: Blob = copyOrcrFile2
+        if (copyOrcrFile2.type.startsWith('image/')) {
+          try {
+            fileToUpload = await compressImage(copyOrcrFile2, 1024, 0.6)
+          } catch (err) {
+            console.warn('Compression failed, uploading original:', err)
+          }
+        }
+        const fileExt = copyOrcrFile2.name.split(".").pop()
+        const fileName = `${trackingCode}/orcr2-${Date.now()}.${fileExt}`
+        const { data, error } = await supabase.storage.from("damage-images").upload(fileName, fileToUpload)
+        if (error) throw error
+        const { data: { publicUrl } } = supabase.storage.from("damage-images").getPublicUrl(data.path)
+        finalOrcrImage2 = publicUrl
+      }
+
+      const response = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trackingCode,
+          ...copyFormData,
+          damageImages: finalDamageImages,
+          orcrImage: finalOrcrImage,
+          orcrImage2: finalOrcrImage2,
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `New appointment created with tracking code: ${trackingCode}`,
+        })
+        setIsCopyModalOpen(false)
+        loadAppointments()
+      } else {
+        const err = await response.json()
+        throw new Error(err.error || "Failed to create appointment")
+      }
+    } catch (error: any) {
+      console.error("Error copying appointment:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to copy appointment",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmittingCopy(false)
+    }
+  }
+
+  const handleCopyImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+    const fileList = Array.from(files)
+    setCopyDamageFiles(prev => [...prev, ...fileList])
+  }
+
+  const handleCopyOrcrUpload = (e: React.ChangeEvent<HTMLInputElement>, slot: 1 | 2) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (slot === 1) setCopyOrcrFile(file)
+    else setCopyOrcrFile2(file)
+  }
 
   // Focus effect for new items
   useEffect(() => {
@@ -2042,16 +2220,11 @@ export default function AdminDashboard() {
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        disabled={savingIds.has(appointment.id)}
-                                        onClick={() => handleSaveFile(appointment)}
-                                        className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 disabled:opacity-70"
+                                        onClick={() => handleCopyAppointment(appointment)}
+                                        className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
                                       >
-                                        {savingIds.has(appointment.id) ? (
-                                          <RefreshCw className="w-3 h-3 text-primary animate-spin" />
-                                        ) : (
-                                          <Save className="w-3 h-3 text-primary" />
-                                        )}
-                                        {savingIds.has(appointment.id) ? "Saving..." : "Save File"}
+                                        <Copy className="w-3 h-3 text-primary" />
+                                        Copy & New Appointment
                                       </Button>
                                     </div>
                                     <div className="flex items-center gap-2 mt-1">
@@ -3834,7 +4007,316 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Copy & New Appointment Modal */}
+      <Dialog open={isCopyModalOpen} onOpenChange={setIsCopyModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Copy className="w-5 h-5 text-primary" />
+              Copy & New Appointment
+            </DialogTitle>
+            <DialogDescription>
+              Create a new appointment for this customer using their existing information.
+            </DialogDescription>
+          </DialogHeader>
 
-    </div >
+          <div className="space-y-6 py-4">
+            {/* Customer & Vehicle Info Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="copy-name">Customer Name</Label>
+                <Input
+                  id="copy-name"
+                  value={copyFormData.name}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-phone">Phone Number</Label>
+                <Input
+                  id="copy-phone"
+                  value={copyFormData.phone}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, phone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-email">Email Address</Label>
+                <Input
+                  id="copy-email"
+                  value={copyFormData.email}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-make">Vehicle Make</Label>
+                <Input
+                  id="copy-make"
+                  value={copyFormData.vehicleMake}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, vehicleMake: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-model">Vehicle Model</Label>
+                <Input
+                  id="copy-model"
+                  value={copyFormData.vehicleModel}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, vehicleModel: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-year">Vehicle Year</Label>
+                <Input
+                  id="copy-year"
+                  value={copyFormData.vehicleYear}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, vehicleYear: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-plate">Plate Number</Label>
+                <Input
+                  id="copy-plate"
+                  className="uppercase"
+                  value={copyFormData.vehiclePlate}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, vehiclePlate: e.target.value.toUpperCase() })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-color">Vehicle Color</Label>
+                <Input
+                  id="copy-color"
+                  value={copyFormData.vehicleColor}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, vehicleColor: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-chassis">Chassis Number</Label>
+                <Input
+                  id="copy-chassis"
+                  value={copyFormData.chassisNumber}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, chassisNumber: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-engine">Engine Number</Label>
+                <Input
+                  id="copy-engine"
+                  value={copyFormData.engineNumber}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, engineNumber: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-insurance">Insurance</Label>
+                <Input
+                  id="copy-insurance"
+                  value={copyFormData.insurance}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, insurance: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-sa">Service Advisor (S/A)</Label>
+                <Input
+                  id="copy-sa"
+                  value={copyFormData.serviceAdvisor}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, serviceAdvisor: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-assignee">Assignee/Driver</Label>
+                <Input
+                  id="copy-assignee"
+                  value={copyFormData.assigneeDriver}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, assigneeDriver: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="copy-service">Service Type</Label>
+                <Select
+                  value={copyFormData.service}
+                  onValueChange={(val) => setCopyFormData({ ...copyFormData, service: val })}
+                >
+                  <SelectTrigger id="copy-service">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SERVICES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 md:col-span-3">
+                <Label htmlFor="copy-message">Additional Details / Message</Label>
+                <Textarea
+                  id="copy-message"
+                  value={copyFormData.message}
+                  onChange={(e) => setCopyFormData({ ...copyFormData, message: e.target.value })}
+                  placeholder="Any specific instructions for this new appointment..."
+                  className="min-h-[80px]"
+                />
+              </div>
+            </div>
+
+            {/* Photos Section */}
+            <div className="space-y-6 pt-4 border-t border-border">
+              {/* Damage Photos */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-primary" />
+                  Damage Photos
+                </Label>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {/* Existing Copied Images */}
+                  {copyFormData.damageImages.map((url: string, idx: number) => (
+                    <div key={`copied-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border border-border group">
+                      <img src={url} alt="Damage" className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setCopyFormData({ ...copyFormData, damageImages: copyFormData.damageImages.filter((u: string) => u !== url) })}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove existing photo"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[8px] text-white px-1 py-0.5 text-center">
+                        Copied
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* New Files */}
+                  {copyDamageFiles.map((file, idx) => (
+                    <div key={`new-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border border-primary/30 group">
+                      <img src={URL.createObjectURL(file)} alt="New Damage" className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setCopyDamageFiles(prev => prev.filter((_, i) => i !== idx))}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white px-1 py-0.5 text-center">
+                        New
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Upload Button */}
+                  <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all">
+                    <Plus className="w-6 h-6 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground mt-1 text-center px-2">Add New Photo</span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleCopyImageUpload}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* ORCR Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
+                {/* ORCR 1 */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary" />
+                    Official Document (ORCR) 1
+                  </Label>
+                  <div className="relative aspect-video rounded-lg overflow-hidden border border-border group bg-muted/30">
+                    {copyOrcrFile ? (
+                      <img src={URL.createObjectURL(copyOrcrFile)} alt="ORCR 1" className="w-full h-full object-contain" />
+                    ) : copyFormData.orcrImage ? (
+                      <img src={copyFormData.orcrImage} alt="ORCR 1" className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                        <FileText className="w-8 h-8 mb-2 opacity-20" />
+                        <span className="text-xs">No ORCR uploaded</span>
+                      </div>
+                    )}
+
+                    <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                      <span className="bg-white text-black px-3 py-1 rounded text-xs font-medium">Change Photo</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCopyOrcrUpload(e, 1)} />
+                    </label>
+                    {(copyOrcrFile || copyFormData.orcrImage) && (
+                      <button
+                        onClick={() => {
+                          if (copyOrcrFile) setCopyOrcrFile(null)
+                          else setCopyFormData({ ...copyFormData, orcrImage: "" })
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* ORCR 2 */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary" />
+                    Official Document (ORCR) 2
+                  </Label>
+                  <div className="relative aspect-video rounded-lg overflow-hidden border border-border group bg-muted/30">
+                    {copyOrcrFile2 ? (
+                      <img src={URL.createObjectURL(copyOrcrFile2)} alt="ORCR 2" className="w-full h-full object-contain" />
+                    ) : copyFormData.orcrImage2 ? (
+                      <img src={copyFormData.orcrImage2} alt="ORCR 2" className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                        <FileText className="w-8 h-8 mb-2 opacity-20" />
+                        <span className="text-xs">No ORCR uploaded</span>
+                      </div>
+                    )}
+
+                    <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                      <span className="bg-white text-black px-3 py-1 rounded text-xs font-medium">Change Photo</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCopyOrcrUpload(e, 2)} />
+                    </label>
+                    {(copyOrcrFile2 || copyFormData.orcrImage2) && (
+                      <button
+                        onClick={() => {
+                          if (copyOrcrFile2) setCopyOrcrFile2(null)
+                          else setCopyFormData({ ...copyFormData, orcrImage2: "" })
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-6 border-t border-border pt-6">
+            <Button
+              variant="outline"
+              onClick={() => setIsCopyModalOpen(false)}
+              disabled={isSubmittingCopy}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={saveCopyAppointment}
+              disabled={isSubmittingCopy}
+              className="min-w-[150px]"
+            >
+              {isSubmittingCopy ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create Appointment
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

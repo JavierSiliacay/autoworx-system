@@ -463,8 +463,9 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         <p style="font-weight: bold; color: #856404; font-size: 9px;">${appointmentStatus}</p>
       </div>
     </div>
+    `}
 
-    ${isAdmin && hasCosting ? `
+    ${isAdmin && appointment.status !== 'pending' ? `
     <div class="section-title">Cost Estimation</div>
     <div class="costing-section">
       <table class="costing-table">
@@ -477,7 +478,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
           </tr>
         </thead>
         <tbody>
-          ${activeCategories.sort((a, b) => {
+          ${(appointment.costing?.items.length || 0) > 0 ? activeCategories.sort((a, b) => {
     const order = ["Tinsmith", "Mechanical Works", "Electrical", "Aircon", "Alignment", "Glassworks", "Detailing", "Painting", "Parts", "Service", "Labor", "Service/Labor"];
     const indexA = order.indexOf(a);
     const indexB = order.indexOf(b);
@@ -502,7 +503,11 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
                 </tr>
               `).join("")}
             `;
-  }).join("")}
+  }).join("") : `
+              <tr>
+                <td colspan="4" style="text-align: center; color: #999; padding: 10px; font-style: italic;">No items listed for this estimate yet.</td>
+              </tr>
+            `}
         </tbody>
       </table>
     </div>
@@ -511,17 +516,16 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <strong>Notes:</strong> ${appointment.costing.notes}
     </div>
     ` : ""}
-    ` : `
+    ` : (!isAdmin && appointment.status !== 'pending' ? `
     <div style="margin: 15px auto; padding: 15px; text-align: center; border: 1.2px dashed #1a5f9c; border-radius: 6px; background: #fdfdfd; max-width: 90%; -webkit-print-color-adjust: exact;">
       <p style="font-size: 9px; font-weight: bold; color: #1a5f9c; line-height: 1.5; margin: 0;">
         For complete cost estimation information, please reach out to Sir Ryan or Sir Paul.<br>
         Thank you
       </p>
     </div>
-    `}
+    ` : "")}
 
 
-    `}
 
     <div style="font-size: 10px; font-weight: bold; color: red; margin-bottom: 2px; text-transform: uppercase;">
       DELIVERY DATE: <span style="text-decoration: underline; color: red;">${appointment.costing?.deliveryDate || options.deliveryDate || "_______"}</span> WORKING DAYS
@@ -547,7 +551,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       </div>
 
       <div class="signatures-totals-container">
-        ${isAdmin && hasCosting ? `
+        ${isAdmin && appointment.status !== 'pending' ? `
         <div class="totals-summary">
           <div class="totals-summary-row"><span>Total Parts</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
           <div class="totals-summary-row"><span>Total Labor</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
