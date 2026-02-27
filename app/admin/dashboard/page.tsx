@@ -942,9 +942,9 @@ export default function AdminDashboard() {
     setDeletedAppointments((prev) => prev.filter((apt) => apt.id !== appointment.id))
 
     try {
-      let endpoint = "/api/appointments"
+      let endpoint = "/api/appointments?permanent=true"
       if (appointment.source === 'history') {
-        endpoint = "/api/history?permanent=true" // Pass flag for history hard delete
+        endpoint = "/api/history?permanent=true"
       }
 
       const response = await fetch(endpoint, {
