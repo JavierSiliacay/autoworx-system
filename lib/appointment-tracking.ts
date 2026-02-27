@@ -117,6 +117,14 @@ export function getRepairStatusInfo(status: RepairStatus | undefined) {
       borderColor: "border-green-500/30",
       step: 5,
     },
+    confirm: {
+      label: "Confirmed",
+      description: "Your Rent A Car appointment has been confirmed",
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/10",
+      borderColor: "border-blue-500/30",
+      step: 1,
+    },
   }
 
   if (!status) {

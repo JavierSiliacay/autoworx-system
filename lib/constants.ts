@@ -12,6 +12,7 @@ export const SERVICES = [
   "Wash Over & Car Detailing",
   "24/7 Towing Service",
   "Insurance Claim",
+  "Rent A Car",
   "Other",
 ]
 
@@ -23,6 +24,7 @@ export const SERVICE_CATEGORIES = [
 
 // Repair Status Options
 export const REPAIR_STATUS_OPTIONS = [
+  { value: "confirm", label: "Confirmed" },
   { value: "pending_inspection", label: "Pending Inspection" },
   { value: "under_diagnosis", label: "Under Diagnosis" },
   { value: "waiting_for_client_approval", label: "Waiting for Client Approval" },
@@ -74,12 +76,27 @@ export const COST_ITEM_CATEGORIES = [
 
 export type CostItemType = typeof COST_ITEM_TYPES[number]["value"]
 
+export const COMMON_UNITS = [
+  "PC",
+  "Lit",
+  "Box",
+  "Set",
+  "Can",
+  "Bottle",
+  "Kg",
+  "Mtr",
+  "Unit",
+  "Job",
+  "Lot"
+] as const
+
 export interface CostItem {
   id: string
   type: CostItemType
   category?: string
   description: string
   quantity: number
+  unit?: string
   unitPrice: number
   total: number
 }

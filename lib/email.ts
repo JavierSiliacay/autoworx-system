@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { PRODUCTION_URL } from './constants';
 
-export type EmailType = 'submission' | 'completed';
+export type EmailType = 'submission' | 'completed' | 'confirmed';
 
 interface EmailParams {
     type: EmailType;
@@ -20,6 +20,7 @@ interface EmailParams {
     assigneeDriver?: string;
     estimateNumber?: string;
     serviceAdvisor?: string;
+    repairStatus?: string;
 }
 
 export async function sendAppointmentEmail({
@@ -38,7 +39,8 @@ export async function sendAppointmentEmail({
     engineNumber,
     assigneeDriver,
     estimateNumber,
-    serviceAdvisor
+    serviceAdvisor,
+    repairStatus
 }: EmailParams) {
     console.log(`[Email Utility] Preparing to send ${type} email to: ${email}`);
 
@@ -87,6 +89,7 @@ export async function sendAppointmentEmail({
                                 <td style="padding: 6px 0; color: #666;">Status:</td>
                                 <td style="padding: 6px 0; color: #2e7d32; font-weight: bold;">Completed</td>
                             </tr>
+                            ${repairStatus ? `<tr><td style="padding: 6px 0; color: #666;">Vehicle Status:</td><td style="padding: 6px 0; color: #1a1a1a;">${repairStatus}</td></tr>` : ''}
                         </table>
                     </div>
 
@@ -109,6 +112,70 @@ export async function sendAppointmentEmail({
                         <a href="${PRODUCTION_URL}/track?code=${trackingCode}" 
                            style="background-color: #1a1a1a; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
                            Track Status Online
+                        </a>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
+                    <p>This is an automated message. Please do not reply.</p>
+                    <p>&copy; ${new Date().getFullYear()} Autoworx Repairs & Gen. Merchandise</p>
+                </div>
+            </div>
+        `;
+    } else if (type === 'confirmed') {
+        subject = 'Your Appointment has been Confirmed';
+        htmlContent = `
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; line-height: 1.6;">
+                <div style="background-color: #1a1a1a; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                    <img src="${PRODUCTION_URL}/autoworxlogo.png" alt="Autoworx Logo" style="width: 100px; height: auto; margin-bottom: 20px; display: block; margin-left: auto; margin-right: auto;" />
+                    <h1 style="color: #ffffff; margin: 0; letter-spacing: 2px; font-size: 24px;">AUTOWORX REPAIRS</h1>
+                    <p style="color: #cccccc; margin: 5px 0 0 0; font-size: 14px;">& GEN. MERCHANDISE</p>
+                </div>
+                
+                <div style="padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; background-color: #ffffff;">
+                    <p style="font-size: 16px;">Hello <strong>${name}</strong>,</p>
+                    
+                    <p style="font-size: 16px;">We are pleased to inform you that your appointment with <strong>Autoworx Repairs and Gen. Merchandise</strong> has been <strong>Confirmed</strong>.</p>
+                    
+                    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                        <h3 style="margin-top: 0; color: #1a1a1a; border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 16px;">Appointment Details</h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 6px 0; color: #666; width: 140px;">Tracking Code:</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #1a1a1a;">${trackingCode}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 0; color: #666;">Vehicle:</td>
+                                <td style="padding: 6px 0; color: #1a1a1a;">${vehicleDetails}</td>
+                            </tr>
+                            ${plateNumber ? `<tr><td style="padding: 6px 0; color: #666;">Plate Number:</td><td style="padding: 6px 0; color: #1a1a1a;">${plateNumber}</td></tr>` : ''}
+                            <tr>
+                                <td style="padding: 6px 0; color: #666;">Services:</td>
+                                <td style="padding: 6px 0; color: #1a1a1a;">${services}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 0; color: #666;">Status:</td>
+                                <td style="padding: 6px 0; color: #007bff; font-weight: bold;">Confirmed</td>
+                            </tr>
+                            ${repairStatus ? `<tr><td style="padding: 6px 0; color: #666;">Vehicle Status:</td><td style="padding: 6px 0; color: #1a1a1a;">${repairStatus}</td></tr>` : ''}
+                        </table>
+                    </div>
+
+                    <div style="background-color: #e7f3ff; padding: 15px; border-left: 4px solid #007bff; margin-bottom: 25px;">
+                        <p style="margin: 0; font-weight: bold; color: #0056b3;">Next Steps:</p>
+                        <p style="margin: 5px 0 0 0; color: #0056b3;">Our team is now preparing for your visit. Please bring your vehicle to our service center on your scheduled date.</p>
+                    </div>
+
+                    <div style="margin: 30px 0; border-top: 1px solid #eeeeee; padding-top: 20px;">
+                        <p style="margin-bottom: 10px; font-weight: bold;">Contact for inquiries:</p>
+                        <p style="margin: 5px 0;"><strong>Sir Ryan (Service Advisor):</strong> 0965-918-3394</p>
+                        <p style="margin: 5px 0;"><strong>Sir Paul (Service Manager):</strong> 0936-354-9603</p>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="${PRODUCTION_URL}/track?code=${trackingCode}" 
+                           style="background-color: #1a1a1a; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                           Track Your Vehicle
                         </a>
                     </div>
                 </div>
@@ -163,6 +230,7 @@ export async function sendAppointmentEmail({
                                 <td style="padding: 6px 0; color: #666;">Status:</td>
                                 <td style="padding: 6px 0; color: #fb8c00; font-weight: bold;">${displayStatus}</td>
                             </tr>
+                            ${repairStatus ? `<tr><td style="padding: 6px 0; color: #666;">Vehicle Status:</td><td style="padding: 6px 0; color: #1a1a1a;">${repairStatus}</td></tr>` : ''}
                         </table>
                         ${message ? `
                         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">

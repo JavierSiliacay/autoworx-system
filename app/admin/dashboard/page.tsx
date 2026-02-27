@@ -63,7 +63,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { SERVICES, VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
+import { SERVICES, VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, COMMON_UNITS, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
 import { getRepairStatusInfo, generateTrackingCode } from "@/lib/appointment-tracking"
 import { generateTrackingPDF, generateGatepassPDF, type GatepassData } from "@/lib/generate-pdf"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
@@ -266,6 +266,11 @@ const statusConfig = {
     label: "Contacted",
     icon: Phone,
     variant: "outline" as const,
+  },
+  confirm: {
+    label: "Confirm",
+    icon: CheckCircle2,
+    variant: "default" as const,
   },
   completed: {
     label: "Completed",
@@ -635,7 +640,7 @@ export default function AdminDashboard() {
     await signOut({ callbackUrl: "/admin" })
   }
 
-  const updateStatus = async (id: string, newStatus: "pending" | "contacted" | "completed") => {
+  const updateStatus = async (id: string, newStatus: "pending" | "contacted" | "completed" | "confirm") => {
     if (newStatus === "completed") {
       const confirmed = window.confirm("Are you sure that this unit is completed?")
       if (!confirmed) return
@@ -1503,6 +1508,7 @@ export default function AdminDashboard() {
       category: finalCategory,
       description: "",
       quantity: 1,
+      unit: "PC",
       unitPrice: 0,
       total: 0,
     }
@@ -2600,6 +2606,17 @@ export default function AdminDashboard() {
                                 >
                                   Completed
                                 </Button>
+                                {appointment.service === "Rent A Car" && (
+                                  <Button
+                                    size="sm"
+                                    variant={appointment.status === "confirm" ? "default" : "outline"}
+                                    onClick={() => updateStatus(appointment.id, "confirm")}
+                                    disabled={appointment.status === "confirm"}
+                                    className={appointment.status === "confirm" ? "" : "bg-transparent"}
+                                  >
+                                    Confirm
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -2684,7 +2701,11 @@ export default function AdminDashboard() {
                                         <SelectValue placeholder="Select repair status" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        {REPAIR_STATUS_OPTIONS.filter(opt => !['waiting_for_insurance', 'insurance_approved'].includes(opt.value)).map((option) => (
+                                        {REPAIR_STATUS_OPTIONS.filter(opt => {
+                                          const isInsuranceExclude = ['waiting_for_insurance', 'insurance_approved'].includes(opt.value);
+                                          const isConfirmExclude = opt.value === 'confirm' && appointment.service !== 'Rent A Car';
+                                          return !isInsuranceExclude && !isConfirmExclude;
+                                        }).map((option) => (
                                           <SelectItem key={option.value} value={option.value}>
                                             {option.label}
                                           </SelectItem>
@@ -3038,11 +3059,11 @@ export default function AdminDashboard() {
                                       {appointment.costing.items.map((item) => (
                                         <div key={item.id} className="p-3 bg-background rounded-lg border border-border">
                                           <div className="flex items-start gap-3">
-                                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-6 gap-3">
+                                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-7 gap-3">
                                               {(() => {
                                                 const isWidened = widenedItems.has(item.id) || item.description?.includes('\n')
                                                 return (
-                                                  <div className={cn(isWidened ? "sm:col-span-6" : "sm:col-span-3")}>
+                                                  <div className={cn(isWidened ? "sm:col-span-7" : "sm:col-span-3")}>
                                                     <label className="text-xs text-muted-foreground mb-1 block">
                                                       {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
                                                     </label>
@@ -3098,6 +3119,22 @@ export default function AdminDashboard() {
                                                   }}
                                                   className="h-8 text-sm"
                                                 />
+                                              </div>
+                                              <div>
+                                                <label className="text-xs text-muted-foreground mb-1 block">Unit</label>
+                                                <Select
+                                                  value={item.unit || "PC"}
+                                                  onValueChange={(val) => updateCostItem(appointment.id, item.id, { unit: val })}
+                                                >
+                                                  <SelectTrigger className="h-8 text-sm">
+                                                    <SelectValue placeholder="Unit" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    {COMMON_UNITS.map((u) => (
+                                                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
                                               </div>
                                               <div>
                                                 <label className="text-xs text-muted-foreground mb-1 block">Unit Price</label>
@@ -3617,7 +3654,9 @@ export default function AdminDashboard() {
                                           <div className="text-xs text-muted-foreground font-medium">Items:</div>
                                           {record.costing.items.map((item, idx) => (
                                             <div key={idx} className="flex justify-between items-center text-sm">
-                                              <span className="text-muted-foreground">{item.description}</span>
+                                              <span className="text-muted-foreground">
+                                                {item.description} {item.quantity > 0 && `(${item.quantity} ${item.unit || 'PC'})`}
+                                              </span>
                                               <span className="font-mono font-semibold text-foreground">
                                                 P{item.total?.toLocaleString("en-PH", { minimumFractionDigits: 2 }) || "0.00"}
                                               </span>
@@ -4021,11 +4060,17 @@ export default function AdminDashboard() {
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="edit-service">Service Type</Label>
-                <Input
-                  id="edit-service"
+                <Select
                   value={editingAppointment.service}
-                  onChange={(e) => setEditingAppointment({ ...editingAppointment, service: e.target.value })}
-                />
+                  onValueChange={(val) => setEditingAppointment({ ...editingAppointment, service: val })}
+                >
+                  <SelectTrigger id="edit-service">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SERVICES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="edit-message">Customer Message</Label>

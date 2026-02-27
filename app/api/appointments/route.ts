@@ -3,6 +3,7 @@ import { isAuthorizedAdminEmail } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { sendAppointmentEmail } from "@/lib/email"
+import { REPAIR_STATUS_OPTIONS } from "@/lib/constants"
 
 export async function GET(request: Request) {
   try {
@@ -226,7 +227,8 @@ export async function POST(request: Request) {
           engineNumber: data.engine_number,
           assigneeDriver: data.assignee_driver,
           estimateNumber: data.estimate_number,
-          serviceAdvisor: data.service_advisor
+          serviceAdvisor: data.service_advisor,
+          repairStatus: REPAIR_STATUS_OPTIONS.find(opt => opt.value === data.repair_status)?.label
         });
         console.log(`Confirmation email sent to ${data.email}`);
       } catch (emailError) {
@@ -322,7 +324,8 @@ export async function PUT(request: Request) {
           vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
           plateNumber: data.vehicle_plate,
           services: data.service,
-          status: 'Completed'
+          status: 'Completed',
+          repairStatus: REPAIR_STATUS_OPTIONS.find(opt => opt.value === data.repair_status)?.label
         });
         console.log('Completion email response:', emailResponse);
       } catch (emailError) {
@@ -331,6 +334,30 @@ export async function PUT(request: Request) {
       }
     } else {
       console.log(`Skipping completion email: No valid email provided (${data.email})`);
+    }
+  }
+
+  // Trigger Confirmation Email if status is updated to confirm OR repairStatus is updated to confirm
+  if (updates.status?.toLowerCase() === "confirm" || updates.repairStatus === "confirm") {
+    const isValidEmail = data.email && data.email.toUpperCase() !== "N/A" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
+
+    if (isValidEmail) {
+      console.log(`Triggering confirmation email for ${data.email}`);
+      try {
+        await sendAppointmentEmail({
+          type: 'confirmed',
+          name: data.name,
+          email: data.email,
+          trackingCode: data.tracking_code,
+          vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
+          plateNumber: data.vehicle_plate,
+          services: data.service,
+          status: 'Confirmed',
+          repairStatus: REPAIR_STATUS_OPTIONS.find(opt => opt.value === data.repair_status)?.label
+        });
+      } catch (emailError) {
+        console.error("Failed to send confirmation email:", emailError);
+      }
     }
   }
 

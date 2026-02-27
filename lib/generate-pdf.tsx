@@ -471,9 +471,10 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <table class="costing-table">
         <thead>
           <tr>
-            <th style="width: 55%;">Description</th>
-            <th style="width: 10%;">Qty</th>
-            <th style="width: 17.5%;" class="amount">Unit Piece</th>
+            <th style="width: 48%;">Description</th>
+            <th style="width: 7%;">Qty</th>
+            <th style="width: 10%;">Unit</th>
+            <th style="width: 17.5%;" class="amount">Unit Price</th>
             <th style="width: 17.5%;" class="amount">Total</th>
           </tr>
         </thead>
@@ -490,7 +491,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     const items = categorized[cat];
     return `
               <tr>
-                <td colspan="4" style="background: #fdfdfd; font-weight: bold; font-size: 1.1em; border-bottom: 1px solid #000; padding-top: 2px;">
+                <td colspan="5" style="background: #fdfdfd; font-weight: bold; font-size: 1.1em; border-bottom: 1px solid #000; padding-top: 2px;">
                   ${cat}
                 </td>
               </tr>
@@ -498,6 +499,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
                 <tr>
                   <td style="padding-left: 12px;">${item.description}</td>
                   <td>${item.quantity}</td>
+                  <td>${item.unit || ""}</td>
                   <td class="amount">₱${item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
                   <td class="amount">₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
                 </tr>
@@ -505,7 +507,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
             `;
   }).join("") : `
               <tr>
-                <td colspan="4" style="text-align: center; color: #999; padding: 10px; font-style: italic;">No items listed for this estimate yet.</td>
+                <td colspan="5" style="text-align: center; color: #999; padding: 10px; font-style: italic;">No items listed for this estimate yet.</td>
               </tr>
             `}
         </tbody>
