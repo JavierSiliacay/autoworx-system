@@ -8,7 +8,7 @@ export function generateTrackingCode(): string {
 }
 
 // Get status display info
-export function getStatusInfo(status: "pending" | "contacted" | "completed") {
+export function getStatusInfo(status: "pending" | "contacted" | "completed" | "confirm") {
   const statusMap = {
     pending: {
       label: "Pending",
@@ -20,6 +20,13 @@ export function getStatusInfo(status: "pending" | "contacted" | "completed") {
     contacted: {
       label: "Contacted",
       description: "We have contacted you about your appointment",
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/10",
+      borderColor: "border-blue-500/30",
+    },
+    confirm: {
+      label: "Confirmed",
+      description: "Your appointment has been confirmed",
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
       borderColor: "border-blue-500/30",

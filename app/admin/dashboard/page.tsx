@@ -98,7 +98,7 @@ interface AppointmentDB {
   service: string
   preferred_date: string
   message: string
-  status: "pending" | "contacted" | "completed"
+  status: "pending" | "contacted" | "completed" | "confirm"
   created_at: string
   repair_status?: RepairStatus
   current_repair_part?: string
@@ -133,7 +133,7 @@ interface Appointment {
   assigneeDriver: string
   service: string
   message: string
-  status: "pending" | "contacted" | "completed"
+  status: "pending" | "contacted" | "completed" | "confirm"
   createdAt: string
   repairStatus?: RepairStatus
   currentRepairPart?: string
