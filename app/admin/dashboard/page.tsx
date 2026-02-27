@@ -65,7 +65,7 @@ import {
 } from "@/components/ui/select"
 import { SERVICES, VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
 import { getRepairStatusInfo, generateTrackingCode } from "@/lib/appointment-tracking"
-import { generateTrackingPDF } from "@/lib/generate-pdf"
+import { generateTrackingPDF, generateGatepassPDF, type GatepassData } from "@/lib/generate-pdf"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
 import {
@@ -298,6 +298,22 @@ export default function AdminDashboard() {
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isGatepassModalOpen, setIsGatepassModalOpen] = useState(false)
+  const [gatepassData, setGatepassData] = useState<GatepassData>({
+    clientName: "",
+    unitModel: "",
+    plateNo: "",
+    color: "",
+    insurance: "",
+    invoiceNo: "",
+    orNo: "",
+    joNo: "",
+    amount: 0,
+    cashier: "",
+    serviceAdvisor: "",
+    note: "",
+    date: new Date().toLocaleDateString("en-PH", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  })
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [zoomModalOpen, setZoomModalOpen] = useState(false)
   const [zoomImages, setZoomImages] = useState<string[]>([])
@@ -1115,6 +1131,72 @@ export default function AdminDashboard() {
       serviceAdvisor: savedSA,
       deliveryDate: savedDelivery?.toString() || ""
     })
+  }
+
+  const handleGenerateGatepass = (appointment: Appointment) => {
+    setGatepassData({
+      clientName: appointment.name || "",
+      unitModel: `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim(),
+      plateNo: appointment.vehiclePlate || "",
+      color: appointment.vehicleColor || "",
+      insurance: appointment.insurance || "",
+      invoiceNo: "",
+      orNo: "",
+      joNo: appointment.estimateNumber || "",
+      amount: appointment.costing?.total || 0,
+      cashier: "",
+      serviceAdvisor: appointment.costing?.serviceAdvisor || appointment.serviceAdvisor || "Paul D. Suazo",
+      note: "",
+      date: new Date().toLocaleDateString("en-PH", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    })
+    setIsGatepassModalOpen(true)
+  }
+
+  const handleDownloadGatepass = async () => {
+    const filename = `Gatepass ${gatepassData.plateNo} ${gatepassData.clientName}`.trim()
+    const printWindow = window.open("", "_blank")
+    if (!printWindow) {
+      toast({
+        title: "Popup Blocked",
+        description: "Please allow popups to print the gatepass.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    printWindow.document.write(`
+      <html>
+        <head><title>${filename}</title></head>
+        <body style="font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f9fafb;">
+          <div style="text-align: center; padding: 40px; border-radius: 12px; background: white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+            <div style="width: 40px; height: 40px; border: 4px solid #1a5f9c; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+            <h2 style="color: #111827; margin: 0 0 8px 0; font-size: 18px;">Generating Gatepass</h2>
+            <p style="color: #6b7280; margin: 0; font-size: 14px;">Preparing the 2-in-1 printout for Sir Paul...</p>
+            <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+          </div>
+        </body>
+      </html>
+    `)
+
+    try {
+      const htmlContent = await generateGatepassPDF(gatepassData)
+      printWindow.document.open()
+      printWindow.document.write(htmlContent)
+      printWindow.document.close()
+      setTimeout(() => {
+        printWindow.focus()
+        printWindow.print()
+      }, 800)
+      setIsGatepassModalOpen(false)
+    } catch (error) {
+      console.error("Gatepass Error:", error)
+      printWindow.close()
+      toast({
+        title: "Generation Failed",
+        description: "Could not create the gatepass PDF.",
+        variant: "destructive"
+      })
+    }
   }
 
 
@@ -2554,6 +2636,17 @@ export default function AdminDashboard() {
                                   <Download className="w-4 h-4 mr-1" />
                                   {appointment.status === 'pending' ? 'Appointment Confirmation' : 'Download Full Report'}
                                 </Button>
+                                {appointment.status === 'completed' && (
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all hover:scale-[1.02]"
+                                    onClick={() => handleGenerateGatepass(appointment)}
+                                  >
+                                    <FileCheck className="w-4 h-4 mr-1" />
+                                    Generate Gatepass
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -3625,6 +3718,40 @@ export default function AdminDashboard() {
                                     <Download className="w-4 h-4 mr-1" />
                                     Download Full Report
                                   </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all hover:scale-[1.02]"
+                                    onClick={() => handleGenerateGatepass({
+                                      id: record.id,
+                                      trackingCode: record.tracking_code,
+                                      name: record.name,
+                                      email: record.email,
+                                      phone: record.phone,
+                                      vehicleMake: record.vehicle_make,
+                                      vehicleModel: record.vehicle_model,
+                                      vehicleYear: record.vehicle_year,
+                                      vehiclePlate: record.vehicle_plate,
+                                      vehicleColor: "N/A",
+                                      chassisNumber: "N/A",
+                                      engineNumber: "N/A",
+                                      assigneeDriver: "N/A",
+                                      service: record.service,
+                                      message: record.message,
+                                      status: "completed",
+                                      createdAt: record.original_created_at,
+                                      repairStatus: record.repair_status as any,
+                                      currentRepairPart: record.current_repair_part,
+                                      statusUpdatedAt: record.completed_at,
+                                      costing: record.costing,
+                                      insurance: record.insurance,
+                                      estimateNumber: record.estimate_number,
+                                      paulNotes: record.paul_notes
+                                    } as any)}
+                                  >
+                                    <FileCheck className="w-4 h-4 mr-1" />
+                                    Generate Gatepass
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -4313,6 +4440,151 @@ export default function AdminDashboard() {
                   Create Appointment
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Gatepass Confirmation Modal */}
+      <Dialog open={isGatepassModalOpen} onOpenChange={setIsGatepassModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600 font-serif">
+              <FileCheck className="w-6 h-6" />
+              Confirm Gatepass Details
+            </DialogTitle>
+            <DialogDescription>
+              Review and edit the information that will appear on the 2-in-1 Claim / Check Gatepass.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="gate-name">Client Name</Label>
+              <Input
+                id="gate-name"
+                value={gatepassData.clientName}
+                onChange={(e) => setGatepassData({ ...gatepassData, clientName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-date">Date</Label>
+              <Input
+                id="gate-date"
+                value={gatepassData.date}
+                onChange={(e) => setGatepassData({ ...gatepassData, date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-unit">Unit/Model</Label>
+              <Input
+                id="gate-unit"
+                value={gatepassData.unitModel}
+                onChange={(e) => setGatepassData({ ...gatepassData, unitModel: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-jo">J.O. #</Label>
+              <Input
+                id="gate-jo"
+                placeholder="Job Order Number (provided by Paul)"
+                value={gatepassData.joNo}
+                onChange={(e) => setGatepassData({ ...gatepassData, joNo: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-plate">Plate #</Label>
+              <Input
+                id="gate-plate"
+                className="uppercase"
+                value={gatepassData.plateNo}
+                onChange={(e) => setGatepassData({ ...gatepassData, plateNo: e.target.value.toUpperCase() })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-color">Color</Label>
+              <Input
+                id="gate-color"
+                value={gatepassData.color}
+                onChange={(e) => setGatepassData({ ...gatepassData, color: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-insurance">Insurance</Label>
+              <Input
+                id="gate-insurance"
+                value={gatepassData.insurance}
+                onChange={(e) => setGatepassData({ ...gatepassData, insurance: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-cashier">Cashier Name</Label>
+              <Input
+                id="gate-cashier"
+                placeholder="Enter Cashier's Name"
+                value={gatepassData.cashier}
+                onChange={(e) => setGatepassData({ ...gatepassData, cashier: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-invoice">Invoice #</Label>
+              <Input
+                id="gate-invoice"
+                placeholder="Enter Invoice Number"
+                value={gatepassData.invoiceNo}
+                onChange={(e) => setGatepassData({ ...gatepassData, invoiceNo: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-sa">Service Advisor</Label>
+              <Input
+                id="gate-sa"
+                value={gatepassData.serviceAdvisor}
+                onChange={(e) => setGatepassData({ ...gatepassData, serviceAdvisor: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-or">OR #</Label>
+              <Input
+                id="gate-or"
+                placeholder="Official Receipt Number"
+                value={gatepassData.orNo}
+                onChange={(e) => setGatepassData({ ...gatepassData, orNo: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-amount">Amount Total</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="gate-amount"
+                  className="pl-9 font-mono"
+                  value={gatepassData.amount}
+                  onChange={(e) => setGatepassData({ ...gatepassData, amount: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="gate-note">Note / Remarks for Guard</Label>
+              <Textarea
+                id="gate-note"
+                placeholder="Any special instructions for the gate security..."
+                value={gatepassData.note}
+                onChange={(e) => setGatepassData({ ...gatepassData, note: e.target.value })}
+                className="min-h-[80px]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="border-t border-border pt-6">
+            <Button variant="outline" onClick={() => setIsGatepassModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 min-w-[150px]"
+              onClick={handleDownloadGatepass}
+            >
+              <Download className="w-4 h-4" />
+              Confirm & Download
             </Button>
           </DialogFooter>
         </DialogContent>

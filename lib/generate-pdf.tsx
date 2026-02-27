@@ -605,3 +605,174 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
 `
   return htmlContent
 }
+
+export interface GatepassData {
+  clientName: string;
+  unitModel: string;
+  plateNo: string;
+  color: string;
+  insurance: string;
+  invoiceNo: string;
+  orNo: string;
+  joNo: string;
+  amount: number | string;
+  cashier: string;
+  serviceAdvisor: string;
+  note: string;
+  date: string;
+}
+
+export async function generateGatepassPDF(data: GatepassData): Promise<string> {
+  const gatepassContent = (type: 'OFFICE' | 'GUARDS') => `
+    <div class="gatepass-copy" style="margin: 0; padding: 0;">
+      <div class="header" style="margin-bottom: 0px;">
+        <div class="header-container" style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="logo-container" style="width: 150px;">
+            <img src="/autoworxlogo.png" style="width: 120px; height: auto; margin-left: 40px;" />
+          </div>
+          <div class="gatepass-title" style="flex: 1; text-align: center; color: #c00; font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 0;">CLAIM / CHECK GATEPASS</div>
+          <div style="width: 150px; text-align: right; font-size: 10px; font-weight: bold; color: ${type === 'OFFICE' ? '#000' : '#4444e0ff'};">${type} COPY</div>
+        </div>
+      </div>
+
+      <div class="content-box" style="border: 2px solid #000; margin-bottom: 5px;">
+        <div style="display: flex; border-bottom: 1px solid #000;">
+          <div style="flex: 2; padding: 4px 8px; border-right: 1px solid #000;">
+            <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">CLIENT NAME:</span>
+            <span style="font-size: 11px; border-bottom: 1px solid #999; flex: 1; display: inline-block; min-width: 150px;">${data.clientName}</span>
+          </div>
+          <div style="flex: 1.5; padding: 4px 8px;">
+            <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">DATE:</span>
+            <span style="font-size: 11px; border-bottom: 1px solid #999; flex: 1; display: inline-block; min-width: 120px;">${data.date}</span>
+          </div>
+        </div>
+
+        <div style="display: flex; border-bottom: 1px solid #000;">
+          <div style="flex: 2; padding: 4px 8px; border-right: 1px solid #000;">
+            <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">UNIT/MODEL:</span>
+            <span style="font-size: 11px; border-bottom: 1px solid #999; flex: 1; display: inline-block; min-width: 150px;">${data.unitModel}</span>
+          </div>
+          <div style="flex: 1.5; padding: 4px 8px;">
+            <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">J.O.:</span>
+            <span style="font-size: 11px; border-bottom: 1px solid #999; flex: 1; display: inline-block; min-width: 120px;">${data.joNo}</span>
+          </div>
+        </div>
+
+        <div style="padding: 4px 8px; border-bottom: 1px solid #000;">
+          <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">PLATE #:</span>
+          <span style="font-size: 11px; border-bottom: 1px solid #999; display: inline-block; min-width: 150px;">${data.plateNo}</span>
+        </div>
+
+        <div style="padding: 4px 8px; border-bottom: 1px solid #000;">
+          <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">COLOR:</span>
+          <span style="font-size: 11px; border-bottom: 1px solid #999; display: inline-block; min-width: 150px;">${data.color || "N/A"}</span>
+        </div>
+
+        <div style="display: flex; border-bottom: 1px solid #000;">
+          <div style="flex: 1.5; padding: 4px 8px; border-right: 1px solid #000;">
+            <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">INSURANCE:</span>
+            <span style="font-size: 11px; border-bottom: 1px solid #999; display: inline-block; min-width: 120px;">${data.insurance || "N/A"}</span>
+          </div>
+          <div style="flex: 1; padding: 4px 8px;">
+            <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">CASHIER:</span>
+            <span style="font-size: 11px; border-bottom: 1px solid #999; display: inline-block; min-width: 100px;">${data.cashier || "________________"}</span>
+          </div>
+        </div>
+
+        <div style="display: flex; border-bottom: 1px solid #000;">
+          <div style="flex: 1.5; padding: 4px 8px; border-right: 1px solid #000;">
+            <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">INVOICE #:</span>
+            <span style="font-size: 11px; border-bottom: 1px solid #999; display: inline-block; min-width: 120px;">${data.invoiceNo || "________________"}</span>
+          </div>
+          <div style="flex: 1; padding: 4px 8px;">
+            <span style="font-weight: bold; font-size: 9px; margin-right: 5px;">SERVICE ADVISOR:</span>
+            <span style="font-size: 11px; border-bottom: 1px solid #999; display: inline-block; min-width: 100px;">${data.serviceAdvisor || "________________"}</span>
+          </div>
+        </div>
+
+        <div style="padding: 4px 8px; border-bottom: 1px solid #000;">
+          <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">OR #:</span>
+          <span style="font-size: 11px; border-bottom: 1px solid #999; display: inline-block; min-width: 150px;">${data.orNo || "________________"}</span>
+        </div>
+
+        ${type === 'OFFICE' ? `
+        <div style="padding: 4px 8px; border-bottom: 1px solid #000;">
+          <span style="font-weight: bold; font-size: 10px; margin-right: 5px;">AMOUNT:</span>
+          <span style="font-size: 14px; font-weight: bold; color: #c00;">${typeof data.amount === 'number' ? `₱${data.amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : data.amount}</span>
+        </div>
+        ` : ''}
+
+        <div style="padding: 5px; min-height: 30px;">
+          <span style="font-weight: bold; font-size: 11px; color: #c00; text-decoration: underline;">NOTE:</span>
+          <div style="font-size: 10px; font-style: italic; margin-top: 3px; white-space: pre-wrap;">${data.note || ""}</div>
+        </div>
+      </div>
+
+      <div style="border: 2px solid #000; padding: 5px; text-align: center; background: #f0f0f0 !important; -webkit-print-color-adjust: exact;">
+        <p style="font-weight: bold; font-size: 10px; margin-bottom: 3px; text-decoration: underline;">IMPORTANT</p>
+        <p style="font-size: 9.5px; line-height: 1.3; font-weight: bold;">THE EXIT GUARD WILL HONOR THIS CLAIM/ CHECK GATEPASS ONLY UPON PRESENTATION OF YOUR SERVICE INVOICE COPY AND OFFICIAL RECEIPT COPY ISSUED BY THE CASHIER. THANK YOU.</p>
+      </div>
+
+      <div style="margin-top: 20px;margin-left: 70px; font-size: 11px; font-weight: bold;">
+        Signed and Approved by: ____________________________________
+      </div>
+    </div>
+  `;
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gatepass - ${data.clientName}</title>
+  <style>
+    @page { 
+      size: 8.5in 13in; 
+      margin: 0 !important; /* Force zero margin to remove browser headers/footers */
+    }
+    body { 
+      font-family: Arial, sans-serif; 
+      -webkit-print-color-adjust: exact; 
+      margin: 0; 
+      padding: 0; 
+      background: #f0f0f0; 
+    }
+    .print-paper {
+      background: white;
+      width: 8.5in;
+      min-height: 13in;
+      margin: 0 auto;
+      padding: 0.25in 0.4in; /* Reduced top/bottom padding */
+      box-sizing: border-box;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .container { 
+      height: 100%;
+      display: flex; 
+      flex-direction: column; 
+      justify-content: center; /* Center vertically on the paper */
+      gap: 5px; 
+      transform: scale(1); /* Return to 100% scale for sharp text */
+      transform-origin: top center;
+    }
+    @media print {
+      body { background: transparent; }
+      .print-paper { box-shadow: none; margin: 0; width: 100%; border: none; padding: 0.1in 0.4in; }
+      .container { transform: scale(1); height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-paper">
+    <div class="container">
+      ${gatepassContent('OFFICE')}
+      <div style="border-top: 2px dashed #999; margin: 2px 0; width: 100%;"></div>
+      ${gatepassContent('GUARDS')}
+    </div>
+  </div>
+</body>
+</html>
+`;
+  return htmlContent;
+}
