@@ -406,6 +406,8 @@ export default function AdminDashboard() {
   const [selectedDownloadAppointment, setSelectedDownloadAppointment] = useState<Appointment | null>(null)
   const [isElectron, setIsElectron] = useState(false)
   const [isUploadingLOA, setIsUploadingLOA] = useState<Record<string, boolean>>({})
+  const [isUploadingDamage, setIsUploadingDamage] = useState<Record<string, boolean>>({})
+  const [isUploadingORCR, setIsUploadingORCR] = useState<Record<string, boolean>>({})
 
   // Refs for stabilizing typing and real-time updates
   const costingDebounceRef = useRef<Record<string, any>>({})
@@ -846,6 +848,206 @@ export default function AdminDashboard() {
         variant: "destructive",
         title: "Remove Failed",
         description: "Could not remove the LOA attachment.",
+      })
+    }
+  }
+
+  const handleDamageImageUpload = async (appointmentId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return
+    setIsUploadingDamage((prev) => ({ ...prev, [appointmentId]: true }))
+
+    try {
+      const supabase = createClient()
+      const newUrls: string[] = []
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        let fileToUpload = file
+        if (file.type.startsWith('image/')) {
+          try {
+            fileToUpload = await compressImage(file)
+          } catch (err) {
+            console.warn("Compression failed, uploading original:", err)
+          }
+        }
+
+        const fileExt = fileToUpload.name.split('.').pop()
+        const fileName = `${appointmentId}-damage-${Date.now()}-${i}.${fileExt}`
+        const filePath = `damage-images/${fileName}`
+
+        const { error } = await supabase.storage
+          .from("damage-images")
+          .upload(filePath, fileToUpload)
+
+        if (error) throw error
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("damage-images")
+          .getPublicUrl(filePath)
+
+        newUrls.push(publicUrl)
+      }
+
+      const appointment = appointments.find(a => a.id === appointmentId)
+      if (appointment) {
+        const updatedImages = [...(appointment.damageImages || []), ...newUrls]
+
+        setAppointments(prev => prev.map(apt =>
+          apt.id === appointmentId ? { ...apt, damageImages: updatedImages } : apt
+        ))
+
+        await fetch("/api/appointments", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: appointmentId,
+            damageImages: updatedImages
+          }),
+        })
+
+        toast({
+          title: "Photos Added",
+          description: `Successfully added ${newUrls.length} photo(s).`,
+        })
+      }
+    } catch (error: any) {
+      console.error("Damage photo upload error:", error)
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: error.message || "Could not upload damage photos.",
+      })
+    } finally {
+      setIsUploadingDamage((prev) => ({ ...prev, [appointmentId]: false }))
+    }
+  }
+
+  const handleDamageImageDelete = async (appointmentId: string, urlToRemove: string) => {
+    if (!confirm("Are you sure you want to remove this damage photo?")) return
+
+    try {
+      const appointment = appointments.find(a => a.id === appointmentId)
+      if (appointment) {
+        const updatedImages = (appointment.damageImages || []).filter(url => url !== urlToRemove)
+
+        setAppointments(prev => prev.map(apt =>
+          apt.id === appointmentId ? { ...apt, damageImages: updatedImages } : apt
+        ))
+
+        await fetch("/api/appointments", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: appointmentId,
+            damageImages: updatedImages
+          }),
+        })
+
+        toast({
+          title: "Photo Removed",
+          description: "The damage photo has been removed from this record.",
+        })
+      }
+    } catch (error) {
+      console.error("Error removing damage photo:", error)
+      toast({
+        variant: "destructive",
+        title: "Remove Failed",
+        description: "Could not remove the damage photo.",
+      })
+    }
+  }
+
+  const handleORCRUpload = async (appointmentId: string, file: File, slot: 1 | 2) => {
+    setIsUploadingORCR((prev) => ({ ...prev, [appointmentId]: true }))
+
+    try {
+      const supabase = createClient()
+      let fileToUpload = file
+      if (file.type.startsWith('image/')) {
+        try {
+          fileToUpload = await compressImage(file)
+        } catch (err) {
+          console.warn("Compression failed, uploading original:", err)
+        }
+      }
+
+      const fileExt = fileToUpload.name.split('.').pop()
+      const fileName = `${appointmentId}-orcr-${slot}-${Date.now()}.${fileExt}`
+      const filePath = `damage-images/${fileName}`
+
+      const { error } = await supabase.storage
+        .from("damage-images")
+        .upload(filePath, fileToUpload)
+
+      if (error) throw error
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("damage-images")
+        .getPublicUrl(filePath)
+
+      const field = slot === 1 ? 'orcr_image' : 'orcr_image_2'
+      const camelField = slot === 1 ? 'orcrImage' : 'orcrImage2'
+
+      setAppointments(prev => prev.map(apt =>
+        apt.id === appointmentId ? { ...apt, [camelField]: publicUrl } : apt
+      ))
+
+      await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: appointmentId,
+          [camelField]: publicUrl
+        }),
+      })
+
+      toast({
+        title: "Document Updated",
+        description: `OR/CR ${slot} has been updated.`,
+      })
+    } catch (error: any) {
+      console.error("OR/CR upload error:", error)
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: error.message || "Could not upload OR/CR document.",
+      })
+    } finally {
+      setIsUploadingORCR((prev) => ({ ...prev, [appointmentId]: false }))
+    }
+  }
+
+  const handleORCRDelete = async (appointmentId: string, slot: 1 | 2) => {
+    if (!confirm(`Are you sure you want to remove OR/CR ${slot}?`)) return
+
+    try {
+      const field = slot === 1 ? 'orcr_image' : 'orcr_image_2'
+      const camelField = slot === 1 ? 'orcrImage' : 'orcrImage2'
+
+      setAppointments(prev => prev.map(apt =>
+        apt.id === appointmentId ? { ...apt, [camelField]: null } : apt
+      ))
+
+      await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: appointmentId,
+          [camelField]: null
+        }),
+      })
+
+      toast({
+        title: "Document Removed",
+        description: `OR/CR ${slot} has been removed.`,
+      })
+    } catch (error) {
+      console.error("Error removing OR/CR:", error)
+      toast({
+        variant: "destructive",
+        title: "Remove Failed",
+        description: "Could not remove the OR/CR document.",
       })
     }
   }
@@ -2445,126 +2647,256 @@ export default function AdminDashboard() {
                                 )}
 
                                 {/* Damage Images */}
-                                {appointment.damageImages && appointment.damageImages.length > 0 && (
-                                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                                    <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 mb-2">
+                                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                                  <div className="flex items-center justify-between gap-2 text-xs text-amber-600 dark:text-amber-400 mb-2">
+                                    <div className="flex items-center gap-2">
                                       <ImageIcon className="w-3 h-3" />
-                                      Damage Photos ({appointment.damageImages.length})
+                                      Damage Photos ({appointment.damageImages?.length || 0})
                                     </div>
-                                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                                      {appointment.damageImages.map((image, index) => (
-                                        <div key={index} className="flex flex-col gap-1">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
+                                    <label className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded cursor-pointer hover:bg-amber-500/20 transition-colors">
+                                      <Plus className="w-3 h-3" />
+                                      <span>Add Photo</span>
+                                      <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => handleDamageImageUpload(appointment.id, e.target.files)}
+                                      />
+                                    </label>
+                                  </div>
+                                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                    {(appointment.damageImages || []).map((image, index) => (
+                                      <div key={index} className="flex flex-col gap-1">
+                                        <div
+                                          role="button"
+                                          tabIndex={0}
+                                          onClick={() => {
+                                            setZoomImages(appointment.damageImages || [])
+                                            setZoomInitialIndex(index)
+                                            setZoomModalOpen(true)
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
                                               setZoomImages(appointment.damageImages || [])
                                               setZoomInitialIndex(index)
                                               setZoomModalOpen(true)
-                                            }}
-                                            className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-zoom-in"
-                                          >
-                                            <img
-                                              src={image || "/placeholder.svg"}
-                                              alt={`Damage photo ${index + 1}`}
-                                              className="w-full h-full object-cover"
-                                            />
-                                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-0.5 text-center">
-                                              {index + 1}
-                                            </div>
-                                          </button>
-                                          <a
-                                            href={image}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] text-amber-600 hover:underline text-center"
-                                          >
-                                            Full Size
-                                          </a>
+                                            }
+                                          }}
+                                          className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-zoom-in group"
+                                        >
+                                          <img
+                                            src={image || "/placeholder.svg"}
+                                            alt={`Damage photo ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                          />
+                                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleDamageImageDelete(appointment.id, image)
+                                              }}
+                                              className="p-1 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
+                                            >
+                                              <X className="w-2.5 h-2.5" />
+                                            </button>
+                                          </div>
+                                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-0.5 text-center">
+                                            {index + 1}
+                                          </div>
                                         </div>
-                                      ))}
-                                    </div>
-                                    <p className="text-[10px] text-muted-foreground mt-2">
-                                      Click to zoom or "Full Size" to download
-                                    </p>
+                                        <a
+                                          href={image}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-[10px] text-amber-600 hover:underline text-center"
+                                        >
+                                          Full Size
+                                        </a>
+                                      </div>
+                                    ))}
                                   </div>
-                                )}
+                                  <p className="text-[10px] text-muted-foreground mt-2">
+                                    Click to zoom or "Full Size" to download
+                                  </p>
+                                </div>
 
                                 {/* ORCR Images */}
-                                {(appointment.orcrImage || appointment.orcrImage2) && (
-                                  <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                                    <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2 font-bold uppercase tracking-wider">
+                                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                                  <div className="flex items-center justify-between gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2 font-bold uppercase tracking-wider">
+                                    <div className="flex items-center gap-2">
                                       <ImageIcon className="w-3 h-3" />
                                       Official Documents (OR/CR)
                                     </div>
-                                    <div className="flex flex-wrap gap-4">
-                                      {appointment.orcrImage && (
-                                        <div className="space-y-1 w-[140px]">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
+                                    <div className="flex gap-2">
+                                      {!appointment.orcrImage && (
+                                        <label className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded cursor-pointer hover:bg-blue-500/20 transition-colors capitalize font-normal">
+                                          <Plus className="w-3 h-3" />
+                                          <span>Add OR/CR 1</span>
+                                          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleORCRUpload(appointment.id, e.target.files[0], 1)} />
+                                        </label>
+                                      )}
+                                      {!appointment.orcrImage2 && (
+                                        <label className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded cursor-pointer hover:bg-blue-500/20 transition-colors capitalize font-normal">
+                                          <Plus className="w-3 h-3" />
+                                          <span>Add OR/CR 2</span>
+                                          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleORCRUpload(appointment.id, e.target.files[0], 2)} />
+                                        </label>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap gap-4">
+                                    {appointment.orcrImage && (
+                                      <div className="space-y-1 w-[140px]">
+                                        <div
+                                          role="button"
+                                          tabIndex={0}
+                                          onClick={() => {
+                                            const images = [appointment.orcrImage!];
+                                            if (appointment.orcrImage2) images.push(appointment.orcrImage2);
+                                            setZoomImages(images);
+                                            setZoomInitialIndex(0);
+                                            setZoomModalOpen(true);
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
                                               const images = [appointment.orcrImage!];
                                               if (appointment.orcrImage2) images.push(appointment.orcrImage2);
                                               setZoomImages(images);
                                               setZoomInitialIndex(0);
                                               setZoomModalOpen(true);
-                                            }}
-                                            className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
-                                          >
-                                            <img
-                                              src={appointment.orcrImage}
-                                              alt="ORCR Photo 1"
-                                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                            />
-                                            <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
-                                              PHOTO 1 - CLICK TO ZOOM
-                                            </div>
-                                          </button>
-                                          <a
-                                            href={appointment.orcrImage}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
-                                          >
-                                            <Download className="w-2 h-2" /> DOWNLOAD
-                                          </a>
+                                            }
+                                          }}
+                                          className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
+                                        >
+                                          <img
+                                            src={appointment.orcrImage}
+                                            alt="ORCR Photo 1"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                          />
+                                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                const input = document.createElement('input')
+                                                input.type = 'file'
+                                                input.accept = 'image/*'
+                                                input.onchange = (ie) => {
+                                                  const file = (ie.target as HTMLInputElement).files?.[0]
+                                                  if (file) handleORCRUpload(appointment.id, file, 1)
+                                                }
+                                                input.click()
+                                              }}
+                                              className="p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600"
+                                              title="Change Photo"
+                                            >
+                                              <RefreshCw className="w-3 h-3" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleORCRDelete(appointment.id, 1)
+                                              }}
+                                              className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
+                                              title="Remove Photo"
+                                            >
+                                              <Trash2 className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                          <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
+                                            PHOTO 1 - CLICK TO ZOOM
+                                          </div>
                                         </div>
-                                      )}
-                                      {appointment.orcrImage2 && (
-                                        <div className="space-y-1 w-[140px]">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
+                                        <a
+                                          href={appointment.orcrImage}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
+                                        >
+                                          <Download className="w-2 h-2" /> DOWNLOAD
+                                        </a>
+                                      </div>
+                                    )}
+                                    {appointment.orcrImage2 && (
+                                      <div className="space-y-1 w-[140px]">
+                                        <div
+                                          role="button"
+                                          tabIndex={0}
+                                          onClick={() => {
+                                            const images = [];
+                                            if (appointment.orcrImage) images.push(appointment.orcrImage);
+                                            images.push(appointment.orcrImage2!);
+                                            setZoomImages(images);
+                                            setZoomInitialIndex(images.length - 1);
+                                            setZoomModalOpen(true);
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
                                               const images = [];
                                               if (appointment.orcrImage) images.push(appointment.orcrImage);
                                               images.push(appointment.orcrImage2!);
                                               setZoomImages(images);
                                               setZoomInitialIndex(images.length - 1);
                                               setZoomModalOpen(true);
-                                            }}
-                                            className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
-                                          >
-                                            <img
-                                              src={appointment.orcrImage2}
-                                              alt="ORCR Photo 2"
-                                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                            />
-                                            <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
-                                              PHOTO 2 - CLICK TO ZOOM
-                                            </div>
-                                          </button>
-                                          <a
-                                            href={appointment.orcrImage2}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
-                                          >
-                                            <Download className="w-2 h-2" /> DOWNLOAD
-                                          </a>
+                                            }
+                                          }}
+                                          className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
+                                        >
+                                          <img
+                                            src={appointment.orcrImage2}
+                                            alt="ORCR Photo 2"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                          />
+                                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                const input = document.createElement('input')
+                                                input.type = 'file'
+                                                input.accept = 'image/*'
+                                                input.onchange = (ie) => {
+                                                  const file = (ie.target as HTMLInputElement).files?.[0]
+                                                  if (file) handleORCRUpload(appointment.id, file, 2)
+                                                }
+                                                input.click()
+                                              }}
+                                              className="p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600"
+                                              title="Change Photo"
+                                            >
+                                              <RefreshCw className="w-3 h-3" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleORCRDelete(appointment.id, 2)
+                                              }}
+                                              className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
+                                              title="Remove Photo"
+                                            >
+                                              <Trash2 className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                          <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
+                                            PHOTO 2 - CLICK TO ZOOM
+                                          </div>
                                         </div>
-                                      )}
-                                    </div>
+                                        <a
+                                          href={appointment.orcrImage2}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
+                                        >
+                                          <Download className="w-2 h-2" /> DOWNLOAD
+                                        </a>
+                                      </div>
+                                    )}
                                   </div>
-                                )}
+                                </div>
                                 {/* Insurance Info */}
                                 {appointment.insurance && (
                                   <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
