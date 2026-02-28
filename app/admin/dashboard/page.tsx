@@ -3492,7 +3492,7 @@ export default function AdminDashboard() {
                                                         variant="outline"
                                                         className="h-8 w-full text-sm font-normal px-2 justify-between bg-background border-input hover:bg-accent hover:text-accent-foreground"
                                                       >
-                                                        <span className="truncate">{item.unit || "Unit"}</span>
+                                                        <span className="truncate">{item.unit || ""}</span>
                                                         <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                                                       </Button>
                                                     </DropdownMenuTrigger>
