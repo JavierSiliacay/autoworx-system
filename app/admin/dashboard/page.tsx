@@ -63,6 +63,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import { SERVICES, VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, COMMON_UNITS, type RepairStatus, type CostItem, type CostingData, type CostItemType } from "@/lib/constants"
 import { getRepairStatusInfo, generateTrackingCode } from "@/lib/appointment-tracking"
 import { generateTrackingPDF, generateGatepassPDF, type GatepassData } from "@/lib/generate-pdf"
@@ -1475,7 +1482,7 @@ export default function AdminDashboard() {
     }
   }, [focusNewItem])
 
-  const addCostItem = (appointmentId: string, type: CostItemType, category?: string) => {
+  const addCostItem = (appointmentId: string, type: CostItemType, category?: string, unit?: string) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
     const currentCosting = appointment?.costing || {
       items: [],
@@ -1508,7 +1515,7 @@ export default function AdminDashboard() {
       category: finalCategory,
       description: "",
       quantity: 1,
-      unit: "PC",
+      unit: unit !== undefined ? unit : "PC",
       unitPrice: 0,
       total: 0,
     }
@@ -3075,7 +3082,7 @@ export default function AdminDashboard() {
                                                         onKeyDown={(e) => {
                                                           if (e.key === 'Enter' && !e.shiftKey) {
                                                             e.preventDefault()
-                                                            addCostItem(appointment.id, item.type)
+                                                            addCostItem(appointment.id, item.type, item.category, item.unit)
                                                           }
                                                           // Shift+Enter will naturally add a newline in Textarea
                                                         }}
@@ -3094,7 +3101,7 @@ export default function AdminDashboard() {
                                                             updateCostItem(appointment.id, item.id, { description: item.description + "\n" }, true)
                                                           } else if (e.key === 'Enter' && !e.shiftKey) {
                                                             e.preventDefault()
-                                                            addCostItem(appointment.id, item.type)
+                                                            addCostItem(appointment.id, item.type, item.category, item.unit)
                                                           }
                                                         }}
                                                         placeholder="Enter description..."
@@ -3114,7 +3121,7 @@ export default function AdminDashboard() {
                                                   onKeyDown={(e) => {
                                                     if (e.key === 'Enter' && !e.shiftKey) {
                                                       e.preventDefault()
-                                                      addCostItem(appointment.id, item.type)
+                                                      addCostItem(appointment.id, item.type, item.category, item.unit)
                                                     }
                                                   }}
                                                   className="h-8 text-sm"
@@ -3122,19 +3129,72 @@ export default function AdminDashboard() {
                                               </div>
                                               <div>
                                                 <label className="text-xs text-muted-foreground mb-1 block">Unit</label>
-                                                <Select
-                                                  value={item.unit || "PC"}
-                                                  onValueChange={(val) => updateCostItem(appointment.id, item.id, { unit: val })}
-                                                >
-                                                  <SelectTrigger className="h-8 text-sm">
-                                                    <SelectValue placeholder="Unit" />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    {COMMON_UNITS.map((u) => (
-                                                      <SelectItem key={u} value={u}>{u}</SelectItem>
-                                                    ))}
-                                                  </SelectContent>
-                                                </Select>
+                                                {(item.unit && (!COMMON_UNITS.includes(item.unit as any) || item.unit === "__CUSTOM__") && item.unit !== "") ? (
+                                                  <div className="relative group">
+                                                    <Input
+                                                      value={item.unit === "__CUSTOM__" ? "" : item.unit}
+                                                      onChange={(e) => updateCostItem(appointment.id, item.id, { unit: e.target.value })}
+                                                      placeholder="Type unit..."
+                                                      className="h-8 text-sm pr-6 bg-background"
+                                                      autoFocus
+                                                      onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                          e.preventDefault()
+                                                          addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                        }
+                                                      }}
+                                                    />
+                                                    <Button
+                                                      size="icon"
+                                                      variant="ghost"
+                                                      onClick={() => updateCostItem(appointment.id, item.id, { unit: "PC" })}
+                                                      className="absolute right-0 top-0 h-8 w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                      <X className="w-3 h-3" />
+                                                    </Button>
+                                                  </div>
+                                                ) : (
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                      <Button
+                                                        variant="outline"
+                                                        className="h-8 w-full text-sm font-normal px-2 justify-between bg-background border-input hover:bg-accent hover:text-accent-foreground"
+                                                      >
+                                                        <span className="truncate">{item.unit || "Unit"}</span>
+                                                        <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                                      </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="start" className="w-40">
+                                                      <DropdownMenuItem
+                                                        className="text-muted-foreground italic"
+                                                        onClick={() => updateCostItem(appointment.id, item.id, { unit: "" })}
+                                                      >
+                                                        (Blank)
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuSeparator />
+                                                      <div className="max-h-[200px] overflow-y-auto">
+                                                        {COMMON_UNITS.map((u) => (
+                                                          <DropdownMenuItem
+                                                            key={u}
+                                                            onClick={() => updateCostItem(appointment.id, item.id, { unit: item.unit === u ? "" : u })}
+                                                            className="flex items-center justify-between"
+                                                          >
+                                                            {u}
+                                                            {item.unit === u && <Check className="w-3 h-3 text-primary" />}
+                                                          </DropdownMenuItem>
+                                                        ))}
+                                                      </div>
+                                                      <DropdownMenuSeparator />
+                                                      <DropdownMenuItem
+                                                        onClick={() => updateCostItem(appointment.id, item.id, { unit: "__CUSTOM__" })}
+                                                        className="text-primary font-medium"
+                                                      >
+                                                        <Plus className="w-3 h-3 mr-2" />
+                                                        Custom Unit
+                                                      </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
+                                                )}
                                               </div>
                                               <div>
                                                 <label className="text-xs text-muted-foreground mb-1 block">Unit Price</label>
@@ -3147,7 +3207,7 @@ export default function AdminDashboard() {
                                                   onKeyDown={(e) => {
                                                     if (e.key === 'Enter' && !e.shiftKey) {
                                                       e.preventDefault()
-                                                      addCostItem(appointment.id, item.type)
+                                                      addCostItem(appointment.id, item.type, item.category, item.unit)
                                                     }
                                                   }}
                                                   className="h-8 text-sm"
