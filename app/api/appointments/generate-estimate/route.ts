@@ -38,25 +38,21 @@ export async function POST(request: Request) {
         const yearMonth = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`
         const prefix = `${yearMonth}-`
 
-        // Find the highest sequence for this month in active appointments
-        const { data: latestEstimates, error: searchError } = await supabase
+        // Find the absolute highest sequence generated so far across all records
+        // This ensures the sequence number is globally continuous and doesn't reset per month
+        const { data: allEstimates, error: searchError } = await supabase
             .from("appointments")
             .select("estimate_number")
-            .like("estimate_number", `${prefix}%`)
-            .order("estimate_number", { ascending: false })
-            .limit(1)
+            .not("estimate_number", "is", null)
 
         if (searchError) {
             return NextResponse.json({ error: searchError.message }, { status: 500 })
         }
 
-        // Find the highest sequence for this month in history
-        const { data: latestHistoryEstimates, error: historyError } = await supabase
+        const { data: allHistoryEstimates, error: historyError } = await supabase
             .from("appointment_history")
             .select("estimate_number")
-            .like("estimate_number", `${prefix}%`)
-            .order("estimate_number", { ascending: false })
-            .limit(1)
+            .not("estimate_number", "is", null)
 
         if (historyError) {
             // Log error but continue, assuming history might be empty or not critical if query fails
@@ -64,25 +60,29 @@ export async function POST(request: Request) {
         }
 
         let maxSequence = 0
-
-        if (latestEstimates && latestEstimates.length > 0 && latestEstimates[0].estimate_number) {
-            const lastNum = latestEstimates[0].estimate_number
-            const parts = lastNum.split('-')
+        const parseSequence = (est: string | null) => {
+            if (!est) return 0;
+            const parts = est.split('-');
             if (parts.length === 2) {
-                maxSequence = Math.max(maxSequence, parseInt(parts[1]))
+                const seq = parseInt(parts[1], 10);
+                return isNaN(seq) ? 0 : seq;
+            }
+            return 0;
+        }
+
+        if (allEstimates) {
+            for (const row of allEstimates) {
+                maxSequence = Math.max(maxSequence, parseSequence(row.estimate_number));
             }
         }
 
-        if (latestHistoryEstimates && latestHistoryEstimates.length > 0 && latestHistoryEstimates[0].estimate_number) {
-            const lastNum = latestHistoryEstimates[0].estimate_number
-            const parts = lastNum.split('-')
-            if (parts.length === 2) {
-                maxSequence = Math.max(maxSequence, parseInt(parts[1]))
+        if (allHistoryEstimates) {
+            for (const row of allHistoryEstimates) {
+                maxSequence = Math.max(maxSequence, parseSequence(row.estimate_number));
             }
         }
 
         const nextSequence = maxSequence + 1
-
         const estimateNumber = `${prefix}${nextSequence.toString().padStart(4, '0')}`
 
         // 3. Update the appointment

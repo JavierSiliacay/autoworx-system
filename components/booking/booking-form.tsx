@@ -108,7 +108,7 @@ export function BookingForm() {
     if (!formData.name.trim()) newErrors.name = "Full name is required"
     const isPhoneNA = formData.phone.trim().toUpperCase() === "N/A"
     if (formData.phone.trim() && !isPhoneNA && !isValidPhoneNumber(formData.phone)) {
-      newErrors.phone = "Invalid Philippine phone number"
+      newErrors.phone = "Invalid phone number"
     }
 
     const isEmailNA = formData.email.trim().toUpperCase() === "N/A"
@@ -118,7 +118,6 @@ export function BookingForm() {
 
     if (!formData.vehicleMake.trim()) newErrors.vehicleMake = "Manufacturer is required"
     if (!formData.vehicleModel.trim()) newErrors.vehicleModel = "Model is required"
-    if (!formData.vehicleYear) newErrors.vehicleYear = "Year is required"
     if (!formData.vehiclePlate.trim()) newErrors.vehiclePlate = "Plate number is required"
     if (!formData.vehicleColor.trim()) newErrors.vehicleColor = "Color is required"
     if (!formData.service) newErrors.service = "Service type is required"
@@ -545,14 +544,14 @@ export function BookingForm() {
               {errors.name && <p className="text-xs text-red-500 font-medium">{errors.name}</p>}
             </div>
             <div className="space-y-2 group">
-              <Label htmlFor="phone" className={`transition-colors ${errors.phone ? 'text-red-500' : 'group-hover:text-primary'}`}>Phone Number (PH)</Label>
+              <Label htmlFor="phone" className={`transition-colors ${errors.phone ? 'text-red-500' : 'group-hover:text-primary'}`}>PH Mobile or Telephone Number (optional)</Label>
               <Input
                 id="phone"
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => updateField("phone", e.target.value)}
-                placeholder="09XX-XXX-XXXX"
-                maxLength={12}
+                placeholder="09XX-XXX-XXXX or (02) 1234-5678"
+                maxLength={20}
                 className={`transition-all ${errors.phone ? 'border-red-500 ring-red-500/10 focus-visible:ring-red-500/20' : 'group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20'}`}
               />
               {errors.phone && <p className="text-xs text-red-500 font-medium">{errors.phone}</p>}
@@ -660,7 +659,7 @@ export function BookingForm() {
               {errors.vehicleModel && <p className="text-xs text-red-500 font-medium">{errors.vehicleModel}</p>}
             </div>
             <div className="space-y-2 group">
-              <Label htmlFor="vehicleYear" className={`transition-colors ${errors.vehicleYear ? 'text-red-500' : 'group-hover:text-primary'}`}>Year *</Label>
+              <Label htmlFor="vehicleYear" className={`transition-colors ${errors.vehicleYear ? 'text-red-500' : 'group-hover:text-primary'}`}>Year Model (optional)</Label>
               <Select
                 value={formData.vehicleYear}
                 onValueChange={(value) => updateField("vehicleYear", value)}
