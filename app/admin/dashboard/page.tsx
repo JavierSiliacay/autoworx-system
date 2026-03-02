@@ -3041,11 +3041,22 @@ export default function AdminDashboard() {
                                       </SelectTrigger>
                                       <SelectContent>
                                         {REPAIR_STATUS_OPTIONS.filter(opt => {
-                                          const isInsuranceExclude = ['waiting_for_insurance', 'insurance_approved'].includes(opt.value);
+                                          const isInsuranceExclude = ['insurance_approved'].includes(opt.value);
                                           const isConfirmExclude = opt.value === 'confirm' && appointment.service !== 'Rent A Car';
                                           return !isInsuranceExclude && !isConfirmExclude;
                                         }).map((option) => (
-                                          <SelectItem key={option.value} value={option.value}>
+                                          <SelectItem
+                                            key={option.value}
+                                            value={option.value}
+                                            onPointerUp={(e) => {
+                                              if (appointment.repairStatus === option.value) {
+                                                e.preventDefault();
+                                                updateRepairStatus(appointment.id, "" as RepairStatus);
+                                                // We simulate clicking outside to close the dropdown since we intercepted the event
+                                                document.body.click();
+                                              }
+                                            }}
+                                          >
                                             {option.label}
                                           </SelectItem>
                                         ))}
