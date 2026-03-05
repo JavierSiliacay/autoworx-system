@@ -176,6 +176,10 @@ interface HistoryRecord {
   vehicle_model: string
   vehicle_year: string
   vehicle_plate: string
+  vehicle_color: string
+  chassis_number: string
+  engine_number: string
+  assignee_driver: string
   service: string
   preferred_date: string
   message: string
@@ -190,6 +194,9 @@ interface HistoryRecord {
   insurance?: string
   estimate_number?: string
   paul_notes?: string
+  loa_attachment?: string
+  loa_attachment_2?: string
+  loa_attachments?: string[]
 }
 
 interface Announcement {
