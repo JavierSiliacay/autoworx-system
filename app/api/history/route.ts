@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { isAuthorizedAdminEmail } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
@@ -51,31 +51,79 @@ export async function PUT(request: Request) {
   }
 
   const supabase = await createClient()
+  const adminSupabase = await createAdminClient().catch(() => supabase)
   const body = await request.json()
   const { id, deletedAt, updates } = body
 
-  if (updates) {
-    const { error } = await supabase
-      .from("appointment_history")
-      .update(updates)
-      .eq("id", id)
+  console.log(`[API History PUT] Received Request for ID: ${id}`, { hasUpdates: !!updates, hasDeletedAt: !!deletedAt });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+  if (updates) {
+    // Convert camelCase to snake_case for database
+    const dbUpdates: Record<string, any> = {}
+    if (updates.costing !== undefined) dbUpdates.costing = updates.costing
+    if (updates.loaAttachments !== undefined) dbUpdates.loa_attachments = updates.loaAttachments
+    if (updates.paulNotes !== undefined) dbUpdates.paul_notes = updates.paulNotes
+    if (updates.currentRepairPart !== undefined) dbUpdates.current_repair_part = updates.currentRepairPart
+    if (updates.repairStatus !== undefined) dbUpdates.repair_status = updates.repairStatus
+    if (updates.name !== undefined) dbUpdates.name = updates.name
+    if (updates.email !== undefined) dbUpdates.email = updates.email
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone
+
+    console.log(`[API History PUT] Attempting direct ID update for: ${id}`);
+    // Try by ID first using admin client to bypass RLS
+    let { data: updatedData, error: updateError } = await adminSupabase
+      .from("appointment_history")
+      .update(dbUpdates)
+      .eq("id", id)
+      .select()
+
+    console.log(`[API History PUT] Direct update result:`, { found: !!updatedData?.length, error: updateError });
+
+    // Fallback: If not found by history PK, try by original_id
+    if (!updateError && (!updatedData || updatedData.length === 0)) {
+      console.log(`[API History PUT] Fallback to original_id for: ${id}`);
+      const { data: fallbackData, error: fbError } = await adminSupabase
+        .from("appointment_history")
+        .update(dbUpdates)
+        .eq("original_id", id)
+        .select()
+
+      console.log(`[API History PUT] Fallback result:`, { found: !!fallbackData?.length, error: fbError });
+      updatedData = fallbackData
+      updateError = fbError
     }
-    return NextResponse.json({ success: true })
+
+    if (updateError) {
+      console.error(`[API History PUT] Database Error:`, updateError);
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    if (!updatedData || updatedData.length === 0) {
+      return NextResponse.json({
+        error: `Record not found in history for ID: ${id}. Please refresh and try again.`
+      }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, data: updatedData[0] })
   }
 
-  const { error } = await supabase
+  const { data: softDeleted, error } = await adminSupabase
     .from("appointment_history")
     .update({ deleted_at: deletedAt })
     .eq("id", id)
+    .select()
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true })
+  if (!softDeleted || softDeleted.length === 0) {
+    return NextResponse.json({
+      error: `Could not archive record. ID ${id} not found.`
+    }, { status: 404 })
+  }
+
+  return NextResponse.json({ success: true, data: softDeleted[0] })
 }
 
 export async function POST(request: Request) {
@@ -131,6 +179,9 @@ export async function POST(request: Request) {
       insurance: appointment.insurance || null,
       estimate_number: appointment.estimate_number || null,
       paul_notes: appointment.paul_notes || null,
+      loa_attachment: appointment.loa_attachment || null,
+      loa_attachment_2: appointment.loa_attachment_2 || null,
+      loa_attachments: appointment.loa_attachments || null,
     })
 
   if (insertError) {

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { isAuthorizedAdminEmail } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
@@ -255,6 +255,7 @@ export async function PUT(request: Request) {
   }
 
   const supabase = await createClient()
+  const adminSupabase = await createAdminClient().catch(() => supabase)
   const body = await request.json()
   const { id, ...updates } = body
 
@@ -297,17 +298,24 @@ export async function PUT(request: Request) {
 
   dbUpdates.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { data: updatedResults, error } = await adminSupabase
     .from("appointments")
     .update(dbUpdates)
     .eq("id", id)
     .select()
-    .single()
 
   if (error) {
     console.error("Error updating appointment:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  if (!updatedResults || updatedResults.length === 0) {
+    return NextResponse.json({
+      error: `Appointment not found for ID: ${id}. It may have been archived or deleted.`
+    }, { status: 404 })
+  }
+
+  const data = updatedResults[0]
 
   // Trigger Completion Email if status is updated to completed
   if (updates.status?.toLowerCase() === "completed") {

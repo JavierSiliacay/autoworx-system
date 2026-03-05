@@ -609,6 +609,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
 }
 
 export interface GatepassData {
+  id?: string;
   clientName: string;
   unitModel: string;
   plateNo: string;
@@ -618,10 +619,16 @@ export interface GatepassData {
   orNo: string;
   joNo: string;
   amount: number | string;
+  brpad?: number;
+  aircon?: number;
+  electrical?: number;
+  mechanical?: number;
+  costing?: any;
   cashier: string;
   serviceAdvisor: string;
   note: string;
   date: string;
+  origin?: 'history' | 'appointments';
 }
 
 export async function generateGatepassPDF(data: GatepassData): Promise<string> {

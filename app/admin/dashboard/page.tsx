@@ -51,7 +51,10 @@ import {
   FileUp,
   PlusCircle,
   FileCheck,
-  Copy
+  Copy,
+  FileX,
+  Loader2,
+  Eye
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -313,6 +316,7 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [isGatepassModalOpen, setIsGatepassModalOpen] = useState(false)
   const [gatepassData, setGatepassData] = useState<GatepassData>({
+    id: "",
     clientName: "",
     unitModel: "",
     plateNo: "",
@@ -322,10 +326,15 @@ export default function AdminDashboard() {
     orNo: "",
     joNo: "",
     amount: 0,
+    brpad: 0,
+    aircon: 0,
+    electrical: 0,
+    mechanical: 0,
     cashier: "",
     serviceAdvisor: "",
     note: "",
-    date: new Date().toLocaleDateString("en-PH", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    date: new Date().toLocaleDateString("en-PH", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+    origin: 'appointments'
   })
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [zoomModalOpen, setZoomModalOpen] = useState(false)
@@ -408,6 +417,7 @@ export default function AdminDashboard() {
   const [selectedDownloadAppointment, setSelectedDownloadAppointment] = useState<Appointment | null>(null)
   const [isElectron, setIsElectron] = useState(false)
   const [isUploadingLOA, setIsUploadingLOA] = useState<Record<string, boolean>>({})
+  const [isUploadingHistoryLOA, setIsUploadingHistoryLOA] = useState<Record<string, boolean>>({})
   const [isUploadingDamage, setIsUploadingDamage] = useState<Record<string, boolean>>({})
   const [isUploadingORCR, setIsUploadingORCR] = useState<Record<string, boolean>>({})
 
@@ -854,6 +864,154 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleHistoryLOAUpload = async (recordId: string, file: File) => {
+    setIsUploadingHistoryLOA((prev) => ({ ...prev, [recordId]: true }))
+    try {
+      // 1. Compress only if it's an image
+      let fileToUpload = file;
+      if (file.type.startsWith('image/')) {
+        try {
+          fileToUpload = await compressImage(file)
+        } catch (err) {
+          console.warn("Compression failed, uploading original:", err)
+        }
+      }
+
+      // 2. Upload to Supabase Storage
+      const supabase = createClient()
+      const fileExt = fileToUpload.name.split('.').pop()
+      const fileName = `loa-hist-${recordId}-${Date.now()}.${fileExt}`
+      const filePath = `damage-images/${fileName}`
+
+      const { data, error } = await supabase.storage
+        .from("damage-images")
+        .upload(filePath, fileToUpload)
+
+      if (error) throw error
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("damage-images")
+        .getPublicUrl(filePath)
+
+      // 3. Update history record costing with loa_attachments array
+      const record = historyRecords.find(r => r.id === recordId)
+      if (record) {
+        const currentLOAs = record.costing?.loaAttachments || [];
+        const combinedLOAs = Array.from(new Set([...currentLOAs, publicUrl]));
+
+        const updatedCosting = {
+          ...(record.costing || {
+            items: [],
+            subtotal: 0,
+            discount: 0,
+            discountType: "fixed",
+            vatEnabled: false,
+            vatAmount: 0,
+            total: 0,
+            notes: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          } as CostingData),
+          loaAttachments: combinedLOAs,
+          updatedAt: new Date().toISOString()
+        }
+
+        const updated = historyRecords.map((r) =>
+          r.id === recordId
+            ? {
+              ...r,
+              costing: updatedCosting,
+            }
+            : r
+        )
+        setHistoryRecords(updated)
+
+        await fetch("/api/history", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: recordId,
+            updates: { costing: updatedCosting }
+          }),
+        })
+      }
+
+      toast({
+        title: "LOA/PO/JRS Attached",
+        description: "The document has been uploaded and attached to history.",
+      })
+    } catch (error: any) {
+      console.error("History LOA upload error:", error)
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: error.message || "Could not upload document.",
+      })
+    } finally {
+      setIsUploadingHistoryLOA((prev) => ({ ...prev, [recordId]: false }))
+    }
+  }
+
+  const handleHistoryRemoveLOA = async (recordId: string, urlToRemove: string) => {
+    if (!confirm("Are you sure you want to remove this attachment?")) return;
+
+    try {
+      const record = historyRecords.find(r => r.id === recordId)
+      if (record) {
+        const currentLOAs = record.costing?.loaAttachments || [];
+        const updatedLOAs = currentLOAs.filter(url => url !== urlToRemove);
+
+        const updatedCosting = {
+          ...(record.costing || {
+            items: [],
+            subtotal: 0,
+            discount: 0,
+            discountType: "fixed",
+            vatEnabled: false,
+            vatAmount: 0,
+            total: 0,
+            notes: "",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          } as CostingData),
+          loaAttachments: updatedLOAs,
+          updatedAt: new Date().toISOString()
+        }
+
+        const updated = historyRecords.map((r) =>
+          r.id === recordId
+            ? {
+              ...r,
+              costing: updatedCosting,
+            }
+            : r
+        )
+        setHistoryRecords(updated)
+
+        await fetch("/api/history", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: recordId,
+            updates: { costing: updatedCosting }
+          }),
+        })
+
+        toast({
+          title: "Attachment Removed",
+          description: "The LOA/PO/JRS attachment has been removed from history.",
+        })
+      }
+    } catch (error: any) {
+      console.error("Error removing LOA from history:", error)
+      toast({
+        variant: "destructive",
+        title: "Remove Failed",
+        description: "Could not remove the attachment.",
+      })
+    }
+  }
+
   const handleDamageImageUpload = async (appointmentId: string, files: FileList | null) => {
     if (!files || files.length === 0) return
     setIsUploadingDamage((prev) => ({ ...prev, [appointmentId]: true }))
@@ -1278,57 +1436,107 @@ export default function AdminDashboard() {
   const saveEditedAppointment = async () => {
     if (!editingAppointment) return
 
+    const isHistory = (editingAppointment as any).source === 'history';
+    const endpoint = isHistory ? "/api/history" : "/api/appointments";
+
+    // Prepare updates
+    let payload: any = { id: editingAppointment.id };
+
+    if (isHistory) {
+      // History API expects snake_case updates
+      payload.updates = {
+        name: editingAppointment.name,
+        email: editingAppointment.email,
+        phone: editingAppointment.phone,
+        vehicle_make: editingAppointment.vehicleMake,
+        vehicle_model: editingAppointment.vehicleModel,
+        vehicle_year: editingAppointment.vehicleYear,
+        vehicle_plate: editingAppointment.vehiclePlate,
+        vehicle_color: editingAppointment.vehicleColor,
+        chassis_number: editingAppointment.chassisNumber,
+        engine_number: editingAppointment.engineNumber,
+        assignee_driver: editingAppointment.assigneeDriver,
+        service: editingAppointment.service,
+        message: editingAppointment.message,
+        insurance: editingAppointment.insurance,
+        estimate_number: editingAppointment.estimateNumber,
+        paul_notes: editingAppointment.paulNotes
+      };
+    } else {
+      // Appointments API handles its own camel->snake conversion
+      payload = {
+        ...payload,
+        name: editingAppointment.name,
+        email: editingAppointment.email,
+        phone: editingAppointment.phone,
+        vehicleMake: editingAppointment.vehicleMake,
+        vehicleModel: editingAppointment.vehicleModel,
+        vehicleYear: editingAppointment.vehicleYear,
+        vehiclePlate: editingAppointment.vehiclePlate,
+        vehicleColor: editingAppointment.vehicleColor,
+        chassisNumber: editingAppointment.chassisNumber,
+        engineNumber: editingAppointment.engineNumber,
+        assigneeDriver: editingAppointment.assigneeDriver,
+        service: editingAppointment.service,
+        message: editingAppointment.message,
+        insurance: editingAppointment.insurance,
+        serviceAdvisor: editingAppointment.serviceAdvisor,
+      };
+    }
+
     try {
-      const response = await fetch("/api/appointments", {
+      const response = await fetch(endpoint, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editingAppointment.id,
-          name: editingAppointment.name,
-          email: editingAppointment.email,
-          phone: editingAppointment.phone,
-          vehicleMake: editingAppointment.vehicleMake,
-          vehicleModel: editingAppointment.vehicleModel,
-          vehicleYear: editingAppointment.vehicleYear,
-          vehiclePlate: editingAppointment.vehiclePlate,
-          vehicleColor: editingAppointment.vehicleColor,
-          chassisNumber: editingAppointment.chassisNumber,
-          engineNumber: editingAppointment.engineNumber,
-          assigneeDriver: editingAppointment.assigneeDriver,
-          service: editingAppointment.service,
-          message: editingAppointment.message,
-          insurance: editingAppointment.insurance,
-          serviceAdvisor: editingAppointment.serviceAdvisor,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
-        setAppointments((prev) =>
-          prev.map((apt) => (apt.id === editingAppointment.id ? editingAppointment : apt))
-        )
+        if (isHistory) {
+          const updatedRecord: any = {
+            id: editingAppointment.id,
+            name: editingAppointment.name,
+            email: editingAppointment.email,
+            phone: editingAppointment.phone,
+            vehicle_make: editingAppointment.vehicleMake,
+            vehicle_model: editingAppointment.vehicleModel,
+            vehicle_year: editingAppointment.vehicleYear,
+            vehicle_plate: editingAppointment.vehiclePlate,
+            vehicle_color: editingAppointment.vehicleColor,
+            chassis_number: editingAppointment.chassisNumber,
+            engine_number: editingAppointment.engineNumber,
+            assignee_driver: editingAppointment.assigneeDriver,
+            service: editingAppointment.service,
+            message: editingAppointment.message,
+            insurance: editingAppointment.insurance,
+            estimate_number: editingAppointment.estimateNumber,
+            paul_notes: editingAppointment.paulNotes,
+            costing: editingAppointment.costing,
+            original_created_at: editingAppointment.createdAt,
+            completed_at: editingAppointment.statusUpdatedAt
+          };
+          setHistoryRecords((prev) =>
+            prev.map((rec) => (rec.id === editingAppointment.id ? { ...rec, ...updatedRecord } : rec))
+          )
+        } else {
+          setAppointments((prev) =>
+            prev.map((apt) => (apt.id === editingAppointment.id ? editingAppointment : apt))
+          )
+        }
+
         setIsEditModalOpen(false)
         setEditingAppointment(null)
-        const { dismiss } = toast({
-          title: "Appointment Updated",
-          description: "Customer details have been successfully updated.",
-          action: (
-            <ToastAction altText="Dismiss" onClick={() => dismiss()}>
-              OK
-            </ToastAction>
-          ),
+        toast({
+          title: isHistory ? "History Updated" : "Appointment Updated",
+          description: "Details have been successfully updated.",
         })
       }
     } catch (error) {
       console.error("Error saving appointment:", error)
-      const { dismiss } = toast({
+      toast({
         title: "Update Failed",
         description: "There was an error saving the changes.",
         variant: "destructive",
-        action: (
-          <ToastAction altText="Dismiss" onClick={() => dismiss()}>
-            OK
-          </ToastAction>
-        ),
       })
     }
   }
@@ -1349,8 +1557,40 @@ export default function AdminDashboard() {
     })
   }
 
-  const handleGenerateGatepass = (appointment: Appointment) => {
+  const handleGenerateGatepass = (appointment: Appointment, origin: 'history' | 'appointments' = 'appointments') => {
+    // Helper to categorize costs for pre-filling
+    const getBreakdown = (costing: any) => {
+      // Priority 1: Use existing gatepass breakdown if already saved
+      if (costing?.gatepass_breakdown) {
+        return {
+          brpad: Number(costing.gatepass_breakdown.brpad) || 0,
+          aircon: Number(costing.gatepass_breakdown.aircon) || 0,
+          electrical: Number(costing.gatepass_breakdown.electrical) || 0,
+          mechanical: Number(costing.gatepass_breakdown.mechanical) || 0,
+          total: Number(costing.gatepass_breakdown.total) || costing.total || 0
+        };
+      }
+
+      // Priority 2: Calculate from items for the first time
+      let res = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0 };
+      if (costing && costing.items) {
+        costing.items.forEach((item: any) => {
+          const cat = item.category || "";
+          const itemTotal = Number(item.total) || 0;
+          if (cat === "Aircon") res.aircon += itemTotal;
+          else if (cat === "Electrical") res.electrical += itemTotal;
+          else if (cat === "Mechanical Works") res.mechanical += itemTotal;
+          else res.brpad += itemTotal;
+        });
+      }
+      return { ...res, total: Number(costing?.total) || 0 };
+    };
+
+    const breakdown = getBreakdown(appointment.costing);
+    console.log(`Loading Gatepass for ${appointment.id} (Origin: ${origin}):`, breakdown);
+
     setGatepassData({
+      id: appointment.id,
       clientName: appointment.name || "",
       unitModel: `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim(),
       plateNo: appointment.vehiclePlate || "",
@@ -1359,14 +1599,103 @@ export default function AdminDashboard() {
       invoiceNo: "",
       orNo: "",
       joNo: appointment.estimateNumber || "",
-      amount: appointment.costing?.total || 0,
+      amount: breakdown.total,
+      brpad: breakdown.brpad,
+      aircon: breakdown.aircon,
+      electrical: breakdown.electrical,
+      mechanical: breakdown.mechanical,
+      costing: appointment.costing,
       cashier: "",
       serviceAdvisor: appointment.costing?.serviceAdvisor || appointment.serviceAdvisor || "Paul D. Suazo",
       note: "",
-      date: new Date().toLocaleDateString("en-PH", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      date: new Date().toLocaleDateString("en-PH", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+      origin
     })
     setIsGatepassModalOpen(true)
   }
+
+  const handleSyncGatepassData = async () => {
+    if (!gatepassData.id) {
+      console.error("Gatepass sync aborted: No ID found", gatepassData);
+      return false;
+    }
+
+    const isHistory = gatepassData.origin === 'history';
+    const endpoint = isHistory ? '/api/history' : '/api/appointments';
+
+    // Find the current costing data from state to ensure we're spreading the LATEST version
+    // (This avoids accidentally wiping out items if they were edited while modal was open)
+    const currentRecord = isHistory
+      ? historyRecords.find(r => r.id === gatepassData.id)
+      : appointments.find(a => a.id === gatepassData.id);
+
+    const baseCosting = currentRecord
+      ? (isHistory ? (currentRecord as any).costing : (currentRecord as any).costing)
+      : gatepassData.costing;
+
+    // Create the updated costing object
+    const mergedCosting = {
+      ...(baseCosting || {}),
+      gatepass_breakdown: {
+        brpad: Number(gatepassData.brpad) || 0,
+        aircon: Number(gatepassData.aircon) || 0,
+        electrical: Number(gatepassData.electrical) || 0,
+        mechanical: Number(gatepassData.mechanical) || 0,
+        total: Number(gatepassData.amount) || 0
+      }
+    };
+
+    console.log(`Syncing Gatepass to ${endpoint}:`, { id: gatepassData.id, mergedCosting });
+
+    const payload = isHistory
+      ? { id: gatepassData.id, updates: { costing: mergedCosting } }
+      : { id: gatepassData.id, costing: mergedCosting };
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        const savedRecord = result.data;
+        // Update local state for immediate UI feedback
+        if (isHistory) {
+          setHistoryRecords(prev =>
+            prev.map(rec => (rec.id === gatepassData.id || rec.original_id === gatepassData.id) ? { ...rec, ...savedRecord } : rec)
+          );
+        } else {
+          setAppointments(prev =>
+            prev.map(apt => apt.id === gatepassData.id ? { ...apt, ...savedRecord } : apt)
+          );
+        }
+
+        // Also update the local state of the modal itself to keep it fresh
+        if (savedRecord?.costing) {
+          setGatepassData(prev => ({ ...prev, costing: savedRecord.costing }));
+        }
+
+        toast({
+          title: "Permanent Success",
+          description: "Financial alignment saved to database.",
+        });
+        return true;
+      } else {
+        throw new Error(result.error || "Database sync failed");
+      }
+    } catch (err: any) {
+      console.error("Sync error:", err);
+      toast({
+        title: "Sync Failed",
+        description: `Backend said: ${err.message}`,
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
 
   const handleDownloadGatepass = async () => {
     const filename = `Gatepass ${gatepassData.plateNo} ${gatepassData.clientName}`.trim()
@@ -1395,15 +1724,32 @@ export default function AdminDashboard() {
     `)
 
     try {
+      // 1. Save the updated financial categories to the record first
+      const success = await handleSyncGatepassData();
+      if (!success) { // Stop if sync failed
+        printWindow.close(); // Close the blank window if sync failed
+        return;
+      }
+
       const htmlContent = await generateGatepassPDF(gatepassData)
       printWindow.document.open()
       printWindow.document.write(htmlContent)
       printWindow.document.close()
+
+      // Close modal after successful generation
+      setIsGatepassModalOpen(false);
+
       setTimeout(() => {
         printWindow.focus()
         printWindow.print()
-      }, 800)
-      setIsGatepassModalOpen(false)
+      }, 500) // Changed from 800 to 500ms
+      // setIsGatepassModalOpen(false) // This line was moved up
+
+      // Refresh local state if possible, or just notify
+      toast({
+        title: "Gatepass Confirmed",
+        description: "Release monitoring data has been synchronized.",
+      })
     } catch (error) {
       console.error("Gatepass Error:", error)
       printWindow.close()
@@ -3833,8 +4179,8 @@ export default function AdminDashboard() {
               <button
                 onClick={() => setHistoryViewMode("list")}
                 className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${historyViewMode === "list"
-                    ? "border-primary text-primary border-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "border-primary text-primary border-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
               >
                 List View
@@ -3842,8 +4188,8 @@ export default function AdminDashboard() {
               <button
                 onClick={() => setHistoryViewMode("release_monitoring")}
                 className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${historyViewMode === "release_monitoring"
-                    ? "border-primary text-primary border-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "border-primary text-primary border-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
               >
                 Release Monitoring Report
@@ -3855,7 +4201,7 @@ export default function AdminDashboard() {
         {
           activeTab === "history" && !showDeletedHistory && historyViewMode === "release_monitoring" && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <ReleaseMonitoring records={historyRecords} />
+              <ReleaseMonitoring records={historyRecords} onUpdate={loadHistory} />
             </div>
           )
         }
@@ -4148,6 +4494,97 @@ export default function AdminDashboard() {
                                       )}
                                     </div>
                                   )}
+
+                                  {/* LOA/PO/JRS Attachments for History */}
+                                  <div className="pt-4 border-t border-border space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <FileCheck className="w-4 h-4 text-emerald-500" />
+                                        <h4 className="font-semibold text-foreground">Attachments of LOA/PO/JRS</h4>
+                                      </div>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={isUploadingHistoryLOA[record.id]}
+                                        className="h-7 text-[10px] font-bold border-dashed border-emerald-500/40 text-emerald-600 hover:bg-emerald-50"
+                                        onClick={() => document.getElementById(`history-loa-upload-${record.id}`)?.click()}
+                                      >
+                                        {isUploadingHistoryLOA[record.id] ? (
+                                          <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                                        ) : (
+                                          <Plus className="w-3 h-3 mr-1" />
+                                        )}
+                                        Upload Document
+                                      </Button>
+                                    </div>
+
+                                    <input
+                                      id={`history-loa-upload-${record.id}`}
+                                      type="file"
+                                      className="hidden"
+                                      accept="image/*,application/pdf"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleHistoryLOAUpload(record.id, file);
+                                        e.target.value = '';
+                                      }}
+                                    />
+
+                                    <div className="bg-muted/30 rounded-lg p-3 border border-border">
+                                      {(() => {
+                                        const costingLOAs = record.costing?.loaAttachments || [];
+                                        const allLOAs = Array.from(new Set([...costingLOAs]));
+
+                                        if (allLOAs.length > 0) {
+                                          return (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                              {allLOAs.map((url, idx) => (
+                                                <div key={idx} className="flex items-center justify-between bg-card p-2 rounded border border-border shadow-sm">
+                                                  <div className="flex items-center gap-2 truncate">
+                                                    <div className="w-7 h-7 rounded bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                                                      <FileText className="w-4 h-4" />
+                                                    </div>
+                                                    <span className="text-[10px] font-medium truncate">Document {idx + 1}</span>
+                                                  </div>
+                                                  <div className="flex items-center gap-1.5 ml-2">
+                                                    <button
+                                                      onClick={() => {
+                                                        if (url.toLowerCase().endsWith('.pdf')) {
+                                                          window.open(url, '_blank');
+                                                        } else {
+                                                          setZoomImages([url]);
+                                                          setZoomInitialIndex(0);
+                                                          setZoomModalOpen(true);
+                                                        }
+                                                      }}
+                                                      className="p-1 hover:bg-muted rounded text-primary transition-colors"
+                                                      title="Preview"
+                                                    >
+                                                      <Eye className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                      onClick={() => handleHistoryRemoveLOA(record.id, url)}
+                                                      className="p-1 hover:bg-muted rounded text-red-500 transition-colors"
+                                                      title="Remove"
+                                                    >
+                                                      <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          );
+                                        } else {
+                                          return (
+                                            <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
+                                              <FileX className="w-8 h-8 mb-2 opacity-20" />
+                                              <p className="text-xs italic">There&apos;s no attachment of LOA/PO/JRS.</p>
+                                            </div>
+                                          );
+                                        }
+                                      })()}
+                                    </div>
+                                  </div>
                                 </div>
 
                                 {/* Actions */}
@@ -4175,10 +4612,10 @@ export default function AdminDashboard() {
                                       vehicleModel: record.vehicle_model,
                                       vehicleYear: record.vehicle_year,
                                       vehiclePlate: record.vehicle_plate,
-                                      vehicleColor: "N/A",
-                                      chassisNumber: "N/A",
-                                      engineNumber: "N/A",
-                                      assigneeDriver: "N/A",
+                                      vehicleColor: record.vehicle_color || "N/A",
+                                      chassisNumber: record.chassis_number || "N/A",
+                                      engineNumber: record.engine_number || "N/A",
+                                      assigneeDriver: record.assignee_driver || "N/A",
                                       service: record.service,
                                       message: record.message,
                                       status: "completed",
@@ -4189,11 +4626,47 @@ export default function AdminDashboard() {
                                       costing: record.costing,
                                       insurance: record.insurance,
                                       estimateNumber: record.estimate_number,
-                                      paulNotes: record.paul_notes
+                                      paulNotes: record.paul_notes,
+                                      source: 'history'
                                     } as any)}
                                   >
                                     <Download className="w-4 h-4 mr-1" />
                                     Download Full Report
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border-blue-500/30 bg-transparent"
+                                    onClick={() => handleEditAppointment({
+                                      id: record.id,
+                                      trackingCode: record.tracking_code,
+                                      name: record.name,
+                                      email: record.email,
+                                      phone: record.phone,
+                                      vehicleMake: record.vehicle_make,
+                                      vehicleModel: record.vehicle_model,
+                                      vehicleYear: record.vehicle_year,
+                                      vehiclePlate: record.vehicle_plate,
+                                      vehicleColor: record.vehicle_color || "N/A",
+                                      chassisNumber: record.chassis_number || "N/A",
+                                      engineNumber: record.engine_number || "N/A",
+                                      assigneeDriver: record.assignee_driver || "N/A",
+                                      service: record.service,
+                                      message: record.message,
+                                      status: "completed",
+                                      createdAt: record.original_created_at,
+                                      repairStatus: record.repair_status as any,
+                                      currentRepairPart: record.current_repair_part,
+                                      statusUpdatedAt: record.completed_at,
+                                      costing: record.costing,
+                                      insurance: record.insurance,
+                                      estimateNumber: record.estimate_number,
+                                      paulNotes: record.paul_notes,
+                                      source: 'history'
+                                    } as any)}
+                                  >
+                                    <Settings2 className="w-4 h-4 mr-1" />
+                                    Edit
                                   </Button>
                                   <Button
                                     size="sm"
@@ -4224,7 +4697,7 @@ export default function AdminDashboard() {
                                       insurance: record.insurance,
                                       estimateNumber: record.estimate_number,
                                       paulNotes: record.paul_notes
-                                    } as any)}
+                                    } as any, 'history')}
                                   >
                                     <FileCheck className="w-4 h-4 mr-1" />
                                     Generate Gatepass
@@ -5035,17 +5508,101 @@ export default function AdminDashboard() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="gate-amount">Amount Total</Label>
+              <Label htmlFor="gate-amount">Amount Total (Auto-computed)</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
                 <Input
                   id="gate-amount"
-                  className="pl-8 font-mono"
+                  className="pl-8 font-mono bg-muted"
+                  readOnly
                   value={gatepassData.amount}
-                  onChange={(e) => setGatepassData({ ...gatepassData, amount: e.target.value })}
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4 md:col-span-2 border-t border-border pt-4 mt-2">
+              <div className="space-y-2">
+                <Label htmlFor="gate-brpad">BRPAD (Body/Paint/Detail)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
+                  <Input
+                    id="gate-brpad"
+                    className="pl-8 font-mono"
+                    type="number"
+                    value={gatepassData.brpad}
+                    onChange={(e) => {
+                      const val = Number(e.target.value) || 0;
+                      setGatepassData(prev => ({
+                        ...prev,
+                        brpad: val,
+                        amount: val + (Number(prev.aircon) || 0) + (Number(prev.electrical) || 0) + (Number(prev.mechanical) || 0)
+                      }));
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gate-aircon">Aircon</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
+                  <Input
+                    id="gate-aircon"
+                    className="pl-8 font-mono"
+                    type="number"
+                    value={gatepassData.aircon}
+                    onChange={(e) => {
+                      const val = Number(e.target.value) || 0;
+                      setGatepassData(prev => ({
+                        ...prev,
+                        aircon: val,
+                        amount: (Number(prev.brpad) || 0) + val + (Number(prev.electrical) || 0) + (Number(prev.mechanical) || 0)
+                      }));
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gate-electrical">Electrical</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
+                  <Input
+                    id="gate-electrical"
+                    className="pl-8 font-mono"
+                    type="number"
+                    value={gatepassData.electrical}
+                    onChange={(e) => {
+                      const val = Number(e.target.value) || 0;
+                      setGatepassData(prev => ({
+                        ...prev,
+                        electrical: val,
+                        amount: (Number(prev.brpad) || 0) + (Number(prev.aircon) || 0) + val + (Number(prev.mechanical) || 0)
+                      }));
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gate-mechanical">Mechanical</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
+                  <Input
+                    id="gate-mechanical"
+                    className="pl-8 font-mono"
+                    type="number"
+                    value={gatepassData.mechanical}
+                    onChange={(e) => {
+                      const val = Number(e.target.value) || 0;
+                      setGatepassData(prev => ({
+                        ...prev,
+                        mechanical: val,
+                        amount: (Number(prev.brpad) || 0) + (Number(prev.aircon) || 0) + (Number(prev.electrical) || 0) + val
+                      }));
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="gate-note">Note / Remarks for Guard</Label>
               <Textarea
@@ -5059,7 +5616,13 @@ export default function AdminDashboard() {
           </div>
 
           <DialogFooter className="border-t border-border pt-6">
-            <Button variant="outline" onClick={() => setIsGatepassModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await handleSyncGatepassData();
+                setIsGatepassModalOpen(false);
+              }}
+            >
               Cancel
             </Button>
             <Button

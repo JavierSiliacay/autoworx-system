@@ -119,6 +119,13 @@ export interface CostingData {
   loaAttachment?: string
   loaAttachment2?: string
   loaAttachments?: string[]
+  gatepass_breakdown?: {
+    brpad: number
+    aircon: number
+    electrical: number
+    mechanical: number
+    total: number
+  }
 }
 
 export const PRODUCTION_URL = "https://www.autoworxcagayan.com"
