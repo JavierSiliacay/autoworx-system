@@ -75,6 +75,7 @@ import { getRepairStatusInfo, generateTrackingCode } from "@/lib/appointment-tra
 import { generateTrackingPDF, generateGatepassPDF, type GatepassData } from "@/lib/generate-pdf"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
+import { ReleaseMonitoring } from "@/components/admin/release-monitoring"
 import {
   Dialog,
   DialogContent,
@@ -345,6 +346,7 @@ export default function AdminDashboard() {
   const [historyServiceFilter, setHistoryServiceFilter] = useState<string>("all")
   const [historyDateRangeFilter, setHistoryDateRangeFilter] = useState<string>("all")
   const [historySortBy, setHistorySortBy] = useState<"latest" | "oldest" | "status" | "name">("latest")
+  const [historyViewMode, setHistoryViewMode] = useState<"list" | "release_monitoring">("list")
 
   // Custom repair part input states
   const [useCustomRepairPart, setUseCustomRepairPart] = useState<Record<string, boolean>>({})
@@ -3827,6 +3829,39 @@ export default function AdminDashboard() {
 
         {
           activeTab === "history" && !showDeletedHistory && (
+            <div className="flex border-b border-border space-x-2 w-full mb-6">
+              <button
+                onClick={() => setHistoryViewMode("list")}
+                className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${historyViewMode === "list"
+                    ? "border-primary text-primary border-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                List View
+              </button>
+              <button
+                onClick={() => setHistoryViewMode("release_monitoring")}
+                className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${historyViewMode === "release_monitoring"
+                    ? "border-primary text-primary border-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                Release Monitoring Report
+              </button>
+            </div>
+          )
+        }
+
+        {
+          activeTab === "history" && !showDeletedHistory && historyViewMode === "release_monitoring" && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <ReleaseMonitoring records={historyRecords} />
+            </div>
+          )
+        }
+
+        {
+          activeTab === "history" && !showDeletedHistory && historyViewMode === "list" && (
             <div className="space-y-6">
               {/* History Toolbar - Search, Filter, Sort */}
               <div className="space-y-4">

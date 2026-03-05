@@ -52,7 +52,19 @@ export async function PUT(request: Request) {
 
   const supabase = await createClient()
   const body = await request.json()
-  const { id, deletedAt } = body
+  const { id, deletedAt, updates } = body
+
+  if (updates) {
+    const { error } = await supabase
+      .from("appointment_history")
+      .update(updates)
+      .eq("id", id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    return NextResponse.json({ success: true })
+  }
 
   const { error } = await supabase
     .from("appointment_history")

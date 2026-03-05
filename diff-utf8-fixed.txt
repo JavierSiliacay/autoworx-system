@@ -1,0 +1,86 @@
+﻿diff --git a/app/admin/dashboard/page.tsx b/app/admin/dashboard/page.tsx
+index 2391217..b2a1f1e 100644
+--- a/app/admin/dashboard/page.tsx
++++ b/app/admin/dashboard/page.tsx
+@@ -75,6 +75,7 @@ import { getRepairStatusInfo, generateTrackingCode } from "@/lib/appointment-tra
+ import { generateTrackingPDF, generateGatepassPDF, type GatepassData } from "@/lib/generate-pdf"
+ import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
+ import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
++import { ReleaseMonitoring } from "@/components/admin/release-monitoring"
+ import {
+   Dialog,
+   DialogContent,
+@@ -345,6 +346,7 @@ export default function AdminDashboard() {
+   const [historyServiceFilter, setHistoryServiceFilter] = useState<string>("all")
+   const [historyDateRangeFilter, setHistoryDateRangeFilter] = useState<string>("all")
+   const [historySortBy, setHistorySortBy] = useState<"latest" | "oldest" | "status" | "name">("latest")
++  const [historyViewMode, setHistoryViewMode] = useState<"list" | "release_monitoring">("list")
+ 
+   // Custom repair part input states
+   const [useCustomRepairPart, setUseCustomRepairPart] = useState<Record<string, boolean>>({})
+@@ -3827,7 +3829,43 @@ export default function AdminDashboard() {
+ 
+         {
+           activeTab === "history" && !showDeletedHistory && (
+-            <div className="space-y-6">
++            <div className="flex border-b border-border mb-6">
++              <button
++                onClick={() => setHistoryViewMode("list")}
++                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${historyViewMode === "list"
++                  ? "border-primary text-primary"
++                  : "border-transparent text-muted-foreground hover:text-foreground"
++                  }`}
++              >
++                List View
++              </button>
++              <button
++                onClick={() => setHistoryViewMode("release_monitoring")}
++                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${historyViewMode === "release_monitoring"
++                  ? "border-primary text-primary text-blue-600 border-blue-600"
++                  : "border-transparent text-muted-foreground hover:text-foreground"
++                  }`}
++              >
++                <div className="flex items-center gap-2">
++                  <FileText className="w-4 h-4" />
++                  Release Monitoring Report
++                </div>
++              </button>
++            </div>
++          )
++        }
++
++        {
++          activeTab === "history" && !showDeletedHistory && historyViewMode === "release_monitoring" && (
++            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
++              <ReleaseMonitoring records={historyRecords} />
++            </div>
++          )
++        }
++
++        {
++          activeTab === "history" && !showDeletedHistory && historyViewMode === "list" && (
++            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+               {/* History Toolbar - Search, Filter, Sort */}
+               <div className="space-y-4">
+                 {/* Search Bar */}
+@@ -4285,10 +4323,10 @@ export default function AdminDashboard() {
+             </div>
+           )
+         }
+-      </main>
++      </main >
+ 
+       {/* Image Zoom Modal */}
+-      <ImageZoomModal
++      < ImageZoomModal
+         images={zoomImages}
+         initialIndex={zoomInitialIndex}
+         isOpen={zoomModalOpen}
+@@ -5037,6 +5075,6 @@ export default function AdminDashboard() {
+           </DialogFooter>
+         </DialogContent>
+       </Dialog>
+-    </div>
++    </div >
+   )
+ }

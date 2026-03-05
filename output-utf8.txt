@@ -1,0 +1,9 @@
+SHEET NAME: Sheet1
+FIRST 30 ROWS:
+ROW 1: [null,null,"RELEASE MONITORING"]
+ROW 2: [null,null,"SALES","As of: January 2026"]
+ROW 3: [null,"NO.","UNIT","PLATE","COLOR","OWNER","CLAIM TYPE INSURANCE/PERSONAL","JO/ ES/ PO #","BRPAD","AIRCON","ELECTRICAL","MECHANICAL","TOTAL","MOD","DATE RELEASED","REMARKS"]
+ROW 4: [null,null,null,null,null,null,null,null,null,null,null,null,0]
+ROW 5: [null,null,null,null,null,null,null,null,null,null,null,null,0]
+ROW 6: [null,null,null,null,null,null,null,null,null,null,null,null,0]
+ROW 7: [null,null,null,null,null,null,null,null,null,null,null,null,0]
