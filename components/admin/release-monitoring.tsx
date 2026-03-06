@@ -38,23 +38,61 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
     const [isEditing, setIsEditing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [editedData, setEditedData] = useState<Record<string, any>>({})
+    const [searchQuery, setSearchQuery] = useState("")
+    const [claimTypeFilter, setClaimTypeFilter] = useState("all")
     const { toast } = useToast()
 
-    // Filter records by selected month
+    const normalizeString = (str: string) => {
+        if (!str) return ""
+        return str.toLowerCase().replace(/[\s\-\.\/\,]/g, "")
+    }
+
+    // Filter records by selected month, and EXCLUDE back-jobs as per admin requirement (they already paid for original)
     const tableRecords = useMemo(() => {
         return records.filter(r => {
+            // Exclude back-jobs/re-entries from fiscal reports
+            if (r.is_backjob) return false
+
             const dateStr = r.completed_at || r.original_created_at
             if (!dateStr) return false
             const d = new Date(dateStr)
             if (isNaN(d.getTime())) return false
             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            return key === selectedMonth
+            if (key !== selectedMonth) return false
+
+            // Comprehensive Search filter (Normalized)
+            if (searchQuery.trim()) {
+                const q = normalizeString(searchQuery)
+                const matches = [
+                    r.name,
+                    r.insurance,
+                    r.vehicle_plate,
+                    r.vehicle_make,
+                    r.vehicle_model,
+                    r.vehicle_year?.toString(),
+                    r.estimate_number,
+                    r.paul_notes,
+                    r.current_repair_part
+                ].some(field => normalizeString(field || "").includes(q))
+
+                if (!matches) return false
+            }
+
+            // Claim Type filter (Dropdown)
+            if (claimTypeFilter !== "all") {
+                const insurance = (r.insurance || "").toLowerCase()
+                const isPersonal = insurance.includes("personal") || insurance.includes("cash") || !insurance
+                if (claimTypeFilter === "insurance" && isPersonal) return false
+                if (claimTypeFilter === "personal" && !isPersonal) return false
+            }
+
+            return true
         }).sort((a, b) => {
             const da = new Date(a.completed_at || a.original_created_at).getTime()
             const db = new Date(b.completed_at || b.original_created_at).getTime()
             return da - db // Ascending order
         })
-    }, [records, selectedMonth])
+    }, [records, selectedMonth, searchQuery, claimTypeFilter])
 
     // Get display text for the month
     const currentMonthLabel = monthsMap.get(selectedMonth) || new Date(selectedMonth + "-01").toLocaleDateString("en-US", { month: "long", year: "numeric" })
@@ -187,13 +225,46 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                 <table className="w-full min-w-[1200px] border-collapse text-xs">
                     <thead>
                         <tr>
-                            <th colSpan={15} className="text-left pb-4 border-none">
+                            <th colSpan={10} className="text-left pb-4 border-none">
                                 <h1 className="text-red-700 m-0 text-3xl font-bold font-serif tracking-widest" style={{ textShadow: "1px 1px 0 #fff, 2px 2px 0 #ccc" }}>
                                     RELEASE MONITORING
                                 </h1>
                                 <div className="flex gap-10 items-baseline mt-2 mb-2">
                                     <div className="font-bold text-lg text-foreground">SALES</div>
                                     <div className="font-normal text-sm text-foreground ml-5">As of: {currentMonthLabel}</div>
+                                </div>
+                            </th>
+                            <th colSpan={6} className="text-right pb-4 border-none align-bottom">
+                                <div className="flex items-center justify-end gap-3 mb-2">
+                                    <div className="relative w-64 group">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Eye className="h-4 w-4 text-muted-foreground group-focus-within:text-red-500 transition-colors" />
+                                        </div>
+                                        <Input
+                                            placeholder="Search: Owner, Plate, Unit, JO#, Remarks..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="h-10 pl-10 bg-background/50 border-border focus:border-red-500/50 focus:ring-red-500/20 rounded-lg text-xs transition-all placeholder:text-[10px]"
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                onClick={() => setSearchQuery("")}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <Select value={claimTypeFilter} onValueChange={setClaimTypeFilter}>
+                                        <SelectTrigger className="w-[140px] h-10 border-border bg-background/50 focus:ring-red-500/20">
+                                            <SelectValue placeholder="Claim Type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Claims</SelectItem>
+                                            <SelectItem value="insurance">Insurance</SelectItem>
+                                            <SelectItem value="personal">Personal</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </th>
                         </tr>

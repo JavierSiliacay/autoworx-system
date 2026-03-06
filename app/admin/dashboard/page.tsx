@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import { useRouter } from "next/navigation"
@@ -126,6 +126,7 @@ interface AppointmentDB {
   loa_attachment?: string
   loa_attachment_2?: string
   loa_attachments?: string[]
+  is_backjob?: boolean
 }
 
 // Frontend interface (camelCase)
@@ -163,6 +164,7 @@ interface Appointment {
   loaAttachment?: string
   loaAttachment2?: string
   loaAttachments?: string[]
+  isBackJob?: boolean
 }
 
 // History interface
@@ -198,6 +200,7 @@ interface HistoryRecord {
   loa_attachment?: string
   loa_attachment_2?: string
   loa_attachments?: string[]
+  is_backjob?: boolean
 }
 
 interface Announcement {
@@ -247,7 +250,8 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     updatedAt: apt.status_updated_at || apt.created_at,
     loaAttachment: apt.loa_attachment || apt.costing?.loaAttachment,
     loaAttachment2: apt.loa_attachment_2 || apt.costing?.loaAttachment2,
-    loaAttachments: apt.loa_attachments || apt.costing?.loaAttachments || []
+    loaAttachments: apt.loa_attachments || apt.costing?.loaAttachments || [],
+    isBackJob: apt.is_backjob
   }
 }
 
@@ -468,6 +472,7 @@ export default function AdminDashboard() {
   const [showDeletedHistory, setShowDeletedHistory] = useState(false)
   const [deletedAppointments, setDeletedAppointments] = useState<Appointment[]>([])
   const [isLoadingDeleted, setIsLoadingDeleted] = useState(false)
+  const [trashSearchQuery, setTrashSearchQuery] = useState<string>("")
 
   const [selectedDownloadAppointment, setSelectedDownloadAppointment] = useState<Appointment | null>(null)
   const [isElectron, setIsElectron] = useState(false)
@@ -481,6 +486,7 @@ export default function AdminDashboard() {
   const lastStateUpdateRef = useRef<Record<string, number>>({})
   const searchInputRef = useRef<HTMLInputElement>(null)
   const historySearchInputRef = useRef<HTMLInputElement>(null)
+  const trashSearchInputRef = useRef<HTMLInputElement>(null)
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -719,7 +725,9 @@ export default function AdminDashboard() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault()
-        if (activeTab === "history" && !showDeletedHistory && historyViewMode === "list") {
+        if (activeTab === "history" && showDeletedHistory) {
+          trashSearchInputRef.current?.focus()
+        } else if (activeTab === "history" && !showDeletedHistory && historyViewMode === "list") {
           historySearchInputRef.current?.focus()
         } else {
           searchInputRef.current?.focus()
@@ -1381,8 +1389,6 @@ export default function AdminDashboard() {
       return
     }
 
-    setDeletedAppointments((prev) => prev.filter((apt) => apt.id !== appointment.id))
-
     try {
       let endpoint = "/api/appointments?permanent=true"
       if (appointment.source === 'history') {
@@ -1396,13 +1402,26 @@ export default function AdminDashboard() {
       })
 
       if (response.ok) {
+        setDeletedAppointments((prev) => prev.filter((apt) => apt.id !== appointment.id))
         toast({
           title: "Deleted Permanently",
           description: "Record has been removed from database.",
         })
+      } else {
+        const data = await response.json()
+        toast({
+          variant: "destructive",
+          title: "Permanent Delete Failed",
+          description: data.error || "Failed to permanently delete. Keep calm and try again."
+        })
       }
     } catch (error) {
       console.error("Error permanently deleting:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "A connection error occurred."
+      })
     }
   }
 
@@ -1440,24 +1459,106 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleReentry = async (record: HistoryRecord) => {
+    if (!window.confirm(`Create a new RE-ENTRY job for ${record.vehicle_plate}? This will clone the vehicle and client info.`)) {
+      return
+    }
+
+    try {
+      // 1. Prepare new appointment data
+      const trackingCode = "RE-" + Math.random().toString(36).substring(2, 7).toUpperCase()
+
+      const payload = {
+        trackingCode,
+        name: record.name,
+        email: record.email,
+        phone: record.phone,
+        vehicleMake: record.vehicle_make,
+        vehicleModel: record.vehicle_model,
+        vehicleYear: record.vehicle_year,
+        vehiclePlate: record.vehicle_plate,
+        vehicleColor: record.vehicle_color,
+        chassisNumber: record.chassis_number,
+        engineNumber: record.engine_number,
+        assigneeDriver: record.assignee_driver,
+        service: "RE-ENTRY: " + record.service,
+        message: "Back-job/Re-entry from previous job " + record.tracking_code,
+        isBackJob: true,
+        // Clone costing items but reset attachments for a clean start
+        costing: record.costing ? {
+          ...record.costing,
+          loaAttachment: null,
+          loaAttachment2: null,
+          loaAttachments: [],
+        } : null,
+        damageImages: [],
+        status: "pending"
+      }
+
+      const response = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (response.ok) {
+        // We don't need to manually update state here because the 
+        // real-time subscription in the useEffect will handle the 
+        // INSERT event and add it to the list automatically!
+
+        // 2. Switch to appointments tab
+        setActiveTab("appointments")
+
+        toast({
+          title: "Re-entry Created",
+          description: `Locked & Loaded. A new job for ${record.vehicle_plate} is now active.`,
+        })
+      } else {
+        throw new Error("Failed to create re-entry")
+      }
+    } catch (error) {
+      console.error("Error creating re-entry:", error)
+      toast({
+        variant: "destructive",
+        title: "Creation Failed",
+        description: "Could not create the re-entry job.",
+      })
+    }
+  }
+
   const deleteHistoryRecord = async (id: string) => {
     if (!window.confirm("Are you sure you want to move this history record to Trash?")) {
       return
     }
 
     try {
-      await fetch("/api/history", {
+      const response = await fetch("/api/history", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       })
-      setHistoryRecords((prev) => prev.filter((record) => record.id !== id))
-      toast({
-        title: "Moved to Trash",
-        description: "History record moved to Delete History."
-      })
+
+      if (response.ok) {
+        setHistoryRecords((prev) => prev.filter((record) => record.id !== id))
+        toast({
+          title: "Moved to Trash",
+          description: "History record moved to Delete History."
+        })
+      } else {
+        const data = await response.json()
+        toast({
+          variant: "destructive",
+          title: "Delete Failed",
+          description: data.error || "Failed to move record to trash. Please try again."
+        })
+      }
     } catch (error) {
       console.error("Error deleting history record:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "A connection error occurred. Check your network."
+      })
     }
   }
 
@@ -2541,6 +2642,22 @@ export default function AdminDashboard() {
     })
   }
 
+  const filteredTrashAppointments = useMemo(() => {
+    if (!trashSearchQuery.trim()) return deletedAppointments
+
+    const query = trashSearchQuery.toLowerCase()
+    return deletedAppointments.filter((apt) => {
+      const nameMatch = (apt.name || "").toLowerCase().includes(query)
+      const plateMatch = (apt.vehiclePlate || "").toLowerCase().includes(query)
+      const trackingMatch = (apt.trackingCode || "").toLowerCase().includes(query)
+      const makeMatch = (apt.vehicleMake || "").toLowerCase().includes(query)
+      const modelMatch = (apt.vehicleModel || "").toLowerCase().includes(query)
+      const emailMatch = (apt.email || "").toLowerCase().includes(query)
+
+      return nameMatch || plateMatch || trackingMatch || makeMatch || modelMatch || emailMatch
+    })
+  }, [deletedAppointments, trashSearchQuery])
+
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -2960,6 +3077,11 @@ export default function AdminDashboard() {
                           <span className="font-medium text-foreground">
                             {appointment.name}
                           </span>
+                          {appointment.isBackJob && (
+                            <Badge variant="outline" className="text-amber-600 border-amber-500/50 bg-amber-500/10 rounded-full text-[10px] font-bold py-0 h-5">
+                              BACK-JOB
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="ml-auto flex items-center gap-2">
@@ -3016,6 +3138,12 @@ export default function AdminDashboard() {
                                       >
                                         <Settings2 className="w-3 h-3 mr-1" />
                                         {repairStatusInfo.label}
+                                      </Badge>
+                                    )}
+                                    {appointment.isBackJob && (
+                                      <Badge variant="outline" className="text-amber-600 border-amber-500/50 bg-amber-500/10">
+                                        <Wrench className="w-3 h-3 mr-1" />
+                                        Back-Job Priority
                                       </Badge>
                                     )}
                                     {searchQuery.trim() && getMatchCategories(appointment, searchQuery).map(cat => (
@@ -4251,17 +4379,55 @@ export default function AdminDashboard() {
                 <span className="text-sm">Items here are soft-deleted. You can restore them or permanently delete them.</span>
               </div>
 
+              {/* Premium Trash Search */}
+              <div className="group relative max-w-4xl mx-auto w-full pt-2 mb-8">
+                {/* Always-on Deep Aura Glow */}
+                <div className="absolute -inset-4 bg-gradient-to-r from-red-500/20 to-rose-500/10 rounded-[32px] blur-3xl opacity-30 group-focus-within:opacity-60 transition-opacity duration-700" />
+
+                {/* Always-on Rotating Laser Border */}
+                <div className="absolute -inset-[2.5px] rounded-[22px] overflow-hidden opacity-50 group-focus-within:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-[-1000%] animate-[spin_8s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,#ef4444_50%,transparent_100%)]" />
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-red-500 transition-colors duration-300" />
+                  <Input
+                    ref={trashSearchInputRef}
+                    placeholder="Search trash: Name, Plate, Email, Brand, Tracking Code..."
+                    value={trashSearchQuery}
+                    onChange={(e) => setTrashSearchQuery(e.target.value)}
+                    className="pl-14 pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-red-500/50 shadow-2xl focus:ring-0 transition-all text-base font-medium placeholder:text-muted-foreground/50"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                    {trashSearchQuery && (
+                      <button
+                        onClick={() => setTrashSearchQuery("")}
+                        className="p-1.5 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                    <div className="hidden sm:flex items-center gap-1.5 px-2 py-1.5 border border-border bg-secondary/50 rounded-lg text-[10px] font-bold text-muted-foreground pointer-events-none select-none shadow-sm">
+                      <span className="text-[12px]">⌘</span>K
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {isLoadingDeleted ? (
                 <div className="p-8 text-center animate-pulse">Loading trash...</div>
-              ) : deletedAppointments.length === 0 ? (
+              ) : filteredTrashAppointments.length === 0 ? (
                 <div className="p-12 bg-card rounded-xl border border-border text-center">
                   <Trash2 className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                  <h3 className="font-semibold text-foreground">Trash is empty</h3>
-                  <p className="text-sm text-muted-foreground mt-1">No deleted items found.</p>
+                  <h3 className="font-semibold text-foreground">
+                    {trashSearchQuery ? "No matching items" : "Trash is empty"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {trashSearchQuery ? `No deleted items found matching "${trashSearchQuery}"` : "No deleted items found."}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {deletedAppointments.map((apt) => (
+                  {filteredTrashAppointments.map((apt) => (
                     <div key={apt.id} className="bg-card rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
@@ -4817,6 +4983,15 @@ export default function AdminDashboard() {
                                   >
                                     <Settings2 className="w-4 h-4 mr-1" />
                                     Edit
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-amber-600 hover:text-amber-500 hover:bg-amber-500/10 border-amber-500/30 bg-transparent"
+                                    onClick={() => handleReentry(record)}
+                                  >
+                                    <RefreshCw className="w-4 h-4 mr-1" />
+                                    Re-entry / Back-job
                                   </Button>
                                   <Button
                                     size="sm"

@@ -193,6 +193,8 @@ export async function POST(request: Request) {
         service_advisor: body.serviceAdvisor || null,
         estimate_number: estimateNumber,
         status: "pending",
+        is_backjob: body.isBackJob || false,
+        costing: body.costing || null,
       })
       .select()
       .single()
@@ -277,6 +279,7 @@ export async function PUT(request: Request) {
   if (updates.loaAttachment !== undefined) dbUpdates.loa_attachment = updates.loaAttachment
   if (updates.loaAttachment2 !== undefined) dbUpdates.loa_attachment_2 = updates.loaAttachment2
   if (updates.loaAttachments !== undefined) dbUpdates.loa_attachments = updates.loaAttachments
+  if (updates.isBackJob !== undefined) dbUpdates.is_backjob = updates.isBackJob
 
   // New editable fields
   if (updates.name !== undefined) dbUpdates.name = updates.name

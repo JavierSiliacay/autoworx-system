@@ -74,6 +74,8 @@ export async function PUT(request: Request) {
     if (updates.vehicle_plate !== undefined) dbUpdates.vehicle_plate = updates.vehicle_plate
     if (updates.vehicle_color !== undefined) dbUpdates.vehicle_color = updates.vehicle_color
     if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
+    if (updates.is_backjob !== undefined) dbUpdates.is_backjob = updates.is_backjob
+    if (updates.isBackJob !== undefined) dbUpdates.is_backjob = updates.isBackJob
 
     console.log(`[API History PUT] Attempting direct ID update for: ${id}`);
     // Try by ID first using admin client to bypass RLS
@@ -188,6 +190,7 @@ export async function POST(request: Request) {
       loa_attachment: appointment.loa_attachment || null,
       loa_attachment_2: appointment.loa_attachment_2 || null,
       loa_attachments: appointment.loa_attachments || null,
+      is_backjob: appointment.is_backjob || false,
     })
 
   if (insertError) {
@@ -228,26 +231,57 @@ export async function DELETE(request: Request) {
   }
 
   const supabase = await createClient()
+  const adminSupabase = await createAdminClient().catch(() => supabase)
   const body = await request.json()
   const { id } = body
+
+  if (!id) {
+    return NextResponse.json({ error: "ID required" }, { status: 400 })
+  }
 
   // Soft delete by updating deleted_at
   // If 'permanent' param is set, do hard delete
   const { searchParams } = new URL(request.url)
   const isPermanent = searchParams.get("permanent") === "true"
 
+  console.log(`[API History DELETE] ID: ${id}, Permanent: ${isPermanent}`);
+
   if (isPermanent) {
-    const { error } = await supabase
+    // Try by ID first
+    let { error } = await adminSupabase
       .from("appointment_history")
       .delete()
       .eq("id", id)
 
+    // Fallback if no error but also might not have found it (delete doesn't return count easily without count: 'exact')
+    // but we'll try original_id too to be safe
+    if (!error) {
+      const { error: fbError } = await adminSupabase
+        .from("appointment_history")
+        .delete()
+        .eq("original_id", id)
+      error = fbError
+    }
+
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   } else {
-    const { error } = await supabase
+    const deletedAt = new Date().toISOString();
+
+    // Try by ID first
+    let { data, error } = await adminSupabase
       .from("appointment_history")
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: deletedAt })
       .eq("id", id)
+      .select()
+
+    if (!error && (!data || data.length === 0)) {
+      console.log(`[API History DELETE] Fallback to original_id for soft delete: ${id}`);
+      const { error: fbError } = await adminSupabase
+        .from("appointment_history")
+        .update({ deleted_at: deletedAt })
+        .eq("original_id", id)
+      error = fbError
+    }
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
