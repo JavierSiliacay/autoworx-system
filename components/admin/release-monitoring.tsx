@@ -1,12 +1,23 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { Printer, Calendar as CalendarIcon, FileDown, Eye, Edit, Save, Loader2, X, FileCheck, FileX } from "lucide-react"
+import { Printer, Calendar as CalendarIcon, FileDown, Eye, Edit, Save, Loader2, X, FileCheck, FileX, Trash2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { generateReleaseMonitoringDoc } from "@/lib/generate-pdf"
 import { useToast } from "@/components/ui/use-toast"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { PlusCircle } from "lucide-react"
 
 export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     // Extract unique months from completed_at / created_at date strings
@@ -40,6 +51,18 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
     const [editedData, setEditedData] = useState<Record<string, any>>({})
     const [searchQuery, setSearchQuery] = useState("")
     const [claimTypeFilter, setClaimTypeFilter] = useState("all")
+    const [isManualModalOpen, setIsManualModalOpen] = useState(false)
+    const [manualEntry, setManualEntry] = useState({
+        name: "",
+        vehicle_make: "",
+        vehicle_model: "",
+        vehicle_year: "",
+        vehicle_plate: "",
+        insurance: "Personal Claim",
+        completed_at: new Date().toISOString().split('T')[0],
+        total_amount: 0,
+        remarks: ""
+    })
     const { toast } = useToast()
 
     const normalizeString = (str: string) => {
@@ -146,6 +169,32 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
         }, 800)
     }
 
+    const handleDeleteRecord = async (id: string, name: string) => {
+        if (!window.confirm(`Are you sure you want to PERMANENTLY remove "${name}" from the monitoring report? This cannot be undone.`)) {
+            return
+        }
+
+        setIsSaving(true)
+        try {
+            const response = await fetch("/api/history?permanent=true", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id })
+            })
+
+            if (response.ok) {
+                toast({ title: "Removed", description: "Record has been permanently deleted." })
+                onUpdate?.()
+            } else {
+                throw new Error("Delete failed")
+            }
+        } catch (e) {
+            toast({ title: "Error", description: "Could not remove record.", variant: "destructive" })
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
     return (
         <div className="space-y-4 bg-card rounded-xl border border-border overflow-hidden">
             <div className="p-4 border-b border-border bg-muted/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -218,6 +267,99 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                             </Button>
                         </>
                     )}
+
+                    <Dialog open={isManualModalOpen} onOpenChange={setIsManualModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="gap-2 border-dashed border-primary text-primary hover:bg-primary/10">
+                                <PlusCircle className="w-4 h-4" />
+                                Manual Entry
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                            <DialogHeader>
+                                <DialogTitle>Add Manual Record</DialogTitle>
+                                <DialogDescription>
+                                    Add a completed unit that is not currently in the system for sales tracking.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="name" className="text-right">Owner</Label>
+                                    <Input id="name" value={manualEntry.name} onChange={(e) => setManualEntry({ ...manualEntry, name: e.target.value })} className="col-span-3" />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="plate" className="text-right">Plate</Label>
+                                    <Input id="plate" value={manualEntry.vehicle_plate} onChange={(e) => setManualEntry({ ...manualEntry, vehicle_plate: e.target.value })} className="col-span-3" />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="unit" className="text-right">Unit</Label>
+                                    <div className="col-span-3 flex gap-2">
+                                        <Input className="w-20" placeholder="Year" value={manualEntry.vehicle_year} onChange={(e) => setManualEntry({ ...manualEntry, vehicle_year: e.target.value })} />
+                                        <Input placeholder="Make" value={manualEntry.vehicle_make} onChange={(e) => setManualEntry({ ...manualEntry, vehicle_make: e.target.value })} />
+                                        <Input placeholder="Model" value={manualEntry.vehicle_model} onChange={(e) => setManualEntry({ ...manualEntry, vehicle_model: e.target.value })} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="insurance" className="text-right">Claim</Label>
+                                    <Input id="insurance" value={manualEntry.insurance} onChange={(e) => setManualEntry({ ...manualEntry, insurance: e.target.value })} className="col-span-3" />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="date" className="text-right">Release Date</Label>
+                                    <Input id="date" type="date" value={manualEntry.completed_at} onChange={(e) => setManualEntry({ ...manualEntry, completed_at: e.target.value })} className="col-span-3" />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="amount" className="text-right">Total Amount</Label>
+                                    <Input id="amount" type="number" value={manualEntry.total_amount} onChange={(e) => setManualEntry({ ...manualEntry, total_amount: parseFloat(e.target.value) || 0 })} className="col-span-3" />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="remarks" className="text-right">Remarks</Label>
+                                    <Input id="remarks" value={manualEntry.remarks} onChange={(e) => setManualEntry({ ...manualEntry, remarks: e.target.value })} className="col-span-3" />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={async () => {
+                                    setIsSaving(true)
+                                    try {
+                                        const response = await fetch("/api/history", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({
+                                                manualData: {
+                                                    ...manualEntry,
+                                                    costing: { total: manualEntry.total_amount, gatepass_breakdown: { brpad: manualEntry.total_amount, aircon: 0, electrical: 0, mechanical: 0, total: manualEntry.total_amount } }
+                                                }
+                                            })
+                                        })
+                                        if (response.ok) {
+                                            toast({ title: "Success", description: "Manual record added." })
+                                            setIsManualModalOpen(false)
+                                            setManualEntry({
+                                                name: "",
+                                                vehicle_make: "",
+                                                vehicle_model: "",
+                                                vehicle_year: "",
+                                                vehicle_plate: "",
+                                                insurance: "Personal Claim",
+                                                completed_at: new Date().toISOString().split('T')[0],
+                                                total_amount: 0,
+                                                remarks: ""
+                                            })
+                                            onUpdate?.()
+                                        } else {
+                                            throw new Error("Failed to add record")
+                                        }
+                                    } catch (e) {
+                                        toast({ title: "Error", description: "Could not add manual record.", variant: "destructive" })
+                                    } finally {
+                                        setIsSaving(false)
+                                    }
+                                }} disabled={isSaving || !manualEntry.name}>
+                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                    Add Record
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
 
@@ -300,7 +442,17 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
 
                                 return (
                                     <tr key={r.id} className={`border-b border-border ${isEditing ? 'bg-muted/30' : 'hover:bg-muted/10'} text-foreground`}>
-                                        <td className="p-2 border border-border text-center">{idx + 1}</td>
+                                        <td className="p-2 border border-border text-center relative group/row">
+                                            {isEditing ? (
+                                                <button
+                                                    onClick={() => handleDeleteRecord(r.id, r.name)}
+                                                    className="p-1 text-red-500 hover:bg-red-500/20 rounded transition-colors"
+                                                    title="Permanently Delete"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            ) : (idx + 1)}
+                                        </td>
                                         <td className="p-2 border border-border text-left truncate max-w-[150px]" title={unitStr}>{unitStr}</td>
                                         <td className="p-2 border border-border text-center font-mono">
                                             {isEditing ? (
@@ -417,7 +569,16 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 <Input className="h-7 px-2 text-[10px] w-full" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} />
                                             ) : (modVal)}
                                         </td>
-                                        <td className="p-2 border border-border text-center">{dateStr}</td>
+                                        <td className="p-2 border border-border text-center">
+                                            {isEditing ? (
+                                                <Input
+                                                    type="date"
+                                                    className="h-7 px-2 text-[10px] w-full"
+                                                    value={currentVal("completed_at") ? new Date(currentVal("completed_at")).toISOString().split('T')[0] : ""}
+                                                    onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), completed_at: new Date(e.target.value).toISOString() } }))}
+                                                />
+                                            ) : (dateStr)}
+                                        </td>
                                         <td className="p-2 border border-border text-left truncate max-w-[120px]" title={r.paul_notes || ""}>
                                             {isEditing ? (
                                                 <Input className="h-7 px-2 text-xs w-full" value={currentVal("paul_notes")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), paul_notes: e.target.value } }))} />

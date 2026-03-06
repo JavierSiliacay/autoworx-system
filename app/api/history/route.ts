@@ -76,6 +76,8 @@ export async function PUT(request: Request) {
     if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
     if (updates.is_backjob !== undefined) dbUpdates.is_backjob = updates.is_backjob
     if (updates.isBackJob !== undefined) dbUpdates.is_backjob = updates.isBackJob
+    if (updates.completed_at !== undefined) dbUpdates.completed_at = updates.completed_at
+    if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt
 
     console.log(`[API History PUT] Attempting direct ID update for: ${id}`);
     // Try by ID first using admin client to bypass RLS
@@ -141,10 +143,49 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient()
+  const adminSupabase = await createAdminClient().catch(() => supabase)
   const body = await request.json()
 
-  // Archive an appointment - move to history and delete from active
-  const { appointmentId, reason } = body
+  const { appointmentId, reason, manualData } = body
+
+  // Manual Entry Support
+  if (manualData) {
+    console.log("[API History POST] Manual Data Received:", manualData);
+
+    // Ensure all possible required fields have defaults
+    const manualRecord = {
+      name: manualData.name,
+      email: manualData.email || "manual@entry.local",
+      phone: manualData.phone || "N/A",
+      vehicle_make: manualData.vehicle_make,
+      vehicle_model: manualData.vehicle_model,
+      vehicle_year: manualData.vehicle_year,
+      vehicle_plate: manualData.vehicle_plate,
+      vehicle_color: manualData.vehicle_color || "",
+      insurance: manualData.insurance,
+      paul_notes: manualData.paul_notes || manualData.remarks,
+      costing: manualData.costing,
+      service: manualData.service || "Manual Sales Entry",
+      final_status: "completed",
+      repair_status: "completed",
+      original_id: manualData.original_id || null, // Database will generate UUID if null
+      tracking_code: manualData.tracking_code || `MANUAL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      archived_reason: "Manual Entry",
+      archived_at: new Date().toISOString(),
+      completed_at: manualData.completed_at || new Date().toISOString(),
+      original_created_at: manualData.completed_at || new Date().toISOString()
+    }
+
+    const { error: insertError } = await adminSupabase
+      .from("appointment_history")
+      .insert(manualRecord)
+
+    if (insertError) {
+      console.error("[API History POST] Manual Insert Error:", insertError);
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
+    return NextResponse.json({ success: true })
+  }
 
   // First, get the appointment data
   const { data: appointment, error: fetchError } = await supabase
