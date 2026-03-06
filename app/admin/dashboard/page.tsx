@@ -1562,6 +1562,43 @@ export default function AdminDashboard() {
     }
   }
 
+  const moveHistoryToActive = async (id: string) => {
+    if (!window.confirm("Restore this record to Active Appointments?")) {
+      return
+    }
+
+    try {
+      const response = await fetch("/api/history", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+
+      if (response.ok) {
+        setHistoryRecords((prev) => prev.filter((record) => record.id !== id))
+        toast({
+          title: "Restored to Active",
+          description: "Record moved back to active appointments list."
+        })
+        loadAppointments() // Refresh active list
+      } else {
+        const data = await response.json()
+        toast({
+          variant: "destructive",
+          title: "Restore Failed",
+          description: data.error || "Failed to restore record. Please try again."
+        })
+      }
+    } catch (error) {
+      console.error("Error moving history to active:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "A connection error occurred."
+      })
+    }
+  }
+
   const updateCosting = (id: string, costing: CostingData, immediate = false) => {
     // Track that we are manually updating this record
     lastStateUpdateRef.current[id] = Date.now()
@@ -4913,6 +4950,15 @@ export default function AdminDashboard() {
                                   >
                                     <Trash2 className="w-4 h-4 mr-1" />
                                     Delete
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-green-600 hover:text-green-500 hover:bg-green-500/10 border-green-500/30 bg-transparent"
+                                    onClick={() => moveHistoryToActive(record.id)}
+                                  >
+                                    <RefreshCw className="w-4 h-4 mr-1" />
+                                    Restore to Active
                                   </Button>
                                   <Button
                                     size="sm"

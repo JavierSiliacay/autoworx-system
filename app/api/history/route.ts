@@ -288,3 +288,81 @@ export async function DELETE(request: Request) {
 
   return NextResponse.json({ success: true })
 }
+
+export async function PATCH(request: Request) {
+  const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!isAuthorizedAdminEmail(token?.email)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const supabase = await createClient()
+  const adminSupabase = await createAdminClient().catch(() => supabase)
+  const body = await request.json()
+  const { id } = body
+
+  if (!id) {
+    return NextResponse.json({ error: "ID required" }, { status: 400 })
+  }
+
+  // 1. Get the history record
+  const { data: record, error: fetchError } = await adminSupabase
+    .from("appointment_history")
+    .select("*")
+    .eq("id", id)
+    .single()
+
+  if (fetchError || !record) {
+    return NextResponse.json({ error: "History record not found" }, { status: 404 })
+  }
+
+  // 2. Insert back into active appointments
+  const { error: insertError } = await adminSupabase
+    .from("appointments")
+    .insert({
+      id: record.original_id, // Restore the original ID if possible
+      tracking_code: record.tracking_code,
+      name: record.name,
+      email: record.email,
+      phone: record.phone,
+      vehicle_make: record.vehicle_make,
+      vehicle_model: record.vehicle_model,
+      vehicle_year: record.vehicle_year,
+      vehicle_plate: record.vehicle_plate,
+      vehicle_color: record.vehicle_color,
+      chassis_number: record.chassis_number,
+      engine_number: record.engine_number,
+      assignee_driver: record.assignee_driver,
+      service: record.service,
+      preferred_date: record.preferred_date,
+      message: record.message,
+      status: "contacted", // Default to contacted since it was archived
+      repair_status: record.repair_status,
+      current_repair_part: record.current_repair_part,
+      costing: record.costing,
+      created_at: record.original_created_at,
+      insurance: record.insurance,
+      estimate_number: record.estimate_number,
+      paul_notes: record.paul_notes,
+      loa_attachment: record.loa_attachment,
+      loa_attachment_2: record.loa_attachment_2,
+      loa_attachments: record.loa_attachments,
+      is_backjob: record.is_backjob || false,
+    })
+
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
+
+  // 3. Delete from history
+  const { error: deleteError } = await adminSupabase
+    .from("appointment_history")
+    .delete()
+    .eq("id", id)
+
+  if (deleteError) {
+    // Note: We already inserted it back, so we just log the delete error
+    console.error("Cleanup error during unarchive:", deleteError)
+  }
+
+  return NextResponse.json({ success: true })
+}
