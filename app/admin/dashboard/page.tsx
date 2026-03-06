@@ -54,7 +54,8 @@ import {
   Copy,
   FileX,
   Loader2,
-  Eye
+  Eye,
+  Undo2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -209,6 +210,11 @@ interface Announcement {
 
 // Helper to convert DB response to frontend format
 function dbToFrontend(apt: AppointmentDB): Appointment {
+  const costing = apt.costing ? {
+    ...apt.costing,
+    items: sortCostingItems(apt.costing.items || [])
+  } : undefined;
+
   return {
     id: apt.id,
     trackingCode: apt.tracking_code,
@@ -230,7 +236,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     repairStatus: apt.repair_status,
     currentRepairPart: apt.current_repair_part,
     statusUpdatedAt: apt.status_updated_at,
-    costing: apt.costing,
+    costing: costing,
     damageImages: apt.damage_images,
     orcrImage: apt.orcr_image,
     orcrImage2: apt.orcr_image_2,
@@ -265,6 +271,47 @@ const MONTHS = [
   { full: "november", short: "nov", index: 10, variations: ["november", "nov"] },
   { full: "december", short: "dec", index: 11, variations: ["december", "dec"] },
 ]
+
+const COST_CATEGORY_ORDER = [
+  "Parts",
+  "Tinsmith/Alignment",
+  "Mechanical Works",
+  "Electrical",
+  "Aircon",
+  "Painting",
+  "Detailing",
+  "Glassworks",
+  "Remove and Install",
+  "Others"
+];
+
+const sortCostingItems = (items: CostItem[]): CostItem[] => {
+  if (!items) return [];
+  return [...items].sort((a, b) => {
+    // Normalize category names for comparison
+    const getCategory = (item: CostItem) => {
+      if (item.type === 'parts') return 'Parts';
+      if (!item.category || item.category === "Others") return 'Others';
+      return item.category;
+    };
+
+    const catA = getCategory(a);
+    const catB = getCategory(b);
+
+    const indexA = COST_CATEGORY_ORDER.indexOf(catA);
+    const indexB = COST_CATEGORY_ORDER.indexOf(catB);
+
+    if (indexA !== -1 && indexB !== -1) {
+      if (indexA !== indexB) return indexA - indexB;
+    } else if (indexA !== -1) {
+      return -1;
+    } else if (indexB !== -1) {
+      return 1;
+    }
+
+    return 0; // Maintain order within same category
+  });
+};
 
 const getMatchedMonth = (query: string) => {
   const norm = query.toLowerCase().trim()
@@ -397,6 +444,7 @@ export default function AdminDashboard() {
   const [copyOrcrFile, setCopyOrcrFile] = useState<File | null>(null)
   const [copyOrcrFile2, setCopyOrcrFile2] = useState<File | null>(null)
   const [widenedItems, setWidenedItems] = useState<Set<string>>(new Set())
+  const [costingHistory, setCostingHistory] = useState<Record<string, CostingData[]>>({})
 
   const toggleWidenItem = (itemId: string) => {
     setWidenedItems((prev) => {
@@ -1401,6 +1449,7 @@ export default function AdminDashboard() {
 
     const updatedCosting = {
       ...costing,
+      items: sortCostingItems(costing.items || []),
       updatedAt: new Date().toISOString(),
     }
 
@@ -2054,6 +2103,12 @@ export default function AdminDashboard() {
       updatedAt: new Date().toISOString(),
     }
 
+    // Save history before adding
+    setCostingHistory(prev => ({
+      ...prev,
+      [appointmentId]: [...(prev[appointmentId] || []), { ...currentCosting }]
+    }))
+
     // Determine category: Explicit > Last Selected > Default (undefined)
     // Only inherit for service_labor type items where category makes sense
     let finalCategory = category;
@@ -2139,6 +2194,12 @@ export default function AdminDashboard() {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
     if (!appointment?.costing) return
 
+    // Save history before removing
+    setCostingHistory(prev => ({
+      ...prev,
+      [appointmentId]: [...(prev[appointmentId] || []), { ...appointment.costing! }]
+    }))
+
     const updatedItems = appointment.costing.items.filter((item) => item.id !== itemId)
     const subtotal = updatedItems.reduce((sum, item) => sum + item.total, 0)
     const { vatAmount, total } = calculateTotal(
@@ -2155,6 +2216,21 @@ export default function AdminDashboard() {
       vatAmount,
       total,
     }, true)
+  }
+
+  const undoCosting = (appointmentId: string) => {
+    const history = costingHistory[appointmentId]
+    if (!history || history.length === 0) return
+
+    const previousState = history[history.length - 1]
+    const updatedHistory = history.slice(0, -1)
+
+    setCostingHistory(prev => ({
+      ...prev,
+      [appointmentId]: updatedHistory
+    }))
+
+    updateCosting(appointmentId, previousState, true)
   }
 
   const updateDiscount = (appointmentId: string, discount: number, discountType: "fixed" | "percentage", immediate = false) => {
@@ -3725,6 +3801,21 @@ export default function AdminDashboard() {
                                     <div className="flex items-center gap-2">
                                       <Receipt className="w-4 h-4 text-green-500" />
                                       <h4 className="font-semibold text-foreground">Cost Breakdown</h4>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn(
+                                          "h-10 w-10 ml-1 transition-all duration-200",
+                                          costingHistory[appointment.id]?.length > 0
+                                            ? "text-primary hover:bg-primary/10 opacity-100"
+                                            : "text-muted-foreground/30 opacity-50 cursor-not-allowed"
+                                        )}
+                                        onClick={() => undoCosting(appointment.id)}
+                                        disabled={!(costingHistory[appointment.id]?.length > 0)}
+                                        title="Undo last change"
+                                      >
+                                        <Undo2 className="w-3.5 h-3.5" />
+                                      </Button>
                                     </div>
                                     <div className="flex gap-2 flex-wrap">
                                       <div className="mr-2">

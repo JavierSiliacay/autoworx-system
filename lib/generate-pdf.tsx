@@ -239,17 +239,10 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : PRODUCTION_URL
   const displayTitle = reportTitle || (appointment.status === 'pending' ? "Appointment Confirmation" : (isAdmin ? "Repair Estimate" : "Repair Status Report"))
 
-  const laborCategories = ["Mechanical Works", "Electrical", "Aircon", "Painting", "Detailing", "Service", "Labor", "Glassworks", "Alignment", "Tinsmith"]
-  const hasCosting = !!appointment.costing
+  const categoryOrder = ["Parts", "Tinsmith/Alignment", "Mechanical Works", "Electrical", "Aircon", "Painting", "Detailing", "Glassworks", "Remove and Install", "Others"];
+
   const partsTotal = (appointment.costing?.items || []).filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
-  const laborTotal = (appointment.costing?.items || []).filter(item =>
-    item.type !== 'parts' && (
-      (item.type as string) === 'labor' ||
-      (item.type as string) === 'service' ||
-      item.type === 'service_labor' ||
-      (item.category && laborCategories.includes(item.category))
-    )
-  ).reduce((sum, item) => sum + item.total, 0) || 0
+  const laborTotal = (appointment.costing?.items || []).filter(item => item.type !== 'parts').reduce((sum, item) => sum + item.total, 0) || 0
 
   // Dynamic Categorization logic
   const categorized = (appointment.costing?.items || []).reduce((acc, item) => {
@@ -269,9 +262,22 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     if (!acc[group]) acc[group] = [];
     acc[group].push(item);
     return acc
-  }, {} as Record<string, any[]>)
+  }, { "Parts": [] } as Record<string, any[]>)
 
-  const activeCategories = Object.keys(categorized);
+  // Filter out empty categories EXCEPT for Parts
+  const activeCategories = Object.keys(categorized).filter(cat => cat === "Parts" || categorized[cat].length > 0);
+
+  // Sort categories according to the predefined order
+  activeCategories.sort((a, b) => {
+    const indexA = categoryOrder.indexOf(a);
+    const indexB = categoryOrder.indexOf(b);
+
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
   const totalRows = (appointment.costing?.items.length || 0) + activeCategories.length
   const shouldScale = totalRows > 12
 
@@ -479,15 +485,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
           </tr>
         </thead>
         <tbody>
-          ${(appointment.costing?.items.length || 0) > 0 ? activeCategories.sort((a, b) => {
-    const order = ["Tinsmith", "Mechanical Works", "Electrical", "Aircon", "Alignment", "Glassworks", "Detailing", "Painting", "Parts", "Service", "Labor", "Service/Labor"];
-    const indexA = order.indexOf(a);
-    const indexB = order.indexOf(b);
-    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-    if (indexA !== -1) return -1;
-    if (indexB !== -1) return 1;
-    return a.localeCompare(b);
-  }).map(cat => {
+          ${activeCategories.length > 0 ? activeCategories.map(cat => {
     const items = categorized[cat];
     return `
               <tr>
@@ -495,7 +493,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
                   ${cat}
                 </td>
               </tr>
-              ${items.map(item => `
+              ${items.length > 0 ? items.map(item => `
                 <tr>
                   <td style="padding-left: 12px;">${item.description}</td>
                   <td>${item.quantity}</td>
@@ -503,7 +501,11 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
                   <td class="amount">₱${item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
                   <td class="amount">₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
                 </tr>
-              `).join("")}
+              `).join("") : (cat === "Parts" ? `
+                <tr>
+                  <td colspan="5" style="padding-left: 12px; color: #999; font-style: italic;">No parts were added.</td>
+                </tr>
+              ` : "")}
             `;
   }).join("") : `
               <tr>
