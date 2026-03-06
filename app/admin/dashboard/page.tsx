@@ -5514,18 +5514,6 @@ export default function AdminDashboard() {
                 onChange={(e) => setGatepassData({ ...gatepassData, orNo: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="gate-amount">Amount Total (Auto-computed)</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
-                <Input
-                  id="gate-amount"
-                  className="pl-8 font-mono bg-muted"
-                  readOnly
-                  value={gatepassData.amount}
-                />
-              </div>
-            </div>
 
             <div className="grid grid-cols-2 gap-4 md:col-span-2 border-t border-border pt-4 mt-2">
               <div className="space-y-2">
@@ -5585,6 +5573,18 @@ export default function AdminDashboard() {
                         amount: (Number(prev.brpad) || 0) + (Number(prev.aircon) || 0) + val + (Number(prev.mechanical) || 0)
                       }));
                     }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gate-amount">Amount Total (Auto-computed)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
+                  <Input
+                    id="gate-amount"
+                    className="pl-8 font-mono bg-muted"
+                    readOnly
+                    value={gatepassData.amount}
                   />
                 </div>
               </div>
