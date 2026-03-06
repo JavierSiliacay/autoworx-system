@@ -479,6 +479,8 @@ export default function AdminDashboard() {
   // Refs for stabilizing typing and real-time updates
   const costingDebounceRef = useRef<Record<string, any>>({})
   const lastStateUpdateRef = useRef<Record<string, number>>({})
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const historySearchInputRef = useRef<HTMLInputElement>(null)
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -711,6 +713,22 @@ export default function AdminDashboard() {
       supabase.removeChannel(channel)
     }
   }, [status, session?.user?.role, toast])
+
+  // Keyboard shortcut for search (Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault()
+        if (activeTab === "history" && !showDeletedHistory && historyViewMode === "list") {
+          historySearchInputRef.current?.focus()
+        } else {
+          searchInputRef.current?.focus()
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [activeTab, showDeletedHistory, historyViewMode])
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/admin" })
@@ -2793,32 +2811,49 @@ export default function AdminDashboard() {
               </div>
 
               {/* Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, email, phone, plate, brand, tracking code, insurance, or estimate #..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-10 w-full"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+              <div className="group relative max-w-4xl mx-auto w-full pt-2">
+                {/* Always-on Deep Aura Glow */}
+                <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/20 to-indigo-500/10 rounded-[32px] blur-3xl opacity-30 group-focus-within:opacity-60 transition-opacity duration-700" />
+
+                {/* Always-on Rotating Laser Border */}
+                <div className="absolute -inset-[2.5px] rounded-[22px] overflow-hidden opacity-50 group-focus-within:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-[-1000%] animate-[spin_8s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,#3b82f6_50%,transparent_100%)]" />
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors duration-300" />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder="Search anything: Name, Plate, Email, Brand, Tracking Code, Estimate #..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-14 pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-base font-medium placeholder:text-muted-foreground/50"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="p-1.5 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                    <div className="hidden sm:flex items-center gap-1.5 px-2 py-1.5 border border-border bg-secondary/50 rounded-lg text-[10px] font-bold text-muted-foreground pointer-events-none select-none shadow-sm">
+                      <span className="text-[12px]">⌘</span>K
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Search Result Summary Feedack */}
+              {/* Search Result Summary Feedback */}
               {searchQuery.trim() && (
-                <div className="animate-in fade-in slide-in-from-top-1 duration-300">
-                  <p className="text-sm font-bold text-primary">
+                <div className="animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border/50" />
+                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-wider">
                     {filteredAppointments.length === 0
-                      ? `No results found for "${searchQuery}"`
-                      : `${filteredAppointments.length} result${filteredAppointments.length !== 1 ? 's' : ''} for "${searchQuery}"`}
-                  </p>
+                      ? `No matches for "${searchQuery}"`
+                      : `Found ${filteredAppointments.length} matching unit${filteredAppointments.length !== 1 ? 's' : ''}`}
+                  </span>
+                  <div className="h-px flex-1 bg-border/50" />
                 </div>
               )}
 
@@ -4310,22 +4345,37 @@ export default function AdminDashboard() {
               {/* History Toolbar - Search, Filter, Sort */}
               <div className="space-y-4">
                 {/* Search Bar */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by tracking code, name, email, phone, plate, vehicle, insurance, or estimate #..."
-                    value={historySearchQuery}
-                    onChange={(e) => setHistorySearchQuery(e.target.value)}
-                    className="pl-10 pr-10 w-full"
-                  />
-                  {historySearchQuery && (
-                    <button
-                      onClick={() => setHistorySearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
+                <div className="group relative max-w-4xl mx-auto w-full pt-2">
+                  {/* Always-on Deep Aura Glow */}
+                  <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/20 to-indigo-500/10 rounded-[32px] blur-3xl opacity-30 group-focus-within:opacity-60 transition-opacity duration-700" />
+
+                  {/* Always-on Rotating Laser Border */}
+                  <div className="absolute -inset-[2.5px] rounded-[22px] overflow-hidden opacity-50 group-focus-within:opacity-100 transition-opacity duration-500">
+                    <div className="absolute inset-[-1000%] animate-[spin_8s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,#3b82f6_50%,transparent_100%)]" />
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors duration-300" />
+                    <Input
+                      ref={historySearchInputRef}
+                      placeholder="Search history: Name, Plate, Email, Brand, Tracking Code, Estimate #..."
+                      value={historySearchQuery}
+                      onChange={(e) => setHistorySearchQuery(e.target.value)}
+                      className="pl-14 pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-base font-medium placeholder:text-muted-foreground/50"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                      {historySearchQuery && (
+                        <button
+                          onClick={() => setHistorySearchQuery("")}
+                          className="p-1.5 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                      <div className="hidden sm:flex items-center gap-1.5 px-2 py-1.5 border border-border bg-secondary/50 rounded-lg text-[10px] font-bold text-muted-foreground pointer-events-none select-none shadow-sm">
+                        <span className="text-[12px]">⌘</span>K
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Filters and Sort */}
@@ -4373,14 +4423,16 @@ export default function AdminDashboard() {
                   </Select>
                 </div>
 
-                {/* Search Result Summary Feedack */}
+                {/* Search Result Summary Feedback */}
                 {historySearchQuery.trim() && (
-                  <div className="animate-in fade-in slide-in-from-top-1 duration-300">
-                    <p className="text-sm font-bold text-primary">
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border/50" />
+                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-wider">
                       {filteredAndSortedHistory.length === 0
-                        ? `No results found for "${historySearchQuery}"`
-                        : `${filteredAndSortedHistory.length} result${filteredAndSortedHistory.length !== 1 ? 's' : ''} for "${historySearchQuery}"`}
-                    </p>
+                        ? `No matches for "${historySearchQuery}"`
+                        : `Found ${filteredAndSortedHistory.length} matching record${filteredAndSortedHistory.length !== 1 ? 's' : ''}`}
+                    </span>
+                    <div className="h-px flex-1 bg-border/50" />
                   </div>
                 )}
 

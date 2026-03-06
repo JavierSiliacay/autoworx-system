@@ -254,13 +254,93 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                         <td className="p-2 border border-border text-left">
                                             {isEditing ? (
                                                 <Input className="h-7 px-2 text-xs w-full" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} />
-                                            ) : ("")}
+                                            ) : (r.estimate_number || "")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono">{costs.brpad > 0 ? costs.brpad.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-"}</td>
-                                        <td className="p-2 border border-border text-right font-mono">{costs.aircon > 0 ? costs.aircon.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-"}</td>
-                                        <td className="p-2 border border-border text-right font-mono">{costs.electrical > 0 ? costs.electrical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-"}</td>
-                                        <td className="p-2 border border-border text-right font-mono">{costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-"}</td>
-                                        <td className="p-2 border border-border text-right font-mono font-bold">{costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-"}</td>
+                                        <td className="p-2 border border-border text-right font-mono">
+                                            {isEditing ? (
+                                                <Input
+                                                    className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
+                                                    type="number"
+                                                    value={editedData[r.id]?.costing?.gatepass_breakdown?.brpad ?? costs.brpad}
+                                                    onChange={(e) => {
+                                                        const val = Number(e.target.value) || 0
+                                                        const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
+                                                        const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
+                                                        const newGB = { ...currentGB, brpad: val }
+                                                        newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
+                                                        setEditedData(prev => ({
+                                                            ...prev,
+                                                            [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                        }))
+                                                    }}
+                                                />
+                                            ) : (costs.brpad > 0 ? costs.brpad.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
+                                        </td>
+                                        <td className="p-2 border border-border text-right font-mono">
+                                            {isEditing ? (
+                                                <Input
+                                                    className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
+                                                    type="number"
+                                                    value={editedData[r.id]?.costing?.gatepass_breakdown?.aircon ?? costs.aircon}
+                                                    onChange={(e) => {
+                                                        const val = Number(e.target.value) || 0
+                                                        const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
+                                                        const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
+                                                        const newGB = { ...currentGB, aircon: val }
+                                                        newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
+                                                        setEditedData(prev => ({
+                                                            ...prev,
+                                                            [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                        }))
+                                                    }}
+                                                />
+                                            ) : (costs.aircon > 0 ? costs.aircon.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
+                                        </td>
+                                        <td className="p-2 border border-border text-right font-mono">
+                                            {isEditing ? (
+                                                <Input
+                                                    className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
+                                                    type="number"
+                                                    value={editedData[r.id]?.costing?.gatepass_breakdown?.electrical ?? costs.electrical}
+                                                    onChange={(e) => {
+                                                        const val = Number(e.target.value) || 0
+                                                        const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
+                                                        const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
+                                                        const newGB = { ...currentGB, electrical: val }
+                                                        newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
+                                                        setEditedData(prev => ({
+                                                            ...prev,
+                                                            [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                        }))
+                                                    }}
+                                                />
+                                            ) : (costs.electrical > 0 ? costs.electrical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
+                                        </td>
+                                        <td className="p-2 border border-border text-right font-mono">
+                                            {isEditing ? (
+                                                <Input
+                                                    className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
+                                                    type="number"
+                                                    value={editedData[r.id]?.costing?.gatepass_breakdown?.mechanical ?? costs.mechanical}
+                                                    onChange={(e) => {
+                                                        const val = Number(e.target.value) || 0
+                                                        const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
+                                                        const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
+                                                        const newGB = { ...currentGB, mechanical: val }
+                                                        newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
+                                                        setEditedData(prev => ({
+                                                            ...prev,
+                                                            [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                        }))
+                                                    }}
+                                                />
+                                            ) : (costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
+                                        </td>
+                                        <td className="p-2 border border-border text-right font-mono font-bold text-red-600">
+                                            {isEditing ? (
+                                                (editedData[r.id]?.costing?.total ?? costs.total).toLocaleString("en-PH", { minimumFractionDigits: 2 })
+                                            ) : (costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
+                                        </td>
                                         <td className="p-2 border border-border text-center">
                                             {isEditing ? (
                                                 <Input className="h-7 px-2 text-[10px] w-full" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} />

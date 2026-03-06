@@ -63,11 +63,17 @@ export async function PUT(request: Request) {
     if (updates.costing !== undefined) dbUpdates.costing = updates.costing
     if (updates.loaAttachments !== undefined) dbUpdates.loa_attachments = updates.loaAttachments
     if (updates.paulNotes !== undefined) dbUpdates.paul_notes = updates.paulNotes
+    if (updates.paul_notes !== undefined) dbUpdates.paul_notes = updates.paul_notes
     if (updates.currentRepairPart !== undefined) dbUpdates.current_repair_part = updates.currentRepairPart
+    if (updates.current_repair_part !== undefined) dbUpdates.current_repair_part = updates.current_repair_part
     if (updates.repairStatus !== undefined) dbUpdates.repair_status = updates.repairStatus
     if (updates.name !== undefined) dbUpdates.name = updates.name
     if (updates.email !== undefined) dbUpdates.email = updates.email
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone
+    if (updates.estimate_number !== undefined) dbUpdates.estimate_number = updates.estimate_number
+    if (updates.vehicle_plate !== undefined) dbUpdates.vehicle_plate = updates.vehicle_plate
+    if (updates.vehicle_color !== undefined) dbUpdates.vehicle_color = updates.vehicle_color
+    if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
 
     console.log(`[API History PUT] Attempting direct ID update for: ${id}`);
     // Try by ID first using admin client to bypass RLS
