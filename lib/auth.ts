@@ -17,12 +17,23 @@ const DEVELOPER_EMAILS = [
   "javiersiliacaysiliacay1234@gmail.com"
 ]
 
+const AUTHORIZED_REPORT_EMAILS = [
+  "paulsuazo64@gmail.com",
+  "alfred_autoworks@yahoo.com",
+  "siliacay.javier@gmail.com",
+  "javiersiliacaysiliacay1234@gmail.com"
+]
+
 export function isAuthorizedAdminEmail(email?: string | null) {
   return !!email && AUTHORIZED_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
 }
 
 export function isDeveloperEmail(email?: string | null) {
   return !!email && DEVELOPER_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
+}
+
+export function isAuthorizedForReport(email?: string | null) {
+  return !!email && AUTHORIZED_REPORT_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
 }
 
 type SignInCallbackParams = { user: { email?: string | null } }

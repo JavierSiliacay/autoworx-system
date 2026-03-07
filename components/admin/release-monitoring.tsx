@@ -18,8 +18,22 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { PlusCircle } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { isAuthorizedForReport } from "@/lib/auth"
 
 export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
+    const { data: session } = useSession()
+
+    if (!isAuthorizedForReport(session?.user?.email)) {
+        return (
+            <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border">
+                <X className="w-12 h-12 mx-auto mb-4 text-red-500" />
+                <h3 className="text-lg font-bold">Unauthorized</h3>
+                <p>You are not authorized to view this confidential report.</p>
+            </div>
+        )
+    }
+
     // Extract unique months from completed_at / created_at date strings
     const monthsMap = new Map<string, string>()
 

@@ -9,7 +9,7 @@ import { signOut, useSession } from "next-auth/react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast, toast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
-import { isAuthorizedAdminEmail, isDeveloperEmail } from "@/lib/auth"
+import { isAuthorizedAdminEmail, isDeveloperEmail, isAuthorizedForReport } from "@/lib/auth"
 import {
   Wrench,
   LogOut,
@@ -405,6 +405,7 @@ export default function AdminDashboard() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false)
   const isDeveloperUser = isDeveloperEmail(session?.user?.email)
+  const isAuthorizedForReportUser = isAuthorizedForReport(session?.user?.email)
   const [archiveModalOpen, setArchiveModalOpen] = useState(false)
   const [archiveAppointmentId, setArchiveAppointmentId] = useState<string | null>(null)
   const [archiveReason, setArchiveReason] = useState("")
@@ -4540,21 +4541,23 @@ export default function AdminDashboard() {
               >
                 List View
               </button>
-              <button
-                onClick={() => setHistoryViewMode("release_monitoring")}
-                className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${historyViewMode === "release_monitoring"
-                  ? "border-primary text-primary border-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                Release Monitoring Report
-              </button>
+              {isAuthorizedForReportUser && (
+                <button
+                  onClick={() => setHistoryViewMode("release_monitoring")}
+                  className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${historyViewMode === "release_monitoring"
+                    ? "border-primary text-primary border-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Release Monitoring Report
+                </button>
+              )}
             </div>
           )
         }
 
         {
-          activeTab === "history" && !showDeletedHistory && historyViewMode === "release_monitoring" && (
+          activeTab === "history" && !showDeletedHistory && historyViewMode === "release_monitoring" && isAuthorizedForReportUser && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <ReleaseMonitoring records={historyRecords} onUpdate={loadHistory} />
             </div>
