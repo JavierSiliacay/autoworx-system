@@ -80,6 +80,7 @@ import { generateTrackingPDF, generateGatepassPDF, type GatepassData } from "@/l
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
 import { ReleaseMonitoring } from "@/components/admin/release-monitoring"
+import { AddAppointmentModal } from "@/components/admin/add-appointment-modal"
 import {
   Dialog,
   DialogContent,
@@ -421,6 +422,7 @@ export default function AdminDashboard() {
   // Appointment Editing states
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isAddAppointmentModalOpen, setIsAddAppointmentModalOpen] = useState(false)
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
   const [isSubmittingCopy, setIsSubmittingCopy] = useState(false)
@@ -2950,7 +2952,17 @@ export default function AdminDashboard() {
             <div className="mb-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="font-serif text-2xl font-bold text-foreground">Appointment Requests</h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="font-serif text-2xl font-bold text-foreground">Appointment Requests</h1>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsAddAppointmentModalOpen(true)}
+                      className="px-3 border-dashed border-primary/50 text-primary hover:bg-primary/5 hover:text-primary transition-all group"
+                      title="Add New Appointment"
+                    >
+                      <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    </Button>
+                  </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     {stats.pending} pending request{stats.pending !== 1 ? "s" : ""} waiting for your attention
                   </p>
@@ -2963,6 +2975,13 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
               </div>
+
+              {/* Add Appointment Modal Component */}
+              <AddAppointmentModal
+                isOpen={isAddAppointmentModalOpen}
+                onClose={() => setIsAddAppointmentModalOpen(false)}
+                onSuccess={loadAppointments}
+              />
 
               {/* Search Bar */}
               <div className="group relative max-w-4xl mx-auto w-full pt-2">
