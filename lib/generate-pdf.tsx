@@ -789,56 +789,54 @@ export async function generateGatepassPDF(data: GatepassData): Promise<string> {
 }
 
 export function generateReleaseMonitoringDoc(records: any[], monthLabel: string, getCategorizedCosts: (costing: any) => any): string {
-  // Generate rows. We'll paginate them if needed, but the browser prints automatically handles page breaks for <tr>
-  // We'll enforce some page break controls in CSS. The prompt says max 22 columns (rows) per page.
-  // We can just rely on the browser's page-break-inside: avoid for tr, and it will flow naturally to new pages 
-  // with identical formatting if we use table header groups.
-  const ROWS_PER_PAGE = 22;
-  const chunks = [];
+  let totalBRPAD = 0, totalAircon = 0, totalElectrical = 0, totalMechanical = 0, grandTotal = 0;
 
-  for (let i = 0; i < records.length; i += ROWS_PER_PAGE) {
-    chunks.push(records.slice(i, i + ROWS_PER_PAGE));
-  }
+  const rowsHtml = records.map((r, idx) => {
+    const claimType = r.insurance ? r.insurance.toUpperCase() : "";
+    const unitStr = `${r.vehicle_year || ""} ${r.vehicle_make || ""} ${r.vehicle_model || ""}`.trim();
+    const dateStr = r.completed_at || r.original_created_at ? new Date(r.completed_at || r.original_created_at).toLocaleDateString("en-US") : "";
+    const costs = getCategorizedCosts(r.costing);
 
-  if (chunks.length === 0) {
-    chunks.push([]);
-  }
+    totalBRPAD += costs.brpad;
+    totalAircon += costs.aircon;
+    totalElectrical += costs.electrical;
+    totalMechanical += costs.mechanical;
+    grandTotal += costs.total;
 
-  const tableHeader = `
-    <thead>
+    return `
       <tr>
-        <th colspan="15" style="text-align: left; border: none; padding-bottom: 5px;">
-          <h1 style="margin: 0; font-size: 24px; font-weight: bold; font-family: 'Times New Roman', serif; letter-spacing: 2px; display: inline-block; padding-bottom: 5px; border-bottom: 4px solid; border-image: linear-gradient(to right, #FF0000 50%, #000000 50%) 1;">
-            <span style="color: #FF0000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc; padding-right: 5px;">RELEASE</span>
-            <span style="color: #000000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;">MONITORING</span>
-          </h1>
-          <div style="display: flex; gap: 40px; align-items: baseline; margin-top: 5px; margin-bottom: 5px;">
-            <div style="font-weight: bold; font-size: 14px;">SALES</div>
-            <div style="font-weight: normal; font-size: 12px; margin-left: 20px;">As of: ${monthLabel}</div>
-          </div>
-        </th>
+        <td>${idx + 1}</td>
+        <td class="text-left">${unitStr}</td>
+        <td>${r.vehicle_plate || ""}</td>
+        <td>${r.vehicle_color || ""}</td>
+        <td class="text-left">${r.name || ""}</td>
+        <td style="font-size: 8px;">${claimType}</td>
+        <td class="text-left">${r.estimate_number || ""}</td>
+        <td class="text-right">${costs.brpad > 0 ? costs.brpad.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
+        <td class="text-right">${costs.aircon > 0 ? costs.aircon.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
+        <td class="text-right">${costs.electrical > 0 ? costs.electrical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
+        <td class="text-right">${costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
+        <td class="text-right" style="font-weight: bold;">${costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
+        <td>${r.current_repair_part || ""}</td>
+        <td>${dateStr}</td>
+        <td class="text-left">${r.paul_notes || ""}</td>
       </tr>
-      <tr style="background: #fff345ff; color: #000;">
-        <th style="font-size: 8px; width: 3%;">NO.</th>
-        <th style="font-size: 8px; width: 14%;">UNIT</th>
-        <th style="font-size: 8px; width: 7%;">PLATE</th>
-        <th style="font-size: 8px; width: 5%;">COLOR</th>
-        <th style="font-size: 8px; width: 14%;">OWNER</th>
-        <th style="font-size: 6px; width: 8%;">CLAIM TYPE<br/>INSURANCE/PERSONAL</th>
-        <th style="font-size: 8px; width: 8%;">JO/ ES/ PO #</th>
-        <th style="font-size: 8px; width: 6%;">BRPAD</th>
-        <th style="font-size: 8px; width: 6%;">AIRCON</th>
-        <th style="font-size: 8px; width: 6%;">ELECTRICAL</th>
-        <th style="font-size: 8px; width: 6%;">MECHANICAL</th>
-        <th style="font-size: 8px; width: 7%;">TOTAL</th>
-        <th style="font-size: 8px; width: 3%;">MOD</th>
-        <th style="font-size: 8px; width: 7%;">DATE RELEASED</th>
-        <th style="font-size: 8px; width: 10%;">REMARKS</th>
-      </tr>
-    </thead>
-  `;
+    `;
+  }).join("");
 
-  let htmlContent = `<!DOCTYPE html>
+  const footerHtml = records.length > 0 ? `
+    <tr style="background: #f8f9fa; font-weight: bold;">
+      <td colspan="7" class="text-right" style="padding-right: 15px; border-top: 2px solid #000;">GRAND TOTAL</td>
+      <td class="text-right" style="border-top: 2px solid #000;">${totalBRPAD.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+      <td class="text-right" style="border-top: 2px solid #000;">${totalAircon.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+      <td class="text-right" style="border-top: 2px solid #000;">${totalElectrical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+      <td class="text-right" style="border-top: 2px solid #000;">${totalMechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+      <td class="text-right" style="border-top: 2px solid #000; color: #c00;">${grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+      <td colspan="3" style="border-top: 2px solid #000;"></td>
+    </tr>
+  ` : "";
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -846,7 +844,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
   <style>
     @page { 
       size: 13in 8.5in; /* Long Bond Paper Landscape */
-      margin: 0.5in; 
+      margin: 0.4in; 
     }
     body { 
       font-family: Arial, sans-serif; 
@@ -871,84 +869,65 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
     th {
       font-weight: bold;
     }
+    thead {
+      display: table-header-group;
+    }
     tbody tr {
       page-break-inside: avoid;
     }
     .text-left { text-align: left; }
     .text-right { text-align: right; }
-    .page-break { page-break-after: always; }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: bold;
+      font-family: 'Times New Roman', serif;
+      letter-spacing: 2px;
+      display: inline-block;
+      padding-bottom: 5px;
+      border-bottom: 4px solid;
+      border-image: linear-gradient(to right, #FF0000 50%, #000000 50%) 1;
+    }
   </style>
 </head>
 <body>
-`;
-
-  let globalIndex = 1;
-  let totalBRPAD = 0, totalAircon = 0, totalElectrical = 0, totalMechanical = 0, grandTotal = 0;
-
-  chunks.forEach((chunk, chunkIndex) => {
-    htmlContent += `
-    <table class="${chunkIndex < chunks.length - 1 ? 'page-break' : ''}">
-      ${tableHeader}
-      <tbody>
-    `;
-
-    if (chunk.length === 0) {
-      htmlContent += `<tr><td colspan="15" style="padding: 20px;">No completed units for this month</td></tr>`;
-    }
-
-    chunk.forEach((r: any) => {
-      const claimType = r.insurance ? r.insurance.toUpperCase() : "";
-      const unitStr = `${r.vehicle_year || ""} ${r.vehicle_make || ""} ${r.vehicle_model || ""}`.trim();
-      const dateStr = r.completed_at || r.original_created_at ? new Date(r.completed_at || r.original_created_at).toLocaleDateString("en-US") : "";
-      const costs = getCategorizedCosts(r.costing);
-
-      totalBRPAD += costs.brpad;
-      totalAircon += costs.aircon;
-      totalElectrical += costs.electrical;
-      totalMechanical += costs.mechanical;
-      grandTotal += costs.total;
-
-      htmlContent += `
-        <tr>
-          <td>${globalIndex++}</td>
-          <td class="text-left">${unitStr}</td>
-          <td>${r.vehicle_plate || ""}</td>
-          <td>${r.vehicle_color || ""}</td>
-          <td class="text-left">${r.name || ""}</td>
-          <td style="font-size: 8px;">${claimType}</td>
-          <td class="text-left"></td>
-          <td class="text-right">${costs.brpad > 0 ? costs.brpad.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
-          <td class="text-right">${costs.aircon > 0 ? costs.aircon.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
-          <td class="text-right">${costs.electrical > 0 ? costs.electrical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
-          <td class="text-right">${costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
-          <td class="text-right" style="font-weight: bold;">${costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
-          <td></td>
-          <td>${dateStr}</td>
-          <td class="text-left">${r.paul_notes || ""}</td>
-        </tr >
-        `;
-    });
-
-    if (chunkIndex === chunks.length - 1 && records.length > 0) {
-      htmlContent += `
-        
-          <td colspan="7" class="text-right" style="padding-right: 15px;">GRAND TOTAL</td>
-          <td class="text-right">${totalBRPAD.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          <td class="text-right">${totalAircon.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          <td class="text-right">${totalElectrical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          <td class="text-right">${totalMechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          <td class="text-right" style="font-weight: bold;">${grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          <td colspan="3"></td>
-        </tr >
-        `;
-    }
-
-    htmlContent += `
-      </tbody >
-    </table >
-        `;
-  });
-
-  htmlContent += `</body ></html > `;
-  return htmlContent;
+  <table>
+    <thead>
+      <tr>
+        <th colspan="15" style="text-align: left; border: none; padding-bottom: 10px;">
+          <h1>
+            <span style="color: #FF0000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc; padding-right: 5px;">RELEASE</span>
+            <span style="color: #000000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;">MONITORING</span>
+          </h1>
+          <div style="display: flex; gap: 40px; align-items: baseline; margin-top: 8px;">
+            <div style="font-weight: bold; font-size: 16px;">SALES</div>
+            <div style="font-weight: normal; font-size: 13px; margin-left: 20px; color: #333;">As of: ${monthLabel}</div>
+          </div>
+        </th>
+      </tr>
+      <tr style="background: #fff345ff; color: #000;">
+        <th style="font-size: 8px; width: 3%;">NO.</th>
+        <th style="font-size: 8px; width: 13%;">UNIT</th>
+        <th style="font-size: 8px; width: 7%;">PLATE</th>
+        <th style="font-size: 8px; width: 5%;">COLOR</th>
+        <th style="font-size: 8px; width: 14%;">OWNER</th>
+        <th style="font-size: 6px; width: 8%;">CLAIM TYPE<br/>INSURANCE/PERSONAL</th>
+        <th style="font-size: 8px; width: 8%;">JO/ ES/ PO #</th>
+        <th style="font-size: 8px; width: 6%;">BRPAD</th>
+        <th style="font-size: 8px; width: 6%;">AIRCON</th>
+        <th style="font-size: 8px; width: 6%;">ELECTRICAL</th>
+        <th style="font-size: 8px; width: 6%;">MECHANICAL</th>
+        <th style="font-size: 8px; width: 7%;">TOTAL</th>
+        <th style="font-size: 8px; width: 4%;">MOD</th>
+        <th style="font-size: 8px; width: 7%;">DATE RELEASED</th>
+        <th style="font-size: 8px; width: 10%;">REMARKS</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+      ${footerHtml}
+    </tbody>
+  </table>
+</body>
+</html>`;
 }
