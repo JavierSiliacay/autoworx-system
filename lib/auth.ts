@@ -21,7 +21,6 @@ const AUTHORIZED_REPORT_EMAILS = [
   "paulsuazo64@gmail.com",
   "alfred_autoworks@yahoo.com",
   "siliacay.javier@gmail.com",
-  "autoworxcagayan2025@gmail.com",
   "javiersiliacaysiliacay1234@gmail.com"
 ]
 
