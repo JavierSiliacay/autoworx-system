@@ -811,13 +811,13 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         <td>${r.vehicle_color || ""}</td>
         <td class="text-left">${r.name || ""}</td>
         <td style="font-size: 8px;">${claimType}</td>
-        <td class="text-left">${r.estimate_number || ""}</td>
+        <td class="text-left"></td>
         <td class="text-right">${costs.brpad > 0 ? costs.brpad.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right">${costs.aircon > 0 ? costs.aircon.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right">${costs.electrical > 0 ? costs.electrical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right">${costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right" style="font-weight: bold;">${costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
-        <td>${r.current_repair_part || ""}</td>
+        <td></td>
         <td>${dateStr}</td>
         <td class="text-left">${r.paul_notes || ""}</td>
       </tr>
