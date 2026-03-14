@@ -2884,7 +2884,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Tab Navigation */}
-        <div className="mb-6 flex gap-2 border-b border-border">
+        <div className="mb-6 flex overflow-x-auto pb-1 gap-2 border-b border-border hide-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab("appointments")}
@@ -2951,7 +2951,7 @@ export default function AdminDashboard() {
           <div>
             {/* Toolbar */}
             <div className="mb-6 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <h1 className="font-serif text-2xl font-bold text-foreground">Appointment Requests</h1>
@@ -3000,7 +3000,7 @@ export default function AdminDashboard() {
                     placeholder="Search anything: Name, Plate, Email, Brand, Tracking Code, Estimate #..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-14 pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-base font-medium placeholder:text-muted-foreground/50"
+                    className="pl-14 pr-12 sm:pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-sm sm:text-base font-medium placeholder:text-muted-foreground/50"
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
                     {searchQuery && (
@@ -3568,7 +3568,7 @@ export default function AdminDashboard() {
                               </div>
 
                               {/* Status Actions */}
-                              <div className="flex flex-row lg:flex-col gap-2 shrink-0">
+                              <div className="flex flex-wrap lg:flex-nowrap lg:flex-col gap-2 shrink-0">
                                 <Button
                                   size="sm"
                                   variant={appointment.status === "pending" ? "default" : "outline"}
@@ -3731,7 +3731,7 @@ export default function AdminDashboard() {
                                           <div className="flex items-center justify-between p-4 bg-background/50 rounded-xl border border-border/50 shadow-sm relative overflow-hidden">
                                             <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
 
-                                            <div className="flex flex-1 items-center justify-between gap-2 max-w-full">
+                                            <div className="flex flex-1 items-center justify-between gap-2 max-w-full overflow-x-auto pb-1 hide-scrollbar">
                                               {/* Waiting Approval */}
                                               <Button
                                                 variant="ghost"
@@ -4326,7 +4326,7 @@ export default function AdminDashboard() {
                                         <div className="space-y-3">
                                           {/* Paul D. Suazo Signature Toggle */}
                                           {isAuthorizedAdminEmail(session?.user?.email) && (
-                                            <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg gap-3">
                                               <div className="flex items-center gap-2 text-sm font-medium text-primary">
                                                 <ShieldCheck className="w-4 h-4" />
                                                 Include E-Signature for Paul D. Suazo?
@@ -4339,7 +4339,7 @@ export default function AdminDashboard() {
                                                   size="sm"
                                                   variant={appointment.costing?.includePaulSignature ? "default" : "outline"}
                                                   onClick={() => setIncludePaulSignature(appointment.id, true)}
-                                                  className="h-7 px-3 text-[10px]"
+                                                  className="h-7 px-3 text-[10px] flex-1 sm:flex-none"
                                                   disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
                                                 >
                                                   Yes
@@ -4348,7 +4348,7 @@ export default function AdminDashboard() {
                                                   size="sm"
                                                   variant={appointment.costing?.includePaulSignature === false ? "destructive" : "outline"}
                                                   onClick={() => setIncludePaulSignature(appointment.id, false)}
-                                                  className="h-7 px-3 text-[10px]"
+                                                  className="h-7 px-3 text-[10px] flex-1 sm:flex-none"
                                                   disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
                                                 >
                                                   No
@@ -4359,7 +4359,7 @@ export default function AdminDashboard() {
 
                                           {/* Alfred N. Agbong Signature Toggle */}
                                           {isAuthorizedAdminEmail(session?.user?.email) && (
-                                            <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg gap-3">
                                               <div className="flex items-center gap-2 text-sm font-medium text-primary">
                                                 <ShieldCheck className="w-4 h-4" />
                                                 Include E-Signature for Alfred N. Agbong?
