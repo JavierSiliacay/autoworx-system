@@ -4074,8 +4074,8 @@ export default function AdminDashboard() {
                                     <div className="space-y-3">
                                       {appointment.costing.items.map((item) => (
                                         <div key={item.id} className="p-3 bg-background rounded-lg border border-border">
-                                          <div className="flex items-start gap-3">
-                                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-7 gap-3">
+                                          <div className="flex flex-col gap-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
                                               {(() => {
                                                 const isWidened = widenedItems.has(item.id) || item.description?.includes('\n')
                                                 return (
@@ -4240,7 +4240,7 @@ export default function AdminDashboard() {
                                               </div>
                                             </div>
                                             {/* Keyboard Shortcut Hint */}
-                                            <div className="mt-1 flex justify-between items-center">
+                                            <div className="hidden sm:flex mt-1 justify-between items-center border-t border-border/50 pt-2">
                                               <p className="text-[10px] text-muted-foreground italic">
                                                 <kbd className="bg-muted px-1 rounded font-sans not-italic border border-border">Shift+Enter</kbd> to add new line (in-cell)
                                               </p>
@@ -4452,7 +4452,7 @@ export default function AdminDashboard() {
                     placeholder="Search trash: Name, Plate, Email, Brand, Tracking Code..."
                     value={trashSearchQuery}
                     onChange={(e) => setTrashSearchQuery(e.target.value)}
-                    className="pl-14 pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-red-500/50 shadow-2xl focus:ring-0 transition-all text-base font-medium placeholder:text-muted-foreground/50"
+                    className="pl-14 pr-12 sm:pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-red-500/50 shadow-2xl focus:ring-0 transition-all text-sm sm:text-base font-medium placeholder:text-muted-foreground/50"
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
                     {trashSearchQuery && (
@@ -4585,7 +4585,7 @@ export default function AdminDashboard() {
                       placeholder="Search history: Name, Plate, Email, Brand, Tracking Code, Estimate #..."
                       value={historySearchQuery}
                       onChange={(e) => setHistorySearchQuery(e.target.value)}
-                      className="pl-14 pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-base font-medium placeholder:text-muted-foreground/50"
+                      className="pl-14 pr-12 sm:pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-sm sm:text-base font-medium placeholder:text-muted-foreground/50"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
                       {historySearchQuery && (
