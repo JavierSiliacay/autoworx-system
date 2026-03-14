@@ -5424,7 +5424,9 @@ export default function AdminDashboard() {
               />
             </div>
             <p className="text-[10px] text-muted-foreground italic">
-              Posted as: <span className="font-semibold text-primary">Sir Paul (Service Manager)</span>
+              Posted as: <span className="font-semibold text-primary">
+                {isDeveloperUser ? "Javier (The Developer)" : "Sir Paul (Service Manager)"}
+              </span>
             </p>
           </div>
 
@@ -5446,7 +5448,7 @@ export default function AdminDashboard() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       content: newAnnouncement,
-                      authorName: "Sir Paul"
+                      authorName: isDeveloperUser ? "Javier (The Developer)" : "Sir Paul"
                     })
                   })
                   if (response.ok) {
