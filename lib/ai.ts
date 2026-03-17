@@ -80,40 +80,37 @@ export async function chatWithAI(messages: { role: string; content: string }[]) 
 export async function generateAIReport(dataString: string) {
     const prompt = `
     You are the Senior Business Intelligence Analyst for Autoworx Repairs.
-    This system was developed by Javier Siliacay, an Autotronics student from the University of Science and Technology of Southern Philippines (USTP).
-    Provide a professional, executive-level business analysis report.
+    Your task is to EXCLUSIVELY interpret and summarize the "Release Monitoring Report" based STRICTLY on the provided data.
     
-    Data:
+    Data Source (JSON):
     ${dataString}
     
-    Use the following exact structure:
-    ### FINANCIAL PERFORMANCE
-    Provide a professional breakdown of revenue.
-    - **Gross Revenue**: [Amount]
-    - **Labor Total**: [Amount]
-    - **Parts Total**: [Amount]
-    - **Average Transaction**: [Amount]
+    REQUIRED RULES:
+    1. START exactly with: "### RELEASE MONITORING SUMMARY" (This is for UI formatting).
+    2. Then follow with: "For this {month} Release Monitoring Report..." (Replacing {month} with the name from the data).
+    3. CLAIM TYPE TOTAL: Calculate the sum of all records where insurance is exactly "Personal Claim". Report this as: "the CLAIM TYPE total under INSURANCE / PERSONAL is [Sum]".
+    4. COMPANY TOTALS: Identify named companies (e.g., ORIX, MAPFRE, GSIS, etc.). State each company's individual total separately (e.g., "ORIX total is 112,100").
+    5. SERVICE TOTALS: Sum and report monthly totals for: BRPAD, AIRCON, ELECTRICAL, and MECHANICAL.
+    6. GRAND TOTAL: End with the grand total of all release amounts for that month.
     
-    ### SERVICE ANALYSIS
-    List the top performing services. Show job counts.
+    CRITICAL CONSTRAINTS:
+    - NO extra explanation, NO assumptions, NO unrelated analysis.
+    - NO bullet points in the text.
+    - Output must be CONCISE, STRUCTURED, and follow the EXAMPLE FORMAT exactly.
+    - Use "PHP" for all currency. No Peso symbols.
+    - NO emojis.
     
-    ### STRATEGIC INSIGHTS
-    Provide 3 high-level business recommendations.
+    EXAMPLE FORMAT:
+    "For this {month} Release Monitoring Report, the CLAIM TYPE total under INSURANCE / PERSONAL is PHP 50,000. ORIX total is PHP 112,100. Service totals are BRPAD PHP 150,000, AIRCON PHP 12,100, ELECTRICAL PHP 0, and MECHANICAL PHP 0. The grand total for all releases this month is PHP 162,100."
     
     ### DATA_BLOCK
-    At the very end, provide a JSON block with this exact structure for my charting engine (no other text in this section):
+    Provide a JSON block for charting with this exact structure:
     [
-      {"name": "Labor", "value": [number]},
-      {"name": "Parts", "value": [number]},
-      {"name": "Custom", "value": [number]}
+      {"name": "BRPAD", "value": [total]},
+      {"name": "Aircon", "value": [total]},
+      {"name": "Electrical", "value": [total]},
+      {"name": "Mechanical", "value": [total]}
     ]
-    
-    CRITICAL RULES:
-    1. USE MARKDOWN (### for headers, ** for bold).
-    2. USE 'PHP' for all currency. No Peso symbols.
-    3. NO EMOJIS in the text.
-    4. Provide the DATA_BLOCK JSON accurately.
-    5. Professional, objective tone.
     `;
 
     if (OPENROUTER_API_KEY) {

@@ -40,14 +40,43 @@ export async function POST(request: Request) {
         }
 
         // Process data for AI (minimize tokens)
-        const reportData = history.map(item => ({
-            service: item.service,
-            costing: item.costing,
-            vehicle: `${item.vehicle_make} ${item.vehicle_model}`,
-            date: item.archived_at
-        }))
+        const reportData = history.map(item => {
+            const costing = item.costing || { total: 0, items: [] }
+            let brpad = 0, aircon = 0, electrical = 0, mechanical = 0
 
-        const dataString = JSON.stringify(reportData, null, 2)
+            if (costing.gatepass_breakdown) {
+                const gb = costing.gatepass_breakdown
+                brpad = Number(gb.brpad) || 0
+                aircon = Number(gb.aircon) || 0
+                electrical = Number(gb.electrical) || 0
+                mechanical = Number(gb.mechanical) || 0
+            } else if (costing.items) {
+                costing.items.forEach((i: any) => {
+                    const cat = i.category || ""
+                    if (cat === "Aircon") aircon += i.total || 0
+                    else if (cat === "Electrical") electrical += i.total || 0
+                    else if (cat === "Mechanical Works") mechanical += i.total || 0
+                    else brpad += i.total || 0
+                })
+            }
+
+            return {
+                insurance: item.insurance || "Personal Claim",
+                total: costing.total || 0,
+                brpad,
+                aircon,
+                electrical,
+                mechanical,
+                vehicle: `${item.vehicle_make} ${item.vehicle_model}`,
+                date: item.archived_at
+            }
+        })
+
+        const dataString = JSON.stringify({
+            month: new Date(year, month - 1).toLocaleString('en-US', { month: 'long' }),
+            year: year,
+            records: reportData
+        }, null, 2)
 
         // Generate AI Summary
         const aiResponse = await generateAIReport(dataString)
