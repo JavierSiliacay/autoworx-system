@@ -18,7 +18,7 @@ function cleanResponse(text: string): string {
 /**
  * Generic function to chat with AI using OpenRouter (primary) or Ollama (fallback)
  */
-export async function chatWithAI(messages: { role: string; content: string }[]) {
+export async function chatWithAI(messages: { role: string; content: string }[], options?: { raw?: boolean }) {
     // 1. Try OpenRouter (User preferred method using fetch)
     if (OPENROUTER_API_KEY) {
         try {
@@ -39,7 +39,8 @@ export async function chatWithAI(messages: { role: string; content: string }[]) 
             if (response.ok) {
                 const data = await response.json();
                 if (data.choices && data.choices[0] && data.choices[0].message) {
-                    return cleanResponse(data.choices[0].message.content);
+                    const content = data.choices[0].message.content;
+                    return options?.raw ? content : cleanResponse(content);
                 }
             } else {
                 const errorData = await response.json();
@@ -65,7 +66,8 @@ export async function chatWithAI(messages: { role: string; content: string }[]) 
 
         if (response.ok) {
             const data = await response.json();
-            return cleanResponse(data.response);
+            const content = data.response;
+            return options?.raw ? content : cleanResponse(content);
         }
     } catch (error) {
         console.error("Ollama Error:", error);
@@ -88,10 +90,17 @@ export async function generateAIReport(dataString: string) {
     REQUIRED RULES:
     1. START exactly with: "### RELEASE MONITORING SUMMARY" (This is for UI formatting).
     2. Then follow with: "For this {month} Release Monitoring Report..." (Replacing {month} with the name from the data).
-    3. CLAIM TYPE TOTAL: Calculate the sum of all records where insurance is exactly "Personal Claim". Report this as: "the CLAIM TYPE total under INSURANCE / PERSONAL is [Sum]".
-    4. COMPANY TOTALS: Identify named companies (e.g., ORIX, MAPFRE, GSIS, etc.). State each company's individual total separately (e.g., "ORIX total is 112,100").
-    5. SERVICE TOTALS: Sum and report monthly totals for: BRPAD, AIRCON, ELECTRICAL, and MECHANICAL.
-    6. GRAND TOTAL: End with the grand total of all release amounts for that month.
+    
+    CALCULATION RULES:
+    3. CLAIM TYPE TOTAL: Calculate the sum of the 'total' field for all records where 'insurance' is "Personal Claim". 
+       Report as: "the CLAIM TYPE total under INSURANCE / PERSONAL is PHP [Sum]".
+    4. COMPANY TOTALS: Identify unique companies from the 'insurance' field (e.g., ORIX, MAPFRE, GSIS, etc.) excluding "Personal Claim". 
+       For each company, calculate the sum of their 'total' fields. 
+       State each company's individual total separately (e.g., "ORIX total is PHP 112,100").
+    5. SERVICE TOTALS: Sum the individual 'brpad', 'aircon', 'electrical', and 'mechanical' fields from ALL records. 
+       Report as: "Service totals are BRPAD PHP [Sum], AIRCON PHP [Sum], ELECTRICAL PHP [Sum], and MECHANICAL PHP [Sum]."
+    6. GRAND TOTAL: Calculate the sum of the 'total' field from ALL records for the month. 
+       End with: "The grand total for all releases this month is PHP [Sum]."
     
     CRITICAL CONSTRAINTS:
     - NO extra explanation, NO assumptions, NO unrelated analysis.
@@ -101,15 +110,15 @@ export async function generateAIReport(dataString: string) {
     - NO emojis.
     
     EXAMPLE FORMAT:
-    "For this {month} Release Monitoring Report, the CLAIM TYPE total under INSURANCE / PERSONAL is PHP 50,000. ORIX total is PHP 112,100. Service totals are BRPAD PHP 150,000, AIRCON PHP 12,100, ELECTRICAL PHP 0, and MECHANICAL PHP 0. The grand total for all releases this month is PHP 162,100."
+    "For this {month} Release Monitoring Report, the CLAIM TYPE total under INSURANCE / PERSONAL is PHP 50,000. ORIX total is PHP 112,100. PGI total is PHP 45,000. Service totals are BRPAD PHP 150,000, AIRCON PHP 12,100, ELECTRICAL PHP 0, and MECHANICAL PHP 0. The grand total for all releases this month is PHP 207,100."
     
     ### DATA_BLOCK
-    Provide a JSON block for charting with this exact structure:
+    Provide a JSON block for charting with the exact SUMMED service totals calculated in step 5:
     [
-      {"name": "BRPAD", "value": [total]},
-      {"name": "Aircon", "value": [total]},
-      {"name": "Electrical", "value": [total]},
-      {"name": "Mechanical", "value": [total]}
+      {"name": "BRPAD", "value": [total_sum_brpad]},
+      {"name": "Aircon", "value": [total_sum_aircon]},
+      {"name": "Electrical", "value": [total_sum_electrical]},
+      {"name": "Mechanical", "value": [total_sum_mechanical]}
     ]
     `;
 
@@ -138,5 +147,5 @@ export async function generateAIReport(dataString: string) {
         }
     }
 
-    return chatWithAI([{ role: "user", content: prompt }]);
+    return chatWithAI([{ role: "user", content: prompt }], { raw: true });
 }
