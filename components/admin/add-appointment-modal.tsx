@@ -209,21 +209,43 @@ export function AddAppointmentModal({
             {/* Row 2: Vehicle Core */}
             <div className="space-y-2">
               <Label htmlFor="vehicleBrand">Vehicle Make</Label>
-              <Select
-                value={formData.vehicleBrand}
-                onValueChange={(val) => handleSelectChange("vehicleBrand", val)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Toyota" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px]">
-                  {VEHICLE_BRANDS.map((brand) => (
-                    <SelectItem key={brand} value={brand}>
-                      {brand}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {formData.vehicleBrand !== "Other" ? (
+                <Select
+                  value={formData.vehicleBrand}
+                  onValueChange={(val) => handleSelectChange("vehicleBrand", val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Toyota" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {VEHICLE_BRANDS.map((brand) => (
+                      <SelectItem key={brand} value={brand}>
+                        {brand}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    id="customVehicleBrand"
+                    name="customVehicleBrand"
+                    value={formData.customVehicleBrand}
+                    onChange={handleChange}
+                    placeholder="Enter custom make"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectChange("vehicleBrand", "")}
+                    className="h-9 px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="vehicleModel">Vehicle Model</Label>
