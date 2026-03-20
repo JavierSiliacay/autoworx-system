@@ -544,7 +544,7 @@ export function BookingForm() {
               {errors.name && <p className="text-xs text-red-500 font-medium">{errors.name}</p>}
             </div>
             <div className="space-y-2 group">
-              <Label htmlFor="phone" className={`transition-colors ${errors.phone ? 'text-red-500' : 'group-hover:text-primary'}`}>PH Mobile or Telephone Number (optional)</Label>
+              <Label htmlFor="phone" className={`transition-colors ${errors.phone ? 'text-red-500' : 'group-hover:text-primary'}`}>PH Mobile or Telephone Number</Label>
               <Input
                 id="phone"
                 type="tel"
