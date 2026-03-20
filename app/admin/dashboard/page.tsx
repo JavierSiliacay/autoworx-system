@@ -423,6 +423,8 @@ export default function AdminDashboard() {
   // Appointment Editing states
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [useCustomEditMake, setUseCustomEditMake] = useState(false)
+  const [useCustomCopyMake, setUseCustomCopyMake] = useState(false)
   const [isAddAppointmentModalOpen, setIsAddAppointmentModalOpen] = useState(false)
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
@@ -1644,6 +1646,7 @@ export default function AdminDashboard() {
   }
 
   const handleEditAppointment = (appointment: Appointment) => {
+    setUseCustomEditMake(!!appointment.vehicleMake && !VEHICLE_BRANDS.includes(appointment.vehicleMake))
     setEditingAppointment({ ...appointment })
     setIsEditModalOpen(true)
   }
@@ -2079,6 +2082,7 @@ export default function AdminDashboard() {
 
 
   const handleCopyAppointment = (appointment: Appointment) => {
+    setUseCustomCopyMake(!!appointment.vehicleMake && !VEHICLE_BRANDS.includes(appointment.vehicleMake))
     setCopyFormData({
       name: appointment.name || "",
       email: appointment.email || "",
@@ -4737,7 +4741,39 @@ export default function AdminDashboard() {
                                 <div className="flex-1 space-y-3">
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
+                                    <div className="flex items-center gap-3">
                                       <h3 className="font-semibold text-foreground">{record.name}</h3>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleCopyAppointment({
+                                          id: record.id,
+                                          trackingCode: record.tracking_code,
+                                          name: record.name,
+                                          email: record.email,
+                                          phone: record.phone,
+                                          vehicleMake: record.vehicle_make || "",
+                                          vehicleModel: record.vehicle_model || "",
+                                          vehicleYear: record.vehicle_year || "",
+                                          vehiclePlate: record.vehicle_plate || "",
+                                          vehicleColor: record.vehicle_color || "",
+                                          chassisNumber: record.chassis_number || "",
+                                          engineNumber: record.engine_number || "",
+                                          assigneeDriver: record.assignee_driver || "",
+                                          service: record.service || "",
+                                          message: record.message || "",
+                                          status: "pending",
+                                          repairStatus: record.repair_status || "",
+                                          createdAt: record.original_created_at,
+                                          insurance: record.insurance || "",
+                                          isBackJob: record.is_backjob || false,
+                                        } as Appointment)}
+                                        className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
+                                      >
+                                        <Copy className="w-3 h-3 text-primary" />
+                                        Copy & New Appointment
+                                      </Button>
+                                    </div>
                                       <p className="text-xs text-muted-foreground mt-1">
                                         Tracking: <span className="font-mono text-primary">{record.tracking_code}</span>
                                       </p>
@@ -5292,11 +5328,50 @@ export default function AdminDashboard() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-make">Vehicle Make</Label>
-                <Input
-                  id="edit-make"
-                  value={editingAppointment.vehicleMake}
-                  onChange={(e) => setEditingAppointment({ ...editingAppointment, vehicleMake: e.target.value })}
-                />
+                {!useCustomEditMake ? (
+                  <Select
+                    value={editingAppointment.vehicleMake}
+                    onValueChange={(val) => {
+                      if (val === "Other") {
+                        setUseCustomEditMake(true)
+                        setEditingAppointment({ ...editingAppointment, vehicleMake: "" })
+                      } else {
+                        setEditingAppointment({ ...editingAppointment, vehicleMake: val })
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="edit-make">
+                      <SelectValue placeholder="Select brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VEHICLE_BRANDS.map((brand) => (
+                        <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      id="edit-make"
+                      value={editingAppointment.vehicleMake}
+                      onChange={(e) => setEditingAppointment({ ...editingAppointment, vehicleMake: e.target.value })}
+                      placeholder="Enter custom make"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setUseCustomEditMake(false)
+                        setEditingAppointment({ ...editingAppointment, vehicleMake: "" })
+                      }}
+                      className="h-9 px-2 text-muted-foreground"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-model">Vehicle Model</Label>
@@ -5527,11 +5602,50 @@ export default function AdminDashboard() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="copy-make">Vehicle Make</Label>
-                <Input
-                  id="copy-make"
-                  value={copyFormData.vehicleMake}
-                  onChange={(e) => setCopyFormData({ ...copyFormData, vehicleMake: e.target.value })}
-                />
+                {!useCustomCopyMake ? (
+                  <Select
+                    value={copyFormData.vehicleMake}
+                    onValueChange={(val) => {
+                      if (val === "Other") {
+                        setUseCustomCopyMake(true)
+                        setCopyFormData({ ...copyFormData, vehicleMake: "" })
+                      } else {
+                        setCopyFormData({ ...copyFormData, vehicleMake: val })
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="copy-make">
+                      <SelectValue placeholder="Select brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VEHICLE_BRANDS.map((brand) => (
+                        <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      id="copy-make"
+                      value={copyFormData.vehicleMake}
+                      onChange={(e) => setCopyFormData({ ...copyFormData, vehicleMake: e.target.value })}
+                      placeholder="Enter custom make"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setUseCustomCopyMake(false)
+                        setCopyFormData({ ...copyFormData, vehicleMake: "" })
+                      }}
+                      className="h-9 px-2 text-muted-foreground"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="copy-model">Vehicle Model</Label>
