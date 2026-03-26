@@ -55,7 +55,8 @@ import {
   FileX,
   Loader2,
   Eye,
-  Undo2
+  Undo2,
+  Code2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -81,6 +82,7 @@ import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
 import { ReleaseMonitoring } from "@/components/admin/release-monitoring"
 import { AddAppointmentModal } from "@/components/admin/add-appointment-modal"
+import { DeveloperTasksModal } from "@/components/admin/developer-tasks-modal"
 import {
   Dialog,
   DialogContent,
@@ -429,6 +431,7 @@ export default function AdminDashboard() {
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
   const [isSubmittingCopy, setIsSubmittingCopy] = useState(false)
+  const [isDeveloperTasksModalOpen, setIsDeveloperTasksModalOpen] = useState(false)
   const [copyFormData, setCopyFormData] = useState<any>({
     name: "",
     email: "",
@@ -2755,8 +2758,17 @@ export default function AdminDashboard() {
               </Link>
             </div>
 
-            <div className="flex items-center gap-2">
-              {!isElectron && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 border-blue-500/30 text-blue-500 hover:bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all h-9"
+                  onClick={() => setIsDeveloperTasksModalOpen(true)}
+                >
+                  <Code2 className="w-4 h-4" />
+                  <span className="hidden lg:inline font-bold">Developer Tasks</span>
+                </Button>
+                {!isElectron && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -2946,7 +2958,7 @@ export default function AdminDashboard() {
                 }`}
             >
               <Heart className="w-4 h-4 inline-block mr-2" />
-              Developer Hub ({recommendations.length})
+              Developer Tasks ({recommendations.length})
             </button>
           )}
         </div>
@@ -6144,6 +6156,12 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DeveloperTasksModal
+        isOpen={isDeveloperTasksModalOpen}
+        onClose={() => setIsDeveloperTasksModalOpen(false)}
+        userEmail={session?.user?.email || ""}
+        isDeveloper={isDeveloperUser}
+      />
     </div>
   )
 }
