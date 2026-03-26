@@ -189,7 +189,7 @@ export function DeveloperTasksModal({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "Pending": return <Clock className="w-4 h-4 text-yellow-500" />;
-      case "Ongoing": return <PlayCircle className="w-4 h-4 text-blue-500 animate-pulse" />;
+      case "Ongoing": return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
       case "Done": return <CheckCircle2 className="w-4 h-4 text-green-500" />;
       default: return <AlertCircle className="w-4 h-4 text-gray-500" />;
     }
