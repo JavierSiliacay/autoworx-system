@@ -31,11 +31,12 @@ const fontSizePx = (px: number) => `${(px / TEMPLATE_WIDTH) * 100}cqi`;
  * on your autoworx-template.jpg.
  */
 const PLACEMENTS = {
-  customerName: { x: 350, y: 550 },
-  date: { x: 1950, y: 550 },
-  itemsTableStart: { x: 200, y: 1100 },
-  rowHeight: 80, // Pixel drop per row
-  total: { x: 2050, y: 3100 },
+  // Nudged based on the physical print photo to line up with NAME and Date
+  customerName: { x: 300, y: 720 },  // Lowered from 550 to hit the NAME line
+  date: { x: 1900, y: 720 },         // Lowered to hit the Date line
+  itemsTableStart: { x: 200, y: 1120 }, // Nudged slightly down to sit perfectly in the row
+  rowHeight: 88, // Nudged up from 80 because the physical print showed text drifting downwards
+  total: { x: 2050, y: 2400 }, // Moved up to match a typical total box (adjust if needed)
 };
 
 export interface InvoiceItem {
@@ -158,13 +159,13 @@ export function InvoicePrinterOverlay({ data = defaultData }: InvoicePrinterOver
               >
                 {/* 
                   Adjust these widths to match the physical columns on your paper!
-                  Based on the picture: Description (wide), Qty (small), Unit (small), Unit Cost (med), Amount (med)
+                  Based on the physical print photo: Description is wider (~55%)
                 */}
-                <span className="w-[50%]">{item.description}</span>
-                <span className="w-[10%] text-center">{item.quantity}</span>
-                <span className="w-[10%] text-center">pcs</span> {/* Placeholder for Unit */}
-                <span className="w-[15%] text-right font-medium">₱{item.price.toFixed(2)}</span>
-                <span className="w-[15%] text-right font-medium">
+                <span className="w-[55%]">{item.description}</span>
+                <span className="w-[9%] text-center">{item.quantity}</span>
+                <span className="w-[9%] text-center">pcs</span>
+                <span className="w-[13.5%] text-right font-medium pr-2">₱{item.price.toFixed(2)}</span>
+                <span className="w-[13.5%] text-right font-medium pr-2">
                   ₱{(item.quantity * item.price).toFixed(2)}
                 </span>
               </div>
