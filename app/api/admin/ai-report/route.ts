@@ -25,7 +25,7 @@ export async function POST(request: Request) {
         const { data: history, error } = await supabase
             .from("appointment_history")
             .select("*")
-            .eq("is_backjob", false) // Exclude back-jobs as per admin requirement
+            .or("is_backjob.eq.false,is_backjob.is.null") // Exclude back-jobs as per admin requirement, but allow nulls (manual records)
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 })
@@ -43,7 +43,14 @@ export async function POST(request: Request) {
             const dateStr = item.completed_at || item.original_created_at
             if (!dateStr) return false
             const d = new Date(dateStr)
-            return d.getFullYear() === year && (d.getMonth() + 1) === month
+            
+            if (isNaN(d.getTime())) return false
+            
+            // Adjust to Philippine Time (GMT+8) which the browser UI uses to render the Release Monitoring table
+            d.setHours(d.getHours() + 8)
+            const y = d.getUTCFullYear()
+            const m = d.getUTCMonth() + 1
+            return y === year && m === month
         })
 
         if (filteredHistory.length === 0) {
@@ -55,6 +62,8 @@ export async function POST(request: Request) {
             const costing = item.costing || { total: 0, items: [] }
             let brpad = 0, aircon = 0, electrical = 0, mechanical = 0
 
+            let total = costing.total || 0
+
             // Exact parity with getCategorizedCosts in release-monitoring.tsx
             if (costing.gatepass_breakdown) {
                 const gb = costing.gatepass_breakdown
@@ -62,6 +71,7 @@ export async function POST(request: Request) {
                 aircon = Number(gb.aircon) || 0
                 electrical = Number(gb.electrical) || 0
                 mechanical = Number(gb.mechanical) || 0
+                total = Number(gb.total) || costing.total || 0
             } else if (costing.items) {
                 costing.items.forEach((i: any) => {
                     const cat = i.category || ""
@@ -71,10 +81,22 @@ export async function POST(request: Request) {
                     else brpad += i.total || 0
                 })
             }
+            
+            let rawInsurance = (item.insurance || "").trim()
+
+            // If it's literally empty string or the word 'blank', mark as UNKNOWN INSURANCE
+            if (!rawInsurance || rawInsurance.toLowerCase() === "blank" || rawInsurance.toLowerCase() === "n/a" || rawInsurance.toLowerCase() === "none") {
+                rawInsurance = "UNKNOWN INSURANCE"
+            }
+
+            // We no longer strictly enforce the "Personal vs Insurance" binary here;
+            // The user wants exactly what's grouped in that column.
+            const claimType = rawInsurance.toUpperCase()
 
             return {
-                insurance: item.insurance || "Personal Claim",
-                total: costing.total || 0,
+                claimType: claimType,
+                insuranceCompany: claimType, 
+                total: total,
                 brpad,
                 aircon,
                 electrical,
@@ -84,9 +106,32 @@ export async function POST(request: Request) {
             }
         })
 
+        // Pre-compute the generic aggregations for accuracy and deterministic reporting
+        const claimTypeSummary: Record<string, { count: number, totalAmount: number }> = {}
+        const serviceSummary = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0 }
+        let exactGrandTotal = 0
+
+        reportData.forEach(r => {
+            if (!claimTypeSummary[r.claimType]) {
+                claimTypeSummary[r.claimType] = { count: 0, totalAmount: 0 }
+            }
+            claimTypeSummary[r.claimType].count += 1
+            claimTypeSummary[r.claimType].totalAmount += r.total
+
+            serviceSummary.brpad += r.brpad
+            serviceSummary.aircon += r.aircon
+            serviceSummary.electrical += r.electrical
+            serviceSummary.mechanical += r.mechanical
+
+            exactGrandTotal += r.total
+        })
+
         const dataString = JSON.stringify({
             month: new Date(year, month - 1).toLocaleString('en-US', { month: 'long' }),
             year: year,
+            exactGrandTotal: exactGrandTotal,
+            serviceSummary: serviceSummary,
+            claimTypeSummary: claimTypeSummary,
             records: reportData
         }, null, 2)
 

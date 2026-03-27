@@ -92,25 +92,27 @@ export async function generateAIReport(dataString: string) {
     2. Then follow with: "For this {month} Release Monitoring Report..." (Replacing {month} with the name from the data).
     
     CALCULATION RULES:
-    3. CLAIM TYPE TOTAL: Calculate the sum of the 'total' field for all records where 'insurance' is "Personal Claim". 
-       Report as: "the CLAIM TYPE total under INSURANCE / PERSONAL is PHP [Sum]".
-    4. COMPANY TOTALS: Identify unique companies from the 'insurance' field (e.g., ORIX, MAPFRE, GSIS, etc.) excluding "Personal Claim". 
-       For each company, calculate the sum of their 'total' fields. 
-       State each company's individual total separately (e.g., "ORIX total is PHP 112,100").
-    5. SERVICE TOTALS: Sum the individual 'brpad', 'aircon', 'electrical', and 'mechanical' fields from ALL records. 
-       Report as: "Service totals are BRPAD PHP [Sum], AIRCON PHP [Sum], ELECTRICAL PHP [Sum], and MECHANICAL PHP [Sum]."
-    6. GRAND TOTAL: Calculate the sum of the 'total' field from ALL records for the month. 
-       End with: "The grand total for all releases this month is PHP [Sum]."
+    3. REVENUE BY CLAIM SOURCE: Using the exactly provided 'claimTypeSummary' object, output a line item for EVERY explicit category strictly as provided (e.g., ORIX, STANDARD, UNKNOWN INSURANCE, PERSONAL CLAIM, etc). Include the exact record count within the output string for each.
+    4. SERVICE TOTALS: Read the exactly provided 'serviceSummary' object and output lines for each service (BRPAD, Aircon, Electrical, Mechanical). DO NOT execute math yourself.
+    5. GRAND TOTAL: Directly output the provided 'exactGrandTotal'. DO NOT sum up the individual records yourself. 
     
     CRITICAL CONSTRAINTS:
     - NO extra explanation, NO assumptions, NO unrelated analysis.
-    - NO bullet points in the text.
-    - Output must be CONCISE, STRUCTURED, and follow the EXAMPLE FORMAT exactly.
+    - YOU MUST FORMAT EVERYTHING AS A STRICT MARKDOWN LIST using exactly "- **Key**: Value" format.
+    - The UI parser explicitly looks for "- **" strings to build a beautiful data table.
     - Use "PHP" for all currency. No Peso symbols.
-    - NO emojis.
     
     EXAMPLE FORMAT:
-    "For this {month} Release Monitoring Report, the CLAIM TYPE total under INSURANCE / PERSONAL is PHP 50,000. ORIX total is PHP 112,100. PGI total is PHP 45,000. Service totals are BRPAD PHP 150,000, AIRCON PHP 12,100, ELECTRICAL PHP 0, and MECHANICAL PHP 0. The grand total for all releases this month is PHP 207,100."
+    - **Report Period**: {month} Release Monitoring
+    - **Personal Claims**: PHP 50,000 (5 records)
+    - **Insurance Claims**: PHP 157,100 (2 records)
+    - **ORIX**: PHP 112,100
+    - **PGI**: PHP 45,000
+    - **Mechanical Services**: PHP 0
+    - **BRPAD Services**: PHP 150,000
+    - **Aircon Services**: PHP 12,100
+    - **Electrical Services**: PHP 0
+    - **Grand Total**: PHP 207,100
     
     ### DATA_BLOCK
     Provide a JSON block for charting with the exact SUMMED service totals calculated in step 5:
