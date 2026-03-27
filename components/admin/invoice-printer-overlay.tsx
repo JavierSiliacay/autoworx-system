@@ -1,4 +1,21 @@
+"use client";
 
+import React, { useRef } from "react";
+
+/**
+ * Dimensions of the scanned template in pixels at 300 DPI.
+ * Width: 8.5 inches * 300 = 2550
+ * Height: 11.7 inches * 300 = 3510
+ */
+const TEMPLATE_WIDTH = 2550;
+const TEMPLATE_HEIGHT = 3510;
+
+/**
+ * 2. PHYSICAL PAPER SIZE (INCHES)
+ * If your custom paper is smaller or larger than 8.5 x 11.7, edit these values here.
+ * For example, if your paper is 8 inches wide and 10 inches tall, set these to 8 and 10.
+ */
+const PHYSICAL_WIDTH_INCHES = 8.5;
 const PHYSICAL_HEIGHT_INCHES = 11.7;
 
 // Helper functions to map exact pixel coordinates from your image editor 
