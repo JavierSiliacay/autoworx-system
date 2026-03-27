@@ -32,11 +32,11 @@ const fontSizePx = (px: number) => `${(px / TEMPLATE_WIDTH) * 100}cqi`;
  */
 const PLACEMENTS = {
   // Nudged based on the physical print photo to line up with NAME and Date
-  customerName: { x: 300, y: 440 },  // Lowered from 550 to hit the NAME line
+  customerName: { x: 300, y: 420 },  // Lowered from 550 to hit the NAME line
   date: { x: 1900, y: 400 },         // Lowered to hit the Date line
-  itemsTableStart: { x: 200, y: 1120 }, // Nudged slightly down to sit perfectly in the row
+  itemsTableStart: { x: 120, y: 880 }, // Nudged slightly down to sit perfectly in the row
   rowHeight: 88, // Nudged up from 80 because the physical print showed text drifting downwards
-  total: { x: 1850, y: 2620 }, // Moved up to match a typical total box (adjust if needed)
+  total: { x: 1950, y: 2620 }, // Moved up to match a typical total box (adjust if needed)
 };
 
 export interface InvoiceItem {
