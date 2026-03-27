@@ -2575,8 +2575,9 @@ export default function AdminDashboard() {
 
       const matchesEstimateNumber = normalizeString(apt.estimateNumber || "").includes(normalizedQuery)
       const matchesInsurance = normalizeString(apt.insurance || "").includes(normalizedQuery)
+      const matchesServiceAdvisor = normalizeString(apt.serviceAdvisor || apt.costing?.serviceAdvisor || "").includes(normalizedQuery)
 
-      if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesModel && !matchesTrackingCode && !matchesMessage && !matchesEstimateNumber && !matchesInsurance && !matchesMonth) return false
+      if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesModel && !matchesTrackingCode && !matchesMessage && !matchesEstimateNumber && !matchesInsurance && !matchesServiceAdvisor && !matchesMonth) return false
     }
     return true
   })
@@ -2656,8 +2657,9 @@ export default function AdminDashboard() {
 
         const matchesInsurance = normalizeString(record.insurance || "").includes(normalizedQuery)
         const matchesEstimateNumber = normalizeString(record.estimate_number || "").includes(normalizedQuery)
+        const matchesServiceAdvisor = normalizeString(record.costing?.serviceAdvisor || (record as any).service_advisor || "").includes(normalizedQuery)
 
-        if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel && !matchesInsurance && !matchesEstimateNumber && !matchesMonth) {
+        if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel && !matchesInsurance && !matchesEstimateNumber && !matchesServiceAdvisor && !matchesMonth) {
           return false
         }
       }
@@ -2700,8 +2702,9 @@ export default function AdminDashboard() {
       const makeMatch = (apt.vehicleMake || "").toLowerCase().includes(query)
       const modelMatch = (apt.vehicleModel || "").toLowerCase().includes(query)
       const emailMatch = (apt.email || "").toLowerCase().includes(query)
+      const serviceAdvisorMatch = (apt.serviceAdvisor || apt.costing?.serviceAdvisor || "").toLowerCase().includes(query)
 
-      return nameMatch || plateMatch || trackingMatch || makeMatch || modelMatch || emailMatch
+      return nameMatch || plateMatch || trackingMatch || makeMatch || modelMatch || emailMatch || serviceAdvisorMatch
     })
   }, [deletedAppointments, trashSearchQuery])
 
@@ -2758,17 +2761,17 @@ export default function AdminDashboard() {
               </Link>
             </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2 border-blue-500/30 text-blue-500 hover:bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all h-9"
-                  onClick={() => setIsDeveloperTasksModalOpen(true)}
-                >
-                  <Code2 className="w-4 h-4" />
-                  <span className="hidden lg:inline font-bold">Developer Tasks</span>
-                </Button>
-                {!isElectron && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 border-blue-500/30 text-blue-500 hover:bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all h-9"
+                onClick={() => setIsDeveloperTasksModalOpen(true)}
+              >
+                <Code2 className="w-4 h-4" />
+                <span className="hidden lg:inline font-bold">Developer Tasks</span>
+              </Button>
+              {!isElectron && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -3013,7 +3016,7 @@ export default function AdminDashboard() {
                   <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors duration-300" />
                   <Input
                     ref={searchInputRef}
-                    placeholder="Search anything: Name, Plate, Email, Brand, Tracking Code, Estimate #..."
+                    placeholder="Search anything: Name, S/A, Plate, Email, Brand, Tracking Code, Estimate #..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-14 pr-12 sm:pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-sm sm:text-base font-medium placeholder:text-muted-foreground/50"
@@ -4598,7 +4601,7 @@ export default function AdminDashboard() {
                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors duration-300" />
                     <Input
                       ref={historySearchInputRef}
-                      placeholder="Search history: Name, Plate, Email, Brand, Tracking Code, Estimate #..."
+                      placeholder="Search history: Name, S/A, Plate, Email, Brand, Tracking Code, Estimate #..."
                       value={historySearchQuery}
                       onChange={(e) => setHistorySearchQuery(e.target.value)}
                       className="pl-14 pr-12 sm:pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-sm sm:text-base font-medium placeholder:text-muted-foreground/50"
@@ -4753,39 +4756,39 @@ export default function AdminDashboard() {
                                 <div className="flex-1 space-y-3">
                                   <div className="flex items-start justify-between gap-3">
                                     <div>
-                                    <div className="flex items-center gap-3">
-                                      <h3 className="font-semibold text-foreground">{record.name}</h3>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleCopyAppointment({
-                                          id: record.id,
-                                          trackingCode: record.tracking_code,
-                                          name: record.name,
-                                          email: record.email,
-                                          phone: record.phone,
-                                          vehicleMake: record.vehicle_make || "",
-                                          vehicleModel: record.vehicle_model || "",
-                                          vehicleYear: record.vehicle_year || "",
-                                          vehiclePlate: record.vehicle_plate || "",
-                                          vehicleColor: record.vehicle_color || "",
-                                          chassisNumber: record.chassis_number || "",
-                                          engineNumber: record.engine_number || "",
-                                          assigneeDriver: record.assignee_driver || "",
-                                          service: record.service || "",
-                                          message: record.message || "",
-                                          status: "pending",
-                                          repairStatus: record.repair_status || "",
-                                          createdAt: record.original_created_at,
-                                          insurance: record.insurance || "",
-                                          isBackJob: record.is_backjob || false,
-                                        } as Appointment)}
-                                        className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
-                                      >
-                                        <Copy className="w-3 h-3 text-primary" />
-                                        Copy & New Appointment
-                                      </Button>
-                                    </div>
+                                      <div className="flex items-center gap-3">
+                                        <h3 className="font-semibold text-foreground">{record.name}</h3>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleCopyAppointment({
+                                            id: record.id,
+                                            trackingCode: record.tracking_code,
+                                            name: record.name,
+                                            email: record.email,
+                                            phone: record.phone,
+                                            vehicleMake: record.vehicle_make || "",
+                                            vehicleModel: record.vehicle_model || "",
+                                            vehicleYear: record.vehicle_year || "",
+                                            vehiclePlate: record.vehicle_plate || "",
+                                            vehicleColor: record.vehicle_color || "",
+                                            chassisNumber: record.chassis_number || "",
+                                            engineNumber: record.engine_number || "",
+                                            assigneeDriver: record.assignee_driver || "",
+                                            service: record.service || "",
+                                            message: record.message || "",
+                                            status: "pending",
+                                            repairStatus: record.repair_status || "",
+                                            createdAt: record.original_created_at,
+                                            insurance: record.insurance || "",
+                                            isBackJob: record.is_backjob || false,
+                                          } as Appointment)}
+                                          className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
+                                        >
+                                          <Copy className="w-3 h-3 text-primary" />
+                                          Copy & New Appointment
+                                        </Button>
+                                      </div>
                                       <p className="text-xs text-muted-foreground mt-1">
                                         Tracking: <span className="font-mono text-primary">{record.tracking_code}</span>
                                       </p>
