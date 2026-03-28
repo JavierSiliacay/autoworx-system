@@ -14,7 +14,7 @@ export function HeroSection() {
         className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1500 ease-out"
         style={{
           backgroundImage: "url('/background-picture.jpg')",
-          filter: "brightness(0.6)"
+          filter: "brightness(0.7)"
         }}
         aria-hidden="true"
       />
@@ -23,7 +23,7 @@ export function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
 
       {/* Subtle background pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.02)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.02)_50%,rgba(255,255,255,0.02)_75%,transparent_75%,transparent)] bg-[size:4rem_4rem]" />
+      
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 py-24 lg:px-8">
         <div className="text-center max-w-4xl mx-auto">
