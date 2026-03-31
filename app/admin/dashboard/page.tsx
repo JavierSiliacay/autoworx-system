@@ -4096,9 +4096,25 @@ export default function AdminDashboard() {
 
                                   {/* Cost Items List */}
                                   {appointment.costing?.items && appointment.costing.items.length > 0 ? (
-                                    <div className="space-y-3">
-                                      {appointment.costing.items.map((item) => (
-                                        <div key={item.id} className="p-3 bg-background rounded-lg border border-border">
+                                    <div className="space-y-0">
+                                      {appointment.costing.items.map((item, index) => {
+                                        const prevItem = index > 0 ? appointment.costing!.items[index - 1] : null;
+                                        const currentCategory = item.type === 'parts' ? 'Parts' : (item.category || "Others");
+                                        const prevCategory = prevItem ? (prevItem.type === 'parts' ? 'Parts' : (prevItem.category || "Others")) : null;
+                                        const isNewGroup = currentCategory !== prevCategory;
+
+                                        return (
+                                          <div key={item.id}>
+                                            {isNewGroup && (
+                                              <div className={cn("flex items-center gap-2 mb-2", index > 0 ? "mt-8" : "mt-2")}>
+                                                <div className="h-px bg-border flex-grow" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap bg-muted px-2 py-0.5 rounded border border-border/50">
+                                                  {currentCategory}
+                                                </span>
+                                                <div className="h-px bg-border flex-grow" />
+                                              </div>
+                                            )}
+                                            <div className="p-3 bg-background rounded-lg border border-border">
                                           <div className="flex flex-col gap-3">
                                             <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
                                               {(() => {
@@ -4277,7 +4293,8 @@ export default function AdminDashboard() {
                                             </div>
                                           </div>
                                         </div>
-                                      ))}
+                                      </div>
+                                      )})}
 
                                       {/* Discount & Total */}
                                       <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg space-y-3">
