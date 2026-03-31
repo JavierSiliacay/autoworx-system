@@ -4121,9 +4121,41 @@ export default function AdminDashboard() {
                                                 const isWidened = widenedItems.has(item.id) || item.description?.includes('\n')
                                                 return (
                                                   <div className={cn(isWidened ? "sm:col-span-7" : "sm:col-span-3")}>
-                                                    <label className="text-xs text-muted-foreground mb-1 block">
-                                                      {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
-                                                    </label>
+                                                    <div className="flex items-center gap-1.5 mb-1 group/category">
+                                                      <label className="text-xs text-muted-foreground block">
+                                                        {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
+                                                      </label>
+                                                      <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                          <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground/60 hover:text-primary transition-all hover:bg-primary/20 bg-primary/5 rounded-full ring-1 ring-primary/10">
+                                                            <Settings2 className="h-3 w-3" />
+                                                          </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="start" className="w-56 bg-card border-border shadow-2xl">
+                                                          <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Move to Group</div>
+                                                          <DropdownMenuItem 
+                                                            onClick={() => updateCostItem(appointment.id, item.id, { type: 'parts', category: undefined })}
+                                                            className={cn("flex items-center justify-between text-sm", item.type === 'parts' && "bg-primary/10 text-primary")}
+                                                          >
+                                                            Parts
+                                                            {item.type === 'parts' && <Check className="h-3 w-3" />}
+                                                          </DropdownMenuItem>
+                                                          <DropdownMenuSeparator />
+                                                          <div className="max-h-[300px] overflow-y-auto">
+                                                            {COST_ITEM_CATEGORIES.map((cat) => (
+                                                              <DropdownMenuItem 
+                                                                key={cat} 
+                                                                onClick={() => updateCostItem(appointment.id, item.id, { type: 'service_labor', category: cat })}
+                                                                className={cn("flex items-center justify-between text-sm", item.category === cat && "bg-primary/10 text-primary")}
+                                                              >
+                                                                {cat}
+                                                                {item.category === cat && <Check className="h-3 w-3" />}
+                                                              </DropdownMenuItem>
+                                                            ))}
+                                                          </div>
+                                                        </DropdownMenuContent>
+                                                      </DropdownMenu>
+                                                    </div>
                                                     {isWidened ? (
                                                       <Textarea
                                                         id={`description-${item.id}`}
