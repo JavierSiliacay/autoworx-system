@@ -2242,15 +2242,21 @@ export default function AdminDashboard() {
   // Focus effect for new items
   useEffect(() => {
     if (focusNewItem) {
-      // slight delay to allow render
-      setTimeout(() => {
-        const element = document.getElementById(`description-${focusNewItem}`)
+      // Use a shorter timeout and requestAnimationFrame for a more reliable "after render" focus
+      const focusTimer = setTimeout(() => {
+        const element = document.getElementById(`description-${focusNewItem}`) as HTMLTextAreaElement | HTMLInputElement
         if (element) {
           element.focus()
-          // set cursor to end if needed, though mostly empty
+          // Ensure cursor is at the end so user can continue typing after Shift+Enter
+          const length = element.value.length
+          if (element.setSelectionRange) {
+            element.setSelectionRange(length, length)
+          }
         }
         setFocusNewItem(null)
-      }, 100)
+      }, 50)
+
+      return () => clearTimeout(focusTimer)
     }
   }, [focusNewItem])
 
@@ -4125,8 +4131,10 @@ export default function AdminDashboard() {
                                                         onKeyDown={(e) => {
                                                           if (e.key === 'Enter' && e.shiftKey) {
                                                             e.preventDefault()
-                                                            toggleWidenItem(item.id)
+                                                            // Adding the newline triggers auto-widen to Textarea
                                                             updateCostItem(appointment.id, item.id, { description: item.description + "\n" }, true)
+                                                            toggleWidenItem(item.id)
+                                                            setFocusNewItem(item.id)
                                                           } else if (e.key === 'Enter' && !e.shiftKey) {
                                                             e.preventDefault()
                                                             addCostItem(appointment.id, item.type, item.category, item.unit)

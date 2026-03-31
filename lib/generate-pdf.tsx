@@ -1,5 +1,5 @@
 import { BookingFormData } from "@/components/booking/booking-form"
-import type { CostingData, RepairStatus } from "@/lib/constants"
+import type { CostingData, RepairStatus, CostItem } from "@/lib/constants"
 import { PRODUCTION_URL } from "./constants"
 
 interface PDFGeneratorOptions {
@@ -493,15 +493,20 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
                   ${cat}
                 </td>
               </tr>
-              ${items.length > 0 ? items.map(item => `
+              ${items.length > 0 ? items.map((item: CostItem) => {
+                const descLines = item.description.split('\n').filter((l: string) => l.trim() !== "");
+                const linesToRender = descLines.length > 0 ? descLines : [item.description];
+                
+                return linesToRender.map((line: string, lIdx: number) => `
                 <tr>
-                  <td style="padding-left: 12px;">${item.description}</td>
-                  <td>${item.quantity}</td>
-                  <td>${item.unit || ""}</td>
-                  <td class="amount">₱${item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-                  <td class="amount">₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+                  <td style="padding-left: 12px;">${line}</td>
+                  <td>${lIdx === 0 ? item.quantity : ""}</td>
+                  <td>${lIdx === 0 ? (item.unit || "") : ""}</td>
+                  <td class="amount">${lIdx === 0 ? `₱${item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : ""}</td>
+                  <td class="amount">${lIdx === 0 ? `₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : ""}</td>
                 </tr>
-              `).join("") : (cat === "Parts" ? `
+                `).join("");
+              }).join("") : (cat === "Parts" ? `
                 <tr>
                   <td colspan="5" style="padding-left: 12px; color: #999; font-style: italic;">No parts were added.</td>
                 </tr>
