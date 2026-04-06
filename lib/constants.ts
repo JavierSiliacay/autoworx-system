@@ -112,7 +112,8 @@ export interface CostingData {
   notes: string
   createdAt: string
   updatedAt: string
-  serviceAdvisor?: string
+  serviceAdvisorName?: string
+  brpAdvisorName?: string
   deliveryDate?: string
   includePaulSignature?: boolean
   includeAlfredSignature?: boolean

@@ -580,10 +580,19 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         ` : ""}
 
         <div class="signatures-section">
-          <div class="signature-group">
-            <p style="font-size: 9px; font-weight: bold; margin-bottom: 4px;">Prepared by:</p>
-            <span class="signature-name">Ryan Christopher D. Quintos</span>
-            <p class="signature-title">Service Advisor</p>
+          <div style="display: flex; justify-content: space-between;">
+            <div class="signature-group" style="width: 50%;">
+              <p style="font-size: 9px; font-weight: bold; margin-bottom: 4px;">Prepared by:</p>
+              <span class="signature-name">${appointment.costing?.serviceAdvisorName || 'Ryan Christopher D. Quintos'}</span>
+              <p class="signature-title">Service Advisor</p>
+            </div>
+            
+            <div class="signature-group" style="width: 50%; text-align: right;">
+              ${appointment.costing?.brpAdvisorName ? `
+                <span class="signature-name" style="margin-top: 15px !important; display: block;">${appointment.costing.brpAdvisorName}</span>
+                <p class="signature-title">BRP Advisor</p>
+              ` : ''}
+            </div>
           </div>
           
           <p style="font-size: 9px; font-weight: bold; margin-top: 10px; margin-bottom: 4px;">Noted by:</p>

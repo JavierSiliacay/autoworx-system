@@ -2454,6 +2454,16 @@ export default function AdminDashboard() {
     }, false)
   }
 
+  const updateAdvisorNames = (appointmentId: string, field: 'serviceAdvisorName' | 'brpAdvisorName', name: string) => {
+    const appointment = appointments.find((apt) => apt.id === appointmentId)
+    if (!appointment?.costing) return
+
+    updateCosting(appointmentId, {
+      ...appointment.costing,
+      [field]: name,
+    }, false)
+  }
+
   const updateDeliveryDate = (appointmentId: string, deliveryDate: string) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
     if (!appointment?.costing) return
@@ -4385,6 +4395,28 @@ export default function AdminDashboard() {
                                         </div>
                                       </div>
 
+                                      {/* Advisor Names */}
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                        <div className="space-y-2">
+                                          <label className="text-sm font-medium text-foreground">Service Advisor Name</label>
+                                          <Input
+                                            value={appointment.costing?.serviceAdvisorName ?? "Ryan Christopher D. Quintos"}
+                                            onChange={(e) => updateAdvisorNames(appointment.id, 'serviceAdvisorName', e.target.value)}
+                                            placeholder="e.g. Ryan Christopher D. Quintos"
+                                            className="h-9 text-sm bg-background border-border"
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-sm font-medium text-foreground">BRP Advisor Name</label>
+                                          <Input
+                                            value={appointment.costing?.brpAdvisorName || ""}
+                                            onChange={(e) => updateAdvisorNames(appointment.id, 'brpAdvisorName', e.target.value)}
+                                            placeholder="e.g. John Doe (Leave blank if none)"
+                                            className="h-9 text-sm bg-background border-border"
+                                          />
+                                        </div>
+                                      </div>
+
                                       {/* Delivery Info */}
                                       <div className="grid grid-cols-1 gap-4">
                                         <div className="space-y-2">
@@ -4466,7 +4498,6 @@ export default function AdminDashboard() {
                                             </div>
                                           )}
                                         </div>
-
                                         {/* Notes */}
                                         <div className="space-y-2">
                                           <label className="text-sm font-medium text-foreground">Notes (visible to customer)</label>
