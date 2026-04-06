@@ -13,6 +13,8 @@ export const SERVICES = [
   "24/7 Towing Service",
   "Insurance Claim",
   "Rent A Car",
+  "Glassworks",
+  "Parts",
   "Other",
 ]
 
