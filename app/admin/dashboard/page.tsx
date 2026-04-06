@@ -372,6 +372,7 @@ export default function AdminDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [filter, setFilter] = useState<string>("all")
   const [vehicleBrandFilter, setVehicleBrandFilter] = useState<string>("all")
+  const [serviceFilter, setServiceFilter] = useState<string>("all")
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
@@ -2084,7 +2085,7 @@ export default function AdminDashboard() {
   };
 
 
-  const handleCopyAppointment = (appointment: Appointment) => {
+  const handleCopyAppointment = (appointment: Appointment, includeCosting: boolean = false) => {
     setUseCustomCopyMake(!!appointment.vehicleMake && !VEHICLE_BRANDS.includes(appointment.vehicleMake))
     setCopyFormData({
       name: appointment.name || "",
@@ -2105,6 +2106,7 @@ export default function AdminDashboard() {
       damageImages: appointment.damageImages || [],
       orcrImage: appointment.orcrImage || "",
       orcrImage2: appointment.orcrImage2 || "",
+      costing: includeCosting ? appointment.costing : undefined,
     })
     setCopyDamageFiles([])
     setCopyOrcrFile(null)
@@ -2565,6 +2567,8 @@ export default function AdminDashboard() {
     }
     // Vehicle brand filter
     if (vehicleBrandFilter !== "all" && apt.vehicleMake !== vehicleBrandFilter) return false
+    // Service filter
+    if (serviceFilter !== "all" && apt.service !== serviceFilter) return false
     // Date range filter
     if (!isInDateRange(apt.createdAt, dateRangeFilter)) return false
     // Search filter
@@ -3096,6 +3100,20 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
 
+                <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Service Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Services</SelectItem>
+                    {SERVICES.map((service) => (
+                      <SelectItem key={service} value={service}>
+                        {service}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
                   <SelectTrigger className="w-full sm:w-[140px]">
                     <SelectValue placeholder="Date Range" />
@@ -3194,15 +3212,29 @@ export default function AdminDashboard() {
                                   <div>
                                     <div className="flex items-center gap-3">
                                       <h3 className="font-semibold text-foreground">{appointment.name}</h3>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleCopyAppointment(appointment)}
-                                        className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
-                                      >
-                                        <Copy className="w-3 h-3 text-primary" />
-                                        Copy & New Appointment
-                                      </Button>
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
+                                          >
+                                            <Copy className="w-3 h-3 text-primary" />
+                                            Copy & New Appointment
+                                            <ChevronDown className="w-3 h-3 ml-1" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem onClick={() => handleCopyAppointment(appointment, false)} className="gap-2 text-[11px] cursor-pointer">
+                                            <FileText className="w-3 h-3 text-muted-foreground" />
+                                            Copy Information Only
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleCopyAppointment(appointment, true)} className="gap-2 text-[11px] cursor-pointer">
+                                            <Receipt className="w-3 h-3 text-primary" />
+                                            Copy Everything
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
                                     </div>
                                     <div className="flex items-center gap-2 mt-1">
                                       <p className="text-xs text-muted-foreground">
@@ -4836,36 +4868,79 @@ export default function AdminDashboard() {
                                     <div>
                                       <div className="flex items-center gap-3">
                                         <h3 className="font-semibold text-foreground">{record.name}</h3>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleCopyAppointment({
-                                            id: record.id,
-                                            trackingCode: record.tracking_code,
-                                            name: record.name,
-                                            email: record.email,
-                                            phone: record.phone,
-                                            vehicleMake: record.vehicle_make || "",
-                                            vehicleModel: record.vehicle_model || "",
-                                            vehicleYear: record.vehicle_year || "",
-                                            vehiclePlate: record.vehicle_plate || "",
-                                            vehicleColor: record.vehicle_color || "",
-                                            chassisNumber: record.chassis_number || "",
-                                            engineNumber: record.engine_number || "",
-                                            assigneeDriver: record.assignee_driver || "",
-                                            service: record.service || "",
-                                            message: record.message || "",
-                                            status: "pending",
-                                            repairStatus: record.repair_status || "",
-                                            createdAt: record.original_created_at,
-                                            insurance: record.insurance || "",
-                                            isBackJob: record.is_backjob || false,
-                                          } as Appointment)}
-                                          className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
-                                        >
-                                          <Copy className="w-3 h-3 text-primary" />
-                                          Copy & New Appointment
-                                        </Button>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
+                                            >
+                                              <Copy className="w-3 h-3 text-primary" />
+                                              Copy & New Appointment
+                                              <ChevronDown className="w-3 h-3 ml-1" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() => handleCopyAppointment({
+                                                id: record.id,
+                                                trackingCode: record.tracking_code,
+                                                name: record.name,
+                                                email: record.email,
+                                                phone: record.phone,
+                                                vehicleMake: record.vehicle_make || "",
+                                                vehicleModel: record.vehicle_model || "",
+                                                vehicleYear: record.vehicle_year || "",
+                                                vehiclePlate: record.vehicle_plate || "",
+                                                vehicleColor: record.vehicle_color || "",
+                                                chassisNumber: record.chassis_number || "",
+                                                engineNumber: record.engine_number || "",
+                                                assigneeDriver: record.assignee_driver || "",
+                                                service: record.service || "",
+                                                message: record.message || "",
+                                                status: "pending",
+                                                repairStatus: record.repair_status || "",
+                                                createdAt: record.original_created_at,
+                                                insurance: record.insurance || "",
+                                                isBackJob: record.is_backjob || false,
+                                                costing: record.costing,
+                                              } as Appointment, false)}
+                                              className="gap-2 text-[11px] cursor-pointer"
+                                            >
+                                              <FileText className="w-3 h-3 text-muted-foreground" />
+                                              Copy Information Only
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => handleCopyAppointment({
+                                                id: record.id,
+                                                trackingCode: record.tracking_code,
+                                                name: record.name,
+                                                email: record.email,
+                                                phone: record.phone,
+                                                vehicleMake: record.vehicle_make || "",
+                                                vehicleModel: record.vehicle_model || "",
+                                                vehicleYear: record.vehicle_year || "",
+                                                vehiclePlate: record.vehicle_plate || "",
+                                                vehicleColor: record.vehicle_color || "",
+                                                chassisNumber: record.chassis_number || "",
+                                                engineNumber: record.engine_number || "",
+                                                assigneeDriver: record.assignee_driver || "",
+                                                service: record.service || "",
+                                                message: record.message || "",
+                                                status: "pending",
+                                                repairStatus: record.repair_status || "",
+                                                createdAt: record.original_created_at,
+                                                insurance: record.insurance || "",
+                                                isBackJob: record.is_backjob || false,
+                                                costing: record.costing,
+                                              } as Appointment, true)}
+                                              className="gap-2 text-[11px] cursor-pointer"
+                                            >
+                                              <Receipt className="w-3 h-3 text-primary" />
+                                              Copy Everything
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </div>
                                       <p className="text-xs text-muted-foreground mt-1">
                                         Tracking: <span className="font-mono text-primary">{record.tracking_code}</span>
