@@ -4072,7 +4072,8 @@ export default function AdminDashboard() {
                                         <Undo2 className="w-3.5 h-3.5" />
                                       </Button>
                                     </div>
-                                    <div className="flex gap-2 flex-wrap">
+                                    <div className="flex gap-2 flex-wrap items-center">
+
                                       <div className="mr-2">
                                         <Select
                                           value={selectedCategory || "default"}
@@ -4116,227 +4117,216 @@ export default function AdminDashboard() {
                                         return (
                                           <div key={item.id}>
                                             {isNewGroup && (
-                                              <div className={cn("flex items-center gap-2 mb-2", index > 0 ? "mt-8" : "mt-2")}>
-                                                <div className="h-px bg-border flex-grow" />
-                                                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap bg-muted px-2 py-0.5 rounded border border-border/50">
+                                              <div className={cn("flex items-center gap-3 py-4", index > 0 ? "mt-6" : "mt-2")}>
+                                                <div className="h-px bg-blue-500/20 flex-grow" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-white whitespace-nowrap bg-blue-600 px-3 py-1 rounded-full border border-blue-400/50 shadow-[0_0_15px_rgba(37,99,235,0.2)]">
                                                   {currentCategory}
                                                 </span>
-                                                <div className="h-px bg-border flex-grow" />
+                                                <div className="h-px bg-blue-500/20 flex-grow" />
                                               </div>
                                             )}
                                             <div className="p-3 bg-background rounded-lg border border-border">
-                                          <div className="flex flex-col gap-3">
-                                            <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
-                                              {(() => {
-                                                const isWidened = widenedItems.has(item.id) || item.description?.includes('\n')
-                                                return (
-                                                  <div className={cn(isWidened ? "sm:col-span-7" : "sm:col-span-3")}>
-                                                    <div className="flex items-center gap-1.5 mb-1 group/category">
-                                                      <label className="text-xs text-muted-foreground block">
-                                                        {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
-                                                      </label>
-                                                      <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                          <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground/60 hover:text-primary transition-all hover:bg-primary/20 bg-primary/5 rounded-full ring-1 ring-primary/10">
-                                                            <Settings2 className="h-3 w-3" />
-                                                          </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="start" className="w-56 bg-card border-border shadow-2xl">
-                                                          <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Move to Group</div>
-                                                          <DropdownMenuItem 
-                                                            onClick={() => updateCostItem(appointment.id, item.id, { type: 'parts', category: undefined })}
-                                                            className={cn("flex items-center justify-between text-sm", item.type === 'parts' && "bg-primary/10 text-primary")}
-                                                          >
-                                                            Parts
-                                                            {item.type === 'parts' && <Check className="h-3 w-3" />}
-                                                          </DropdownMenuItem>
-                                                          <DropdownMenuSeparator />
-                                                          <div className="max-h-[300px] overflow-y-auto">
-                                                            {COST_ITEM_CATEGORIES.map((cat) => (
-                                                              <DropdownMenuItem 
-                                                                key={cat} 
-                                                                onClick={() => updateCostItem(appointment.id, item.id, { type: 'service_labor', category: cat })}
-                                                                className={cn("flex items-center justify-between text-sm", item.category === cat && "bg-primary/10 text-primary")}
+                                              <div className="flex flex-col gap-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
+                                                  {(() => {
+                                                    const isWidened = widenedItems.has(item.id) || item.description?.includes('\n')
+                                                    return (
+                                                      <div className={cn(isWidened ? "sm:col-span-7" : "sm:col-span-3")}>
+                                                        <div className="flex items-center gap-1.5 mb-1 group/category">
+                                                          <label className="text-xs text-muted-foreground block">
+                                                            {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
+                                                          </label>
+                                                          <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                              <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground/60 hover:text-primary transition-all hover:bg-primary/20 bg-primary/5 rounded-full ring-1 ring-primary/10">
+                                                                <Settings2 className="h-3 w-3" />
+                                                              </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="start" className="w-56 bg-card border-border shadow-2xl">
+                                                              <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Move to Group</div>
+                                                              <DropdownMenuItem
+                                                                onClick={() => updateCostItem(appointment.id, item.id, { type: 'parts', category: undefined })}
+                                                                className={cn("flex items-center justify-between text-sm", item.type === 'parts' && "bg-primary/10 text-primary")}
                                                               >
-                                                                {cat}
-                                                                {item.category === cat && <Check className="h-3 w-3" />}
+                                                                Parts
+                                                                {item.type === 'parts' && <Check className="h-3 w-3" />}
                                                               </DropdownMenuItem>
-                                                            ))}
-                                                          </div>
-                                                        </DropdownMenuContent>
-                                                      </DropdownMenu>
-                                                    </div>
-                                                    {isWidened ? (
-                                                      <Textarea
-                                                        id={`description-${item.id}`}
-                                                        value={item.description}
-                                                        onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
-                                                        onKeyDown={(e) => {
-                                                          if (e.key === 'Enter' && !e.shiftKey) {
-                                                            e.preventDefault()
-                                                            addCostItem(appointment.id, item.type, item.category, item.unit)
-                                                          }
-                                                          // Shift+Enter will naturally add a newline in Textarea
-                                                        }}
-                                                        placeholder="Enter long description..."
-                                                        className="min-h-[80px] text-sm bg-background whitespace-pre-wrap"
-                                                      />
-                                                    ) : (
-                                                      <Input
-                                                        id={`description-${item.id}`}
-                                                        value={item.description}
-                                                        onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
-                                                        onKeyDown={(e) => {
-                                                          if (e.key === 'Enter' && e.shiftKey) {
-                                                            e.preventDefault()
-                                                            // Adding the newline triggers auto-widen to Textarea
-                                                            updateCostItem(appointment.id, item.id, { description: item.description + "\n" }, true)
-                                                            toggleWidenItem(item.id)
-                                                            setFocusNewItem(item.id)
-                                                          } else if (e.key === 'Enter' && !e.shiftKey) {
-                                                            e.preventDefault()
-                                                            addCostItem(appointment.id, item.type, item.category, item.unit)
-                                                          }
-                                                        }}
-                                                        placeholder="Enter description..."
-                                                        className="h-8 text-sm"
-                                                      />
-                                                    )}
-                                                  </div>
-                                                )
-                                              })()}
-                                              <div>
-                                                <label className="text-xs text-muted-foreground mb-1 block">Qty</label>
-                                                <Input
-                                                  type="number"
-                                                  min="1"
-                                                  value={item.quantity}
-                                                  onChange={(e) => updateCostItem(appointment.id, item.id, { quantity: parseInt(e.target.value) || 1 })}
-                                                  onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                                      e.preventDefault()
-                                                      addCostItem(appointment.id, item.type, item.category, item.unit)
-                                                    }
-                                                  }}
-                                                  className="h-8 text-sm"
-                                                />
-                                              </div>
-                                              <div>
-                                                <label className="text-xs text-muted-foreground mb-1 block">Unit</label>
-                                                {(item.unit && (!COMMON_UNITS.includes(item.unit as any) || item.unit === "__CUSTOM__") && item.unit !== "") ? (
-                                                  <div className="relative group">
+                                                              <DropdownMenuSeparator />
+                                                              <div className="max-h-[300px] overflow-y-auto">
+                                                                {COST_ITEM_CATEGORIES.map((cat) => (
+                                                                  <DropdownMenuItem
+                                                                    key={cat}
+                                                                    onClick={() => updateCostItem(appointment.id, item.id, { type: 'service_labor', category: cat })}
+                                                                    className={cn("flex items-center justify-between text-sm", item.category === cat && "bg-primary/10 text-primary")}
+                                                                  >
+                                                                    {cat}
+                                                                    {item.category === cat && <Check className="h-3 w-3" />}
+                                                                  </DropdownMenuItem>
+                                                                ))}
+                                                              </div>
+                                                            </DropdownMenuContent>
+                                                          </DropdownMenu>
+                                                        </div>
+                                                        {isWidened ? (
+                                                          <Textarea
+                                                            id={`description-${item.id}`}
+                                                            value={item.description}
+                                                            onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                                            onKeyDown={(e) => {
+                                                              if (e.key === 'Enter' && !e.shiftKey) {
+                                                                e.preventDefault()
+                                                                addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                              }
+                                                            }}
+                                                            placeholder="Enter long description..."
+                                                            className="min-h-[80px] text-sm bg-background whitespace-pre-wrap"
+                                                          />
+                                                        ) : (
+                                                          <Input
+                                                            id={`description-${item.id}`}
+                                                            value={item.description}
+                                                            onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                                            onKeyDown={(e) => {
+                                                              if (e.key === 'Enter' && e.shiftKey) {
+                                                                e.preventDefault()
+                                                                updateCostItem(appointment.id, item.id, { description: item.description + "\n" }, true)
+                                                                toggleWidenItem(item.id)
+                                                                setFocusNewItem(item.id)
+                                                              } else if (e.key === 'Enter' && !e.shiftKey) {
+                                                                e.preventDefault()
+                                                                addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                              }
+                                                            }}
+                                                            placeholder="Enter description..."
+                                                            className="h-8 text-sm"
+                                                          />
+                                                        )}
+                                                      </div>
+                                                    )
+                                                  })()}
+                                                  <div>
+                                                    <label className="text-xs text-muted-foreground mb-1 block">Qty</label>
                                                     <Input
-                                                      value={item.unit === "__CUSTOM__" ? "" : item.unit}
-                                                      onChange={(e) => updateCostItem(appointment.id, item.id, { unit: e.target.value })}
-                                                      placeholder="Type unit..."
-                                                      className="h-8 text-sm pr-6 bg-background"
-                                                      autoFocus
+                                                      type="number"
+                                                      min="1"
+                                                      value={item.quantity}
+                                                      onChange={(e) => updateCostItem(appointment.id, item.id, { quantity: parseInt(e.target.value) || 1 })}
                                                       onKeyDown={(e) => {
                                                         if (e.key === 'Enter' && !e.shiftKey) {
                                                           e.preventDefault()
                                                           addCostItem(appointment.id, item.type, item.category, item.unit)
                                                         }
                                                       }}
+                                                      className="h-8 text-sm"
                                                     />
+                                                  </div>
+                                                  <div>
+                                                    <label className="text-xs text-muted-foreground mb-1 block">Unit</label>
+                                                    {(item.unit && (!COMMON_UNITS.includes(item.unit as any) || item.unit === "__CUSTOM__") && item.unit !== "") ? (
+                                                      <div className="relative group">
+                                                        <Input
+                                                          value={item.unit === "__CUSTOM__" ? "" : item.unit}
+                                                          onChange={(e) => updateCostItem(appointment.id, item.id, { unit: e.target.value })}
+                                                          placeholder="Type unit..."
+                                                          className="h-8 text-sm pr-6 bg-background"
+                                                          autoFocus
+                                                          onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                              e.preventDefault()
+                                                              addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                            }
+                                                          }}
+                                                        />
+                                                        <Button
+                                                          size="icon"
+                                                          variant="ghost"
+                                                          onClick={() => updateCostItem(appointment.id, item.id, { unit: "PC" })}
+                                                          className="absolute right-0 top-0 h-8 w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                          <X className="w-3 h-3" />
+                                                        </Button>
+                                                      </div>
+                                                    ) : (
+                                                      <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                          <Button
+                                                            variant="outline"
+                                                            className="h-8 w-full text-sm font-normal px-2 justify-between bg-background border-input hover:bg-accent hover:text-accent-foreground"
+                                                          >
+                                                            <span className="truncate">{item.unit || ""}</span>
+                                                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                                          </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="start" className="w-40">
+                                                          <DropdownMenuItem
+                                                            className="text-muted-foreground italic"
+                                                            onClick={() => updateCostItem(appointment.id, item.id, { unit: "" })}
+                                                          >
+                                                            (Blank)
+                                                          </DropdownMenuItem>
+                                                          <DropdownMenuSeparator />
+                                                          <div className="max-h-[200px] overflow-y-auto">
+                                                            {COMMON_UNITS.map((u) => (
+                                                              <DropdownMenuItem
+                                                                key={u}
+                                                                onClick={() => updateCostItem(appointment.id, item.id, { unit: item.unit === u ? "" : u })}
+                                                                className="flex items-center justify-between"
+                                                              >
+                                                                {u}
+                                                                {item.unit === u && <Check className="w-3 h-3 text-primary" />}
+                                                              </DropdownMenuItem>
+                                                            ))}
+                                                          </div>
+                                                          <DropdownMenuSeparator />
+                                                          <DropdownMenuItem
+                                                            onClick={() => updateCostItem(appointment.id, item.id, { unit: "__CUSTOM__" })}
+                                                            className="text-primary font-medium"
+                                                          >
+                                                            <Plus className="w-3 h-3 mr-2" />
+                                                            Custom Unit
+                                                          </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                      </DropdownMenu>
+                                                    )}
+                                                  </div>
+                                                  <div>
+                                                    <label className="text-xs text-muted-foreground mb-1 block">Unit Price</label>
+                                                    <Input
+                                                      type="number"
+                                                      min="0"
+                                                      step="0.01"
+                                                      value={item.unitPrice}
+                                                      onChange={(e) => updateCostItem(appointment.id, item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                                                      onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                          e.preventDefault()
+                                                          addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                        }
+                                                      }}
+                                                      className="h-8 text-sm"
+                                                    />
+                                                  </div>
+                                                  <div className="flex items-end justify-between">
+                                                    <div>
+                                                      <label className="text-xs text-muted-foreground mb-1 block">Total</label>
+                                                      <p className="font-mono font-semibold text-foreground h-8 flex items-center">
+                                                        P{item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                                      </p>
+                                                    </div>
                                                     <Button
-                                                      size="icon"
+                                                      size="sm"
                                                       variant="ghost"
-                                                      onClick={() => updateCostItem(appointment.id, item.id, { unit: "PC" })}
-                                                      className="absolute right-0 top-0 h-8 w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                                      onClick={() => removeCostItem(appointment.id, item.id)}
+                                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10"
                                                     >
-                                                      <X className="w-3 h-3" />
+                                                      <X className="w-4 h-4" />
                                                     </Button>
                                                   </div>
-                                                ) : (
-                                                  <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                      <Button
-                                                        variant="outline"
-                                                        className="h-8 w-full text-sm font-normal px-2 justify-between bg-background border-input hover:bg-accent hover:text-accent-foreground"
-                                                      >
-                                                        <span className="truncate">{item.unit || ""}</span>
-                                                        <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-                                                      </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="start" className="w-40">
-                                                      <DropdownMenuItem
-                                                        className="text-muted-foreground italic"
-                                                        onClick={() => updateCostItem(appointment.id, item.id, { unit: "" })}
-                                                      >
-                                                        (Blank)
-                                                      </DropdownMenuItem>
-                                                      <DropdownMenuSeparator />
-                                                      <div className="max-h-[200px] overflow-y-auto">
-                                                        {COMMON_UNITS.map((u) => (
-                                                          <DropdownMenuItem
-                                                            key={u}
-                                                            onClick={() => updateCostItem(appointment.id, item.id, { unit: item.unit === u ? "" : u })}
-                                                            className="flex items-center justify-between"
-                                                          >
-                                                            {u}
-                                                            {item.unit === u && <Check className="w-3 h-3 text-primary" />}
-                                                          </DropdownMenuItem>
-                                                        ))}
-                                                      </div>
-                                                      <DropdownMenuSeparator />
-                                                      <DropdownMenuItem
-                                                        onClick={() => updateCostItem(appointment.id, item.id, { unit: "__CUSTOM__" })}
-                                                        className="text-primary font-medium"
-                                                      >
-                                                        <Plus className="w-3 h-3 mr-2" />
-                                                        Custom Unit
-                                                      </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                  </DropdownMenu>
-                                                )}
-                                              </div>
-                                              <div>
-                                                <label className="text-xs text-muted-foreground mb-1 block">Unit Price</label>
-                                                <Input
-                                                  type="number"
-                                                  min="0"
-                                                  step="0.01"
-                                                  value={item.unitPrice}
-                                                  onChange={(e) => updateCostItem(appointment.id, item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                                                  onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                                      e.preventDefault()
-                                                      addCostItem(appointment.id, item.type, item.category, item.unit)
-                                                    }
-                                                  }}
-                                                  className="h-8 text-sm"
-                                                />
-                                              </div>
-                                              <div className="flex items-end justify-between">
-                                                <div>
-                                                  <label className="text-xs text-muted-foreground mb-1 block">Total</label>
-                                                  <p className="font-mono font-semibold text-foreground h-8 flex items-center">
-                                                    P{item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                                  </p>
                                                 </div>
-                                                <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  onClick={() => removeCostItem(appointment.id, item.id)}
-                                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                                                >
-                                                  <X className="w-4 h-4" />
-                                                </Button>
                                               </div>
-                                            </div>
-                                            {/* Keyboard Shortcut Hint */}
-                                            <div className="hidden sm:flex mt-1 justify-between items-center border-t border-border/50 pt-2">
-                                              <p className="text-[10px] text-muted-foreground italic">
-                                                <kbd className="bg-muted px-1 rounded font-sans not-italic border border-border">Shift+Enter</kbd> to add new line (in-cell)
-                                              </p>
-                                              <p className="text-[10px] text-muted-foreground italic">
-                                                Press <kbd className="bg-muted px-1 rounded font-sans not-italic border border-border">Enter</kbd> to duplicate row
-                                              </p>
                                             </div>
                                           </div>
-                                        </div>
-                                      </div>
-                                      )})}
+                                        )})}
 
                                       {/* Discount & Total */}
                                       <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg space-y-3">
@@ -6256,3 +6246,5 @@ export default function AdminDashboard() {
     </div>
   )
 }
+
+
