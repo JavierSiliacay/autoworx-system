@@ -1764,7 +1764,7 @@ export default function AdminDashboard() {
 
   const handleDownloadFullReport = (appointment: Appointment) => {
     // Download immediately using existing S/A
-    const savedSA = appointment.costing?.serviceAdvisor || appointment.serviceAdvisor || "N/A"
+    const savedSA = appointment.costing?.serviceAdvisorName || appointment.serviceAdvisor || "N/A"
     const savedDelivery = appointment.costing?.deliveryDate
 
     toast({
@@ -1827,7 +1827,7 @@ export default function AdminDashboard() {
       mechanical: breakdown.mechanical,
       costing: appointment.costing,
       cashier: "",
-      serviceAdvisor: appointment.costing?.serviceAdvisor || appointment.serviceAdvisor || "Paul D. Suazo",
+      serviceAdvisor: appointment.costing?.serviceAdvisorName || appointment.serviceAdvisor || "Paul D. Suazo",
       note: "",
       date: new Date().toLocaleDateString("en-PH", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
       origin
@@ -2591,7 +2591,7 @@ export default function AdminDashboard() {
 
       const matchesEstimateNumber = normalizeString(apt.estimateNumber || "").includes(normalizedQuery)
       const matchesInsurance = normalizeString(apt.insurance || "").includes(normalizedQuery)
-      const matchesServiceAdvisor = normalizeString(apt.serviceAdvisor || apt.costing?.serviceAdvisor || "").includes(normalizedQuery)
+      const matchesServiceAdvisor = normalizeString(apt.serviceAdvisor || apt.costing?.serviceAdvisorName || "").includes(normalizedQuery)
 
       if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesModel && !matchesTrackingCode && !matchesMessage && !matchesEstimateNumber && !matchesInsurance && !matchesServiceAdvisor && !matchesMonth) return false
     }
@@ -2673,7 +2673,7 @@ export default function AdminDashboard() {
 
         const matchesInsurance = normalizeString(record.insurance || "").includes(normalizedQuery)
         const matchesEstimateNumber = normalizeString(record.estimate_number || "").includes(normalizedQuery)
-        const matchesServiceAdvisor = normalizeString(record.costing?.serviceAdvisor || (record as any).service_advisor || "").includes(normalizedQuery)
+        const matchesServiceAdvisor = normalizeString(record.costing?.serviceAdvisorName || (record as any).service_advisor || "").includes(normalizedQuery)
 
         if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel && !matchesInsurance && !matchesEstimateNumber && !matchesServiceAdvisor && !matchesMonth) {
           return false
@@ -2718,7 +2718,7 @@ export default function AdminDashboard() {
       const makeMatch = (apt.vehicleMake || "").toLowerCase().includes(query)
       const modelMatch = (apt.vehicleModel || "").toLowerCase().includes(query)
       const emailMatch = (apt.email || "").toLowerCase().includes(query)
-      const serviceAdvisorMatch = (apt.serviceAdvisor || apt.costing?.serviceAdvisor || "").toLowerCase().includes(query)
+      const serviceAdvisorMatch = (apt.serviceAdvisor || apt.costing?.serviceAdvisorName || "").toLowerCase().includes(query)
 
       return nameMatch || plateMatch || trackingMatch || makeMatch || modelMatch || emailMatch || serviceAdvisorMatch
     })
