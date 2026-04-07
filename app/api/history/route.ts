@@ -76,6 +76,8 @@ export async function PUT(request: Request) {
     if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
     if (updates.is_backjob !== undefined) dbUpdates.is_backjob = updates.is_backjob
     if (updates.isBackJob !== undefined) dbUpdates.is_backjob = updates.isBackJob
+    if (updates.is_synced !== undefined) dbUpdates.is_synced = updates.is_synced
+    if (updates.isSynced !== undefined) dbUpdates.is_synced = updates.isSynced
     if (updates.completed_at !== undefined) dbUpdates.completed_at = updates.completed_at
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt
 
@@ -232,6 +234,7 @@ export async function POST(request: Request) {
       loa_attachment_2: appointment.loa_attachment_2 || null,
       loa_attachments: appointment.loa_attachments || null,
       is_backjob: appointment.is_backjob || false,
+      is_synced: appointment.is_synced || false,
     })
 
   if (insertError) {

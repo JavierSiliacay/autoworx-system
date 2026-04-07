@@ -802,13 +802,13 @@ export async function generateGatepassPDF(data: GatepassData): Promise<string> {
   return htmlContent;
 }
 
-export function generateReleaseMonitoringDoc(records: any[], monthLabel: string, getCategorizedCosts: (costing: any) => any): string {
+export function generateReleaseMonitoringDoc(records: any[], monthLabel: string, getCategorizedCosts: (costing: any) => any, title: string = "RELEASE MONITORING", dateColumnLabel: string = "DATE RELEASED"): string {
   let totalBRPAD = 0, totalAircon = 0, totalElectrical = 0, totalMechanical = 0, grandTotal = 0;
 
   const rowsHtml = records.map((r, idx) => {
     const claimType = r.insurance ? r.insurance.toUpperCase() : "";
-    const unitStr = `${r.vehicle_year || ""} ${r.vehicle_make || ""} ${r.vehicle_model || ""}`.trim();
-    const dateStr = r.completed_at || r.original_created_at ? new Date(r.completed_at || r.original_created_at).toLocaleDateString("en-US") : "";
+    const unitStr = `${r.vehicle_year || r.vehicleYear || ""} ${r.vehicle_make || r.vehicleMake || ""} ${r.vehicle_model || r.vehicleModel || ""}`.trim();
+    const dateStr = r.completed_at || r.original_created_at || r.createdAt ? new Date(r.completed_at || r.original_created_at || r.createdAt).toLocaleDateString("en-US") : "";
     const costs = getCategorizedCosts(r.costing);
 
     totalBRPAD += costs.brpad;
@@ -821,19 +821,19 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       <tr>
         <td>${idx + 1}</td>
         <td class="text-left">${unitStr}</td>
-        <td>${r.vehicle_plate || ""}</td>
-        <td>${r.vehicle_color || ""}</td>
+        <td>${r.vehicle_plate || r.vehiclePlate || ""}</td>
+        <td>${r.vehicle_color || r.vehicleColor || ""}</td>
         <td class="text-left">${r.name || ""}</td>
         <td style="font-size: 8px;">${claimType}</td>
-        <td class="text-left"></td>
+        <td class="text-left">${r.estimate_number || r.estimateNumber || r.trackingCode || ""}</td>
         <td class="text-right">${costs.brpad > 0 ? costs.brpad.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right">${costs.aircon > 0 ? costs.aircon.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right">${costs.electrical > 0 ? costs.electrical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right">${costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right" style="font-weight: bold;">${costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
-        <td></td>
+        <td>${r.current_repair_part || r.currentRepairPart || ""}</td>
         <td>${dateStr}</td>
-        <td class="text-left">${r.paul_notes || ""}</td>
+        <td class="text-left">${r.paul_notes || r.paulNotes || r.remarks || ""}</td>
       </tr>
     `;
   }).join("");
@@ -910,11 +910,11 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       <tr>
         <th colspan="15" style="text-align: left; border: none; padding-bottom: 10px;">
           <h1>
-            <span style="color: #FF0000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc; padding-right: 5px;">RELEASE</span>
-            <span style="color: #000000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;">MONITORING</span>
+            <span style="color: #FF0000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc; padding-right: 5px;">${title.split(' ')[0]}</span>
+            <span style="color: #000000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;">${title.split(' ').slice(1).join(' ')}</span>
           </h1>
           <div style="display: flex; gap: 40px; align-items: baseline; margin-top: 8px;">
-            <div style="font-weight: bold; font-size: 16px;">SALES</div>
+            <div style="font-weight: bold; font-size: 10px;">${title.includes('SALES') ? 'UNIT ENTRY' : 'RELEASE MONITORING'}</div>
             <div style="font-weight: normal; font-size: 13px; margin-left: 20px; color: #333;">As of: ${monthLabel}</div>
           </div>
         </th>
@@ -931,9 +931,9 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         <th style="font-size: 8px; width: 6%;">AIRCON</th>
         <th style="font-size: 8px; width: 6%;">ELECTRICAL</th>
         <th style="font-size: 8px; width: 6%;">MECHANICAL</th>
-        <th style="font-size: 8px; width: 7%;">TOTAL</th>
+        <th style="font-size: 8px; width: 7%;">TOTAL<br/><span style="font-size: 5px; font-weight: normal; letter-spacing: -0.5px;">(w/ VAT/DISCOUNT)</span></th>
         <th style="font-size: 8px; width: 4%;">MOD</th>
-        <th style="font-size: 8px; width: 7%;">DATE RELEASED</th>
+        <th style="font-size: 8px; width: 7%;">${dateColumnLabel}</th>
         <th style="font-size: 8px; width: 10%;">REMARKS</th>
       </tr>
     </thead>

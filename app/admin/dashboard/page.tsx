@@ -56,7 +56,8 @@ import {
   Loader2,
   Eye,
   Undo2,
-  Code2
+  Code2,
+  TrendingUp
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -83,8 +84,9 @@ import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
 import { ReleaseMonitoring } from "@/components/admin/release-monitoring"
 import { AddAppointmentModal } from "@/components/admin/add-appointment-modal"
 import { DeveloperTasksModal } from "@/components/admin/developer-tasks-modal"
+import { SalesMonitoring } from "@/components/admin/sales-monitoring"
 import {
-  Dialog,
+    Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -130,6 +132,7 @@ interface AppointmentDB {
   loa_attachment_2?: string
   loa_attachments?: string[]
   is_backjob?: boolean
+  is_synced?: boolean
 }
 
 // Frontend interface (camelCase)
@@ -163,11 +166,12 @@ interface Appointment {
   paulNotes?: string
   serviceAdvisor?: string
   updatedAt?: string
-  source?: 'active' | 'history'
   loaAttachment?: string
   loaAttachment2?: string
   loaAttachments?: string[]
   isBackJob?: boolean
+  isSynced?: boolean
+  source?: 'active' | 'history' // For unified monitoring logic
 }
 
 // History interface
@@ -204,6 +208,7 @@ interface HistoryRecord {
   loa_attachment_2?: string
   loa_attachments?: string[]
   is_backjob?: boolean
+  is_synced?: boolean
 }
 
 interface Announcement {
@@ -254,7 +259,8 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     loaAttachment: apt.loa_attachment || apt.costing?.loaAttachment,
     loaAttachment2: apt.loa_attachment_2 || apt.costing?.loaAttachment2,
     loaAttachments: apt.loa_attachments || apt.costing?.loaAttachments || [],
-    isBackJob: apt.is_backjob
+    isBackJob: apt.is_backjob,
+    isSynced: apt.is_synced
   }
 }
 
@@ -402,7 +408,7 @@ export default function AdminDashboard() {
   const [zoomModalOpen, setZoomModalOpen] = useState(false)
   const [zoomImages, setZoomImages] = useState<string[]>([])
   const [zoomInitialIndex, setZoomInitialIndex] = useState(0)
-  const [activeTab, setActiveTab] = useState<"appointments" | "history" | "recommendations">("appointments")
+  const [activeTab, setActiveTab] = useState<"appointments" | "history" | "sales" | "recommendations">("appointments")
   const [historyRecords, setHistoryRecords] = useState<HistoryRecord[]>([])
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
@@ -582,6 +588,7 @@ export default function AdminDashboard() {
           insurance: h.insurance,
           estimateNumber: h.estimate_number,
           paulNotes: h.paul_notes,
+          isSynced: true, // History items are considered synced by default as they are final
           source: 'history' as const
         }))
         combined = [...combined, ...mapped]
@@ -2114,6 +2121,57 @@ export default function AdminDashboard() {
     setIsCopyModalOpen(true)
   }
 
+  const handleSyncToSales = async (appointment: Appointment) => {
+    const newSyncState = !appointment.isSynced
+
+    setSavingIds(prev => new Set(prev).add(appointment.id))
+    try {
+      const response = await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: appointment.id,
+          isSynced: newSyncState
+        })
+      })
+
+      if (response.ok) {
+        setAppointments(prev => prev.map(apt =>
+          apt.id === appointment.id ? { ...apt, isSynced: newSyncState, is_synced: newSyncState } : apt
+        ))
+        
+        if (newSyncState) {
+          toast({
+            title: "Synced to Sales",
+            description: "Unit has been registered in the Sales Monitoring log.",
+            variant: "default",
+          })
+        } else {
+          toast({
+            title: "Un-synced from Sales",
+            description: "Unit has been removed from the Sales Monitoring log.",
+            variant: "default",
+          })
+        }
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Sync failed")
+      }
+    } catch (e: any) {
+      toast({ 
+        title: "Sync Failed", 
+        description: e.message.includes('column') ? "Database update failed: Missing 'is_synced' column in Supabase." : "Could not register unit in sales. Please try again.", 
+        variant: "destructive" 
+      })
+    } finally {
+      setSavingIds(prev => {
+        const next = new Set(prev)
+        next.delete(appointment.id)
+        return next
+      })
+    }
+  }
+
   const saveCopyAppointment = async () => {
     setIsSubmittingCopy(true)
     try {
@@ -2955,6 +3013,22 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => {
+              setActiveTab("sales")
+              if (historyRecords.length === 0) {
+                loadHistory()
+              }
+            }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "sales"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            <TrendingUp className="w-4 h-4 inline-block mr-2" />
+            Sales Monitoring
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setActiveTab("history")
               setShowDeletedHistory(true)
               loadDeletedAppointments()
@@ -3235,6 +3309,31 @@ export default function AdminDashboard() {
                                           </DropdownMenuItem>
                                         </DropdownMenuContent>
                                       </DropdownMenu>
+
+                                      {!appointment.isSynced && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleSyncToSales(appointment)}
+                                          disabled={savingIds.has(appointment.id)}
+                                          className="h-7 px-2 text-[10px] gap-1.5 border-amber-500/30 text-amber-600 hover:bg-amber-50 shadow-sm"
+                                        >
+                                          {savingIds.has(appointment.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                          Sync in Sales Monitoring
+                                        </Button>
+                                      )}
+                                      {appointment.isSynced && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleSyncToSales(appointment)}
+                                          disabled={savingIds.has(appointment.id)}
+                                          className="h-7 px-2 text-[10px] bg-amber-50 text-amber-600 border-amber-200 gap-1.5 shadow-sm hover:bg-amber-100"
+                                        >
+                                          {savingIds.has(appointment.id) ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Check className="w-2.5 h-2.5" />}
+                                          Synced in Sales Monitoring
+                                        </Button>
+                                      )}
                                     </div>
                                     <div className="flex items-center gap-2 mt-1">
                                       <p className="text-xs text-muted-foreground">
@@ -4689,6 +4788,23 @@ export default function AdminDashboard() {
           activeTab === "history" && !showDeletedHistory && historyViewMode === "release_monitoring" && isAuthorizedForReportUser && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <ReleaseMonitoring records={historyRecords} onUpdate={loadHistory} />
+            </div>
+          )
+        }
+
+        {
+          activeTab === "sales" && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <SalesMonitoring 
+                records={[
+                  ...appointments.filter(a => a.isSynced).map(a => ({ ...a, source: 'active' })),
+                  ...historyRecords.map(h => ({ ...h, source: 'history' }))
+                ]} 
+                onUpdate={() => {
+                  loadAppointments()
+                  loadHistory()
+                }} 
+              />
             </div>
           )
         }
