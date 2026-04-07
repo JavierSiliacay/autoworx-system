@@ -21,13 +21,13 @@ import {
 import { Label } from "@/components/ui/label"
 import { PlusCircle } from "lucide-react"
 import { useSession } from "next-auth/react"
-import { isAuthorizedForReport } from "@/lib/auth"
+import { isAuthorizedAdminEmail } from "@/lib/auth"
 
 export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     const { data: session } = useSession()
     const { toast } = useToast()
 
-    if (!isAuthorizedForReport(session?.user?.email)) {
+    if (!isAuthorizedAdminEmail(session?.user?.email)) {
         return (
             <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border">
                 <X className="w-12 h-12 mx-auto mb-4 text-red-500" />
@@ -554,7 +554,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     SALES MONITORING
                                 </h1>
                                 <div className="flex gap-10 items-baseline mt-2 mb-2">
-                                    <div className="font-bold text-lg text-foreground uppercase">Revenue Tracking</div>
+                                    <div className="font-bold text-lg text-foreground uppercase">Unit Entry</div>
                                     <div className="font-normal text-sm text-foreground ml-5">As of: {reportPeriodLabel}</div>
                                 </div>
                             </th>
