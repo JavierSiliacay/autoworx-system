@@ -493,20 +493,15 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
                   ${cat}
                 </td>
               </tr>
-              ${items.length > 0 ? items.map((item: CostItem) => {
-                const descLines = item.description.split('\n').filter((l: string) => l.trim() !== "");
-                const linesToRender = descLines.length > 0 ? descLines : [item.description];
-                
-                return linesToRender.map((line: string, lIdx: number) => `
+              ${items.length > 0 ? items.map((item: CostItem) => `
                 <tr>
-                  <td style="padding-left: 12px;">${line}</td>
-                  <td>${lIdx === 0 ? item.quantity : ""}</td>
-                  <td>${lIdx === 0 ? (item.unit || "") : ""}</td>
-                  <td class="amount">${lIdx === 0 ? `₱${item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : ""}</td>
-                  <td class="amount">${lIdx === 0 ? `₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : ""}</td>
+                  <td style="padding-left: 12px; white-space: pre-wrap; vertical-align: top;">${item.description}</td>
+                  <td style="vertical-align: top;">${item.quantity}</td>
+                  <td style="vertical-align: top;">${item.unit || ""}</td>
+                  <td class="amount" style="vertical-align: top;">₱${item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+                  <td class="amount" style="vertical-align: top;">₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
                 </tr>
-                `).join("");
-              }).join("") : (cat === "Parts" ? `
+              `).join("") : (cat === "Parts" ? `
                 <tr>
                   <td colspan="5" style="padding-left: 12px; color: #999; font-style: italic;">No parts were added.</td>
                 </tr>
@@ -521,7 +516,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       </table>
     </div>
     ${appointment.costing?.notes ? `
-    <div style="margin-top: 4px; padding: 4px 8px; background: #f9f9f9; border-left: 3px solid #d9e1f2; font-size: 8.5px; font-style: italic;">
+    <div style="margin-top: 4px; padding: 4px 8px; background: #f9f9f9; border-left: 3px solid #d9e1f2; font-size: 8.5px; font-style: italic; white-space: pre-wrap;">
       <strong>Notes:</strong> ${appointment.costing.notes}
     </div>
     ` : ""}

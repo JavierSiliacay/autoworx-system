@@ -86,7 +86,7 @@ import { AddAppointmentModal } from "@/components/admin/add-appointment-modal"
 import { DeveloperTasksModal } from "@/components/admin/developer-tasks-modal"
 import { SalesMonitoring } from "@/components/admin/sales-monitoring"
 import {
-    Dialog,
+  Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -2139,7 +2139,7 @@ export default function AdminDashboard() {
         setAppointments(prev => prev.map(apt =>
           apt.id === appointment.id ? { ...apt, isSynced: newSyncState, is_synced: newSyncState } : apt
         ))
-        
+
         if (newSyncState) {
           toast({
             title: "Synced to Sales",
@@ -2158,10 +2158,10 @@ export default function AdminDashboard() {
         throw new Error(errorData.error || "Sync failed")
       }
     } catch (e: any) {
-      toast({ 
-        title: "Sync Failed", 
-        description: e.message.includes('column') ? "Database update failed: Missing 'is_synced' column in Supabase." : "Could not register unit in sales. Please try again.", 
-        variant: "destructive" 
+      toast({
+        title: "Sync Failed",
+        description: e.message.includes('column') ? "Database update failed: Missing 'is_synced' column in Supabase." : "Could not register unit in sales. Please try again.",
+        variant: "destructive"
       })
     } finally {
       setSavingIds(prev => {
@@ -4457,7 +4457,8 @@ export default function AdminDashboard() {
                                               </div>
                                             </div>
                                           </div>
-                                        )})}
+                                        )
+                                      })}
 
                                       {/* Discount & Total */}
                                       <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg space-y-3">
@@ -4795,15 +4796,15 @@ export default function AdminDashboard() {
         {
           activeTab === "sales" && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <SalesMonitoring 
+              <SalesMonitoring
                 records={[
                   ...appointments.filter(a => a.isSynced).map(a => ({ ...a, source: 'active' })),
                   ...historyRecords.map(h => ({ ...h, source: 'history' }))
-                ]} 
+                ]}
                 onUpdate={() => {
                   loadAppointments()
                   loadHistory()
-                }} 
+                }}
               />
             </div>
           )
@@ -6437,5 +6438,6 @@ export default function AdminDashboard() {
     </div>
   )
 }
+
 
 
