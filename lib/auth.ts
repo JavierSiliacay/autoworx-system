@@ -18,8 +18,18 @@ const DEVELOPER_EMAILS = [
   "javiersiliacaysiliacay1234@gmail.com"
 ]
 
+// Authorized emails for Release Monitoring Report (Owners/High-level managers)
 const AUTHORIZED_REPORT_EMAILS = [
   "paulsuazo64@gmail.com",
+  "alfred_autoworks@yahoo.com",
+  "siliacay.javier@gmail.com",
+  "javiersiliacaysiliacay1234@gmail.com"
+]
+
+// Authorized emails for Sales Monitoring (Owners, Managers, and specific monitoring staff)
+const AUTHORIZED_SALES_EMAILS = [
+  "paulsuazo64@gmail.com",
+  "autoworxcagayan2025@gmail.com",
   "alfred_autoworks@yahoo.com",
   "siliacay.javier@gmail.com",
   "javiersiliacaysiliacay1234@gmail.com"
@@ -35,6 +45,10 @@ export function isDeveloperEmail(email?: string | null) {
 
 export function isAuthorizedForReport(email?: string | null) {
   return !!email && AUTHORIZED_REPORT_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
+}
+
+export function isAuthorizedForSales(email?: string | null) {
+  return !!email && AUTHORIZED_SALES_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
 }
 
 type SignInCallbackParams = { user: { email?: string | null } }

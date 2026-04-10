@@ -15,6 +15,7 @@ export const SERVICES = [
   "Rent A Car",
   "Glassworks",
   "Parts",
+  "Machine Works",
   "Other",
 ]
 

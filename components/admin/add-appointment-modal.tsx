@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -57,7 +58,8 @@ export function AddAppointmentModal({
     insurance: "",
     serviceAdvisor: "",
     assigneeDriver: "",
-    service: "",
+    service: [] as string[],
+    customService: "",
     message: "",
   });
 
@@ -72,13 +74,24 @@ export function AddAppointmentModal({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleServiceChange = (service: string, checked: boolean) => {
+    setFormData((prev) => {
+      const currentServices = prev.service;
+      if (checked) {
+        return { ...prev, service: [...currentServices, service] };
+      } else {
+        return { ...prev, service: currentServices.filter((s) => s !== service) };
+      }
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.service) {
+    if (!formData.name || formData.service.length === 0) {
       toast({
         title: "Missing fields",
-        description: "Please fill in the required fields (Name and Service).",
+        description: "Please fill in the required fields (Name and at least one Service).",
         variant: "destructive",
       });
       return;
@@ -113,7 +126,7 @@ export function AddAppointmentModal({
           insurance: formData.insurance,
           serviceAdvisor: formData.serviceAdvisor,
           assigneeDriver: formData.assigneeDriver,
-          service: formData.service,
+          service: formData.service.map(s => s === "Other" ? (formData.customService ? `Other: ${formData.customService}` : "Other") : s).join(", "),
           message: formData.message,
         }),
       });
@@ -143,7 +156,8 @@ export function AddAppointmentModal({
         insurance: "",
         serviceAdvisor: "",
         assigneeDriver: "",
-        service: "",
+        service: [] as string[],
+        customService: "",
         message: "",
       });
 
@@ -344,24 +358,38 @@ export function AddAppointmentModal({
                 placeholder="Enter Driver"
               />
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="service">Service Type <span className="text-red-500">*</span></Label>
-              <Select
-                value={formData.service}
-                onValueChange={(val) => handleSelectChange("service", val)}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Body Repairs & Painting" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px]">
-                  {SERVICES.map((service) => (
-                    <SelectItem key={service} value={service}>
+            <div className="space-y-3 md:col-span-3">
+              <Label>Service Types <span className="text-red-500">*</span></Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-md bg-muted/20">
+                {SERVICES.map((service) => (
+                  <div key={service} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`service-${service}`}
+                      checked={formData.service.includes(service)}
+                      onCheckedChange={(checked) =>
+                        handleServiceChange(service, !!checked)
+                      }
+                    />
+                    <label
+                      htmlFor={`service-${service}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
                       {service}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {formData.service.includes("Other") && (
+                <div className="mt-3 animate-in fade-in slide-in-from-top-2">
+                  <Input
+                    name="customService"
+                    value={formData.customService}
+                    onChange={handleChange}
+                    placeholder="Specify other service..."
+                    className="bg-background border-primary/20 focus:border-primary"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

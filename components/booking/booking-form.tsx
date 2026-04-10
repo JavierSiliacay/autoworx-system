@@ -46,7 +46,8 @@ export interface BookingFormData {
   chassisNumber: string
   engineNumber: string
   assigneeDriver: string
-  service: string
+  service: string | string[]
+  customService?: string
   message: string
   orcrImage?: string
   orcrImage2?: string
@@ -73,7 +74,8 @@ export function BookingForm() {
     chassisNumber: "",
     engineNumber: "",
     assigneeDriver: "",
-    service: "",
+    service: [],
+    customService: "",
     message: "",
     insurance: "",
     serviceAdvisor: "",
@@ -120,7 +122,7 @@ export function BookingForm() {
     if (!formData.vehicleModel.trim()) newErrors.vehicleModel = "Model is required"
     if (!formData.vehiclePlate.trim()) newErrors.vehiclePlate = "Plate number is required"
     if (!formData.vehicleColor.trim()) newErrors.vehicleColor = "Color is required"
-    if (!formData.service) newErrors.service = "Service type is required"
+    if (!formData.service || (Array.isArray(formData.service) && formData.service.length === 0)) newErrors.service = "Service type is required"
     if (!orcrImage) newErrors.orcrImage = "ORCR Photo 1 is required"
     if (!captchaVerified) newErrors.captcha = "Please verify you're not a robot"
 
@@ -212,6 +214,9 @@ export function BookingForm() {
         body: JSON.stringify({
           trackingCode: trackingCodeGenerated,
           ...formData,
+          service: Array.isArray(formData.service) 
+            ? formData.service.map(s => s === "Other" ? (formData.customService ? `Other: ${formData.customService}` : "Other") : s).join(", ") 
+            : formData.service,
           damageImages: uploadedImageUrls,
           orcrImage: uploadedOrcrUrl,
           orcrImage2: uploadedOrcrUrl2,
@@ -278,7 +283,7 @@ export function BookingForm() {
     }
   }
 
-  const updateField = (field: keyof BookingFormData, value: string) => {
+  const updateField = (field: keyof BookingFormData, value: any) => {
     // Format phone number if it's the phone field
     let finalValue = value
     if (field === "phone") {
@@ -511,7 +516,8 @@ export function BookingForm() {
                 chassisNumber: "",
                 engineNumber: "",
                 assigneeDriver: "",
-                service: "",
+                service: [],
+                customService: "",
                 message: "",
                 insurance: "",
               })
@@ -734,23 +740,47 @@ export function BookingForm() {
         <div className="animate-in fade-in slide-in-from-left-2 duration-500">
           <h3 className="font-semibold text-foreground mb-4">Service Details</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2 group">
-              <Label htmlFor="service" className={`transition-colors ${errors.service ? 'text-red-500' : 'group-hover:text-primary'}`}>Requested Service *</Label>
-              <Select
-                value={formData.service}
-                onValueChange={(value) => updateField("service", value)}
-              >
-                <SelectTrigger id="service" className={`transition-all ${errors.service ? 'border-red-500 ring-red-500/10' : 'group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20'}`}>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map((service) => (
-                    <SelectItem key={service} value={service}>
-                      {service}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-4 col-span-full">
+              <Label className={`transition-colors ${errors.service ? 'text-red-500' : 'group-hover:text-primary'}`}>Requested Services * (Select all that apply)</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-xl bg-muted/5">
+                {services.map((service) => {
+                  const isChecked = Array.isArray(formData.service) && formData.service.includes(service);
+                  return (
+                    <div key={service} className="flex items-center space-x-3 group/item">
+                      <Checkbox
+                        id={`service-${service}`}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          const currentServices = Array.isArray(formData.service) ? formData.service : [];
+                          if (checked) {
+                            updateField("service", [...currentServices, service]);
+                          } else {
+                            updateField("service", currentServices.filter((s) => s !== service));
+                          }
+                        }}
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <label
+                        htmlFor={`service-${service}`}
+                        className="text-sm font-medium leading-none cursor-pointer group-hover/item:text-primary transition-colors"
+                      >
+                        {service}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              {Array.isArray(formData.service) && formData.service.includes("Other") && (
+                <div className="mt-3 animate-in fade-in slide-in-from-top-2">
+                  <Input
+                    id="customService"
+                    value={formData.customService}
+                    onChange={(e) => updateField("customService", e.target.value)}
+                    placeholder="Specify other service..."
+                    className="bg-muted/10 border-primary/20 focus:border-primary transition-all rounded-lg"
+                  />
+                </div>
+              )}
               {errors.service && <p className="text-xs text-red-500 font-medium">{errors.service}</p>}
             </div>
           </div>

@@ -9,7 +9,7 @@ import { signOut, useSession } from "next-auth/react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast, toast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
-import { isAuthorizedAdminEmail, isDeveloperEmail, isAuthorizedForReport } from "@/lib/auth"
+import { isAuthorizedAdminEmail, isDeveloperEmail, isAuthorizedForReport, isAuthorizedForSales } from "@/lib/auth"
 import {
   Wrench,
   LogOut,
@@ -60,6 +60,7 @@ import {
   TrendingUp
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import {
@@ -415,6 +416,7 @@ export default function AdminDashboard() {
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false)
   const isDeveloperUser = isDeveloperEmail(session?.user?.email)
   const isAuthorizedForReportUser = isAuthorizedForReport(session?.user?.email)
+  const isAuthorizedForSalesUser = isAuthorizedForSales(session?.user?.email)
   const [archiveModalOpen, setArchiveModalOpen] = useState(false)
   const [archiveAppointmentId, setArchiveAppointmentId] = useState<string | null>(null)
   const [archiveReason, setArchiveReason] = useState("")
@@ -432,6 +434,8 @@ export default function AdminDashboard() {
   // Appointment Editing states
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingCustomService, setEditingCustomService] = useState("")
+  const [copyCustomService, setCopyCustomService] = useState("")
   const [useCustomEditMake, setUseCustomEditMake] = useState(false)
   const [useCustomCopyMake, setUseCustomCopyMake] = useState(false)
   const [isAddAppointmentModalOpen, setIsAddAppointmentModalOpen] = useState(false)
@@ -1658,6 +1662,16 @@ export default function AdminDashboard() {
 
   const handleEditAppointment = (appointment: Appointment) => {
     setUseCustomEditMake(!!appointment.vehicleMake && !VEHICLE_BRANDS.includes(appointment.vehicleMake))
+    
+    // Extract custom service if exists
+    const services = appointment.service?.split(", ") || []
+    const otherService = services.find(s => s.startsWith("Other: "))
+    if (otherService) {
+      setEditingCustomService(otherService.replace("Other: ", ""))
+    } else {
+      setEditingCustomService("")
+    }
+
     setEditingAppointment({ ...appointment })
     setIsEditModalOpen(true)
   }
@@ -1667,6 +1681,15 @@ export default function AdminDashboard() {
 
     const isHistory = (editingAppointment as any).source === 'history';
     const endpoint = isHistory ? "/api/history" : "/api/appointments";
+
+    // Finalize service string with custom input if Other is selected
+    const finalService = editingAppointment.service?.split(", ").map(s => 
+      s === "Other" || s.startsWith("Other: ") 
+        ? (editingCustomService ? `Other: ${editingCustomService}` : "Other") 
+        : s
+    ).join(", ");
+    
+    const updatedAppointment = { ...editingAppointment, service: finalService };
 
     // Prepare updates
     let payload: any = { id: editingAppointment.id };
@@ -1684,8 +1707,8 @@ export default function AdminDashboard() {
         vehicle_color: editingAppointment.vehicleColor,
         chassis_number: editingAppointment.chassisNumber,
         engine_number: editingAppointment.engineNumber,
-        assignee_driver: editingAppointment.assigneeDriver,
-        service: editingAppointment.service,
+        assignee_driver: (editingAppointment as any).assignee_driver || editingAppointment.assigneeDriver,
+        service: finalService,
         message: editingAppointment.message,
         insurance: editingAppointment.insurance,
         estimate_number: editingAppointment.estimateNumber,
@@ -1706,7 +1729,7 @@ export default function AdminDashboard() {
         chassisNumber: editingAppointment.chassisNumber,
         engineNumber: editingAppointment.engineNumber,
         assigneeDriver: editingAppointment.assigneeDriver,
-        service: editingAppointment.service,
+        service: finalService,
         message: editingAppointment.message,
         insurance: editingAppointment.insurance,
         serviceAdvisor: editingAppointment.serviceAdvisor,
@@ -1735,7 +1758,7 @@ export default function AdminDashboard() {
             chassis_number: editingAppointment.chassisNumber,
             engine_number: editingAppointment.engineNumber,
             assignee_driver: editingAppointment.assigneeDriver,
-            service: editingAppointment.service,
+            service: finalService,
             message: editingAppointment.message,
             insurance: editingAppointment.insurance,
             estimate_number: editingAppointment.estimateNumber,
@@ -1749,7 +1772,7 @@ export default function AdminDashboard() {
           )
         } else {
           setAppointments((prev) =>
-            prev.map((apt) => (apt.id === editingAppointment.id ? editingAppointment : apt))
+            prev.map((apt) => (apt.id === editingAppointment.id ? updatedAppointment : apt))
           )
         }
 
@@ -2094,6 +2117,15 @@ export default function AdminDashboard() {
 
   const handleCopyAppointment = (appointment: Appointment, includeCosting: boolean = false) => {
     setUseCustomCopyMake(!!appointment.vehicleMake && !VEHICLE_BRANDS.includes(appointment.vehicleMake))
+    
+    // Extract custom service if exists
+    const services = appointment.service?.split(", ") || []
+    const otherService = services.find(s => s.startsWith("Other: "))
+    if (otherService) {
+      setCopyCustomService(otherService.replace("Other: ", ""))
+    } else {
+      setCopyCustomService("")
+    }
     setCopyFormData({
       name: appointment.name || "",
       email: appointment.email || "",
@@ -2250,12 +2282,19 @@ export default function AdminDashboard() {
         finalOrcrImage2 = publicUrl
       }
 
+      const finalizedService = copyFormData.service?.split(", ").map((s: string) => 
+        s === "Other" || s.startsWith("Other: ") 
+          ? (copyCustomService ? `Other: ${copyCustomService}` : "Other") 
+          : s
+      ).join(", ");
+
       const response = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           trackingCode,
           ...copyFormData,
+          service: finalizedService,
           damageImages: finalDamageImages,
           orcrImage: finalOrcrImage,
           orcrImage2: finalOrcrImage2,
@@ -2626,7 +2665,7 @@ export default function AdminDashboard() {
     // Vehicle brand filter
     if (vehicleBrandFilter !== "all" && apt.vehicleMake !== vehicleBrandFilter) return false
     // Service filter
-    if (serviceFilter !== "all" && apt.service !== serviceFilter) return false
+    if (serviceFilter !== "all" && !apt.service?.split(", ").includes(serviceFilter)) return false
     // Date range filter
     if (!isInDateRange(apt.createdAt, dateRangeFilter)) return false
     // Search filter
@@ -2710,7 +2749,7 @@ export default function AdminDashboard() {
       if (!isInDateRange(record.original_created_at, historyDateRangeFilter)) return false
 
       // Service filter
-      if (historyServiceFilter !== "all" && record.service !== historyServiceFilter) return false
+      if (historyServiceFilter !== "all" && !record.service?.split(", ").includes(historyServiceFilter)) return false
 
       // Search filter
       if (historySearchQuery.trim()) {
@@ -3010,22 +3049,24 @@ export default function AdminDashboard() {
             <HistoryIcon className="w-4 h-4 inline-block mr-2" />
             History ({historyRecords.length})
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("sales")
-              if (historyRecords.length === 0) {
-                loadHistory()
-              }
-            }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "sales"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <TrendingUp className="w-4 h-4 inline-block mr-2" />
-            Sales Monitoring
-          </button>
+          {isAuthorizedForSalesUser && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("sales")
+                if (historyRecords.length === 0) {
+                  loadHistory()
+                }
+              }}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "sales"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              <TrendingUp className="w-4 h-4 inline-block mr-2" />
+              Sales Monitoring
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -3762,7 +3803,7 @@ export default function AdminDashboard() {
                                 >
                                   Completed
                                 </Button>
-                                {appointment.service === "Rent A Car" && (
+                                {appointment.service?.includes("Rent A Car") && (
                                   <Button
                                     size="sm"
                                     variant={appointment.status === "confirm" ? "default" : "outline"}
@@ -3859,7 +3900,7 @@ export default function AdminDashboard() {
                                       <SelectContent>
                                         {REPAIR_STATUS_OPTIONS.filter(opt => {
                                           const isInsuranceExclude = ['insurance_approved'].includes(opt.value);
-                                          const isConfirmExclude = opt.value === 'confirm' && appointment.service !== 'Rent A Car';
+                                          const isConfirmExclude = opt.value === 'confirm' && !appointment.service?.includes('Rent A Car');
                                           return !isInsuranceExclude && !isConfirmExclude;
                                         }).map((option) => (
                                           <SelectItem
@@ -4794,7 +4835,7 @@ export default function AdminDashboard() {
         }
 
         {
-          activeTab === "sales" && (
+          activeTab === "sales" && isAuthorizedForSalesUser && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <SalesMonitoring
                 records={[
@@ -5722,19 +5763,47 @@ export default function AdminDashboard() {
                   onChange={(e) => setEditingAppointment({ ...editingAppointment, serviceAdvisor: e.target.value })}
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="edit-service">Service Type</Label>
-                <Select
-                  value={editingAppointment.service}
-                  onValueChange={(val) => setEditingAppointment({ ...editingAppointment, service: val })}
-                >
-                  <SelectTrigger id="edit-service">
-                    <SelectValue placeholder="Select service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SERVICES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3 md:col-span-2">
+                <Label>Service Types</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 border rounded-md bg-muted/20 max-h-[250px] overflow-y-auto">
+                  {SERVICES.map((s) => (
+                    <div key={s} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-service-${s}`}
+                        checked={s === "Other" 
+                          ? editingAppointment.service?.split(", ").some(v => v === "Other" || v.startsWith("Other: ")) 
+                          : editingAppointment.service?.split(", ").includes(s)}
+                        onCheckedChange={(checked) => {
+                          const current = editingAppointment.service ? editingAppointment.service.split(", ").filter(Boolean) : [];
+                          let updated;
+                          if (checked) {
+                            updated = [...current, s].join(", ");
+                          } else {
+                            // If unchecking "Other", remove both "Other" and any "Other: ..." entries
+                            if (s === "Other") {
+                              updated = current.filter(item => !item.startsWith("Other")).join(", ");
+                              setEditingCustomService("");
+                            } else {
+                              updated = current.filter(item => item !== s).join(", ");
+                            }
+                          }
+                          setEditingAppointment({ ...editingAppointment, service: updated });
+                        }}
+                      />
+                      <label htmlFor={`edit-service-${s}`} className="text-xs cursor-pointer">{s}</label>
+                    </div>
+                  ))}
+                </div>
+                {(editingAppointment.service?.split(", ").some(v => v === "Other" || v.startsWith("Other: "))) && (
+                  <div className="mt-2 animate-in fade-in slide-in-from-top-1">
+                    <Input
+                      placeholder="Specify other service..."
+                      value={editingCustomService}
+                      onChange={(e) => setEditingCustomService(e.target.value)}
+                      className="h-8 text-xs bg-background border-primary/20 focus:border-primary"
+                    />
+                  </div>
+                )}
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="edit-message">Customer Message</Label>
@@ -6005,19 +6074,46 @@ export default function AdminDashboard() {
                   onChange={(e) => setCopyFormData({ ...copyFormData, assigneeDriver: e.target.value })}
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="copy-service">Service Type</Label>
-                <Select
-                  value={copyFormData.service}
-                  onValueChange={(val) => setCopyFormData({ ...copyFormData, service: val })}
-                >
-                  <SelectTrigger id="copy-service">
-                    <SelectValue placeholder="Select service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SERVICES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3 md:col-span-3">
+                <Label>Service Types</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-md bg-muted/20">
+                  {SERVICES.map((s) => (
+                    <div key={s} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`copy-service-${s}`}
+                        checked={s === "Other" 
+                          ? copyFormData.service?.split(", ").some((v: string) => v === "Other" || v.startsWith("Other: ")) 
+                          : copyFormData.service?.split(", ").includes(s)}
+                        onCheckedChange={(checked) => {
+                          const current = copyFormData.service ? copyFormData.service.split(", ").filter(Boolean) : [];
+                          let updated;
+                          if (checked) {
+                            updated = [...current, s].join(", ");
+                          } else {
+                            if (s === "Other") {
+                              updated = current.filter((item: string) => !item.startsWith("Other")).join(", ");
+                              setCopyCustomService("");
+                            } else {
+                              updated = current.filter((item: string) => item !== s).join(", ");
+                            }
+                          }
+                          setCopyFormData({ ...copyFormData, service: updated });
+                        }}
+                      />
+                      <label htmlFor={`copy-service-${s}`} className="text-xs cursor-pointer">{s}</label>
+                    </div>
+                  ))}
+                </div>
+                {(copyFormData.service?.split(", ").some((v: string) => v === "Other" || v.startsWith("Other: "))) && (
+                  <div className="mt-2 animate-in fade-in slide-in-from-top-1">
+                    <Input
+                      placeholder="Specify other service..."
+                      value={copyCustomService}
+                      onChange={(e) => setCopyCustomService(e.target.value)}
+                      className="h-8 text-xs bg-background border-primary/20 focus:border-primary"
+                    />
+                  </div>
+                )}
               </div>
               <div className="space-y-2 md:col-span-3">
                 <Label htmlFor="copy-message">Additional Details / Message</Label>

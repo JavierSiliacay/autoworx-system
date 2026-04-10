@@ -21,13 +21,13 @@ import {
 import { Label } from "@/components/ui/label"
 import { PlusCircle } from "lucide-react"
 import { useSession } from "next-auth/react"
-import { isAuthorizedAdminEmail } from "@/lib/auth"
+import { isAuthorizedForSales } from "@/lib/auth"
 
 export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     const { data: session } = useSession()
     const { toast } = useToast()
 
-    if (!isAuthorizedAdminEmail(session?.user?.email)) {
+    if (!isAuthorizedForSales(session?.user?.email)) {
         return (
             <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border">
                 <X className="w-12 h-12 mx-auto mb-4 text-red-500" />
