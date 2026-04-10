@@ -2964,9 +2964,9 @@ export default function AdminDashboard() {
         <div className="mx-auto max-w-7xl px-4 py-4 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-lg">
-                  <Wrench className="w-6 h-6 text-primary-foreground" />
+              <Link href="/" className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-18 h-10 select-none">
+                  <img src="/autoworxlogo.png" alt="Autoworx logo" className="w-18 h-18 object-contain drop-shadow-md" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-serif text-lg font-bold tracking-tight text-primary">

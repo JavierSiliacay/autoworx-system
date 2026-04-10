@@ -85,9 +85,9 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         {/* Same logo section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4">
-            <Wrench className="w-8 h-8 text-primary-foreground" />
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-32 h-32 mb-6 select-none">
+            <img src="/autoworxlogo.png" alt="Autoworx logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="font-serif text-2xl font-bold text-foreground">
             Admin Portal
