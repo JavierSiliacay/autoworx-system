@@ -282,6 +282,7 @@ export async function PUT(request: Request) {
   if (updates.loaAttachments !== undefined) dbUpdates.loa_attachments = updates.loaAttachments
   if (updates.isBackJob !== undefined) dbUpdates.is_backjob = updates.isBackJob
   if (updates.isSynced !== undefined) dbUpdates.is_synced = updates.isSynced
+  if (updates.syncedAt !== undefined) dbUpdates.synced_at = updates.syncedAt
 
   // New editable fields
   if (updates.name !== undefined) dbUpdates.name = updates.name
@@ -303,11 +304,27 @@ export async function PUT(request: Request) {
 
   dbUpdates.updated_at = new Date().toISOString()
 
-  const { data: updatedResults, error } = await adminSupabase
+  let { data: updatedResults, error } = await adminSupabase
     .from("appointments")
     .update(dbUpdates)
     .eq("id", id)
     .select()
+
+  // Fallback if synced_at column is missing in Supabase
+  if (error && (error.code === '42703' || error.message?.includes('synced_at'))) {
+    console.warn("synced_at column missing, retrying without it")
+    const fallbackUpdates = { ...dbUpdates }
+    delete fallbackUpdates.synced_at
+    
+    const { data: retryData, error: retryError } = await adminSupabase
+      .from("appointments")
+      .update(fallbackUpdates)
+      .eq("id", id)
+      .select()
+    
+    updatedResults = retryData
+    error = retryError
+  }
 
   if (error) {
     console.error("Error updating appointment:", error)

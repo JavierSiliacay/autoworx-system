@@ -78,6 +78,8 @@ export async function PUT(request: Request) {
     if (updates.isBackJob !== undefined) dbUpdates.is_backjob = updates.isBackJob
     if (updates.is_synced !== undefined) dbUpdates.is_synced = updates.is_synced
     if (updates.isSynced !== undefined) dbUpdates.is_synced = updates.isSynced
+    if (updates.synced_at !== undefined) dbUpdates.synced_at = updates.synced_at
+    if (updates.syncedAt !== undefined) dbUpdates.synced_at = updates.syncedAt
     if (updates.completed_at !== undefined) dbUpdates.completed_at = updates.completed_at
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt
 
@@ -201,41 +203,55 @@ export async function POST(request: Request) {
   }
 
   // Insert into history (without images to save storage)
-  const { error: insertError } = await supabase
+  const historyDraft = {
+    original_id: appointment.id,
+    tracking_code: appointment.tracking_code,
+    name: appointment.name,
+    email: appointment.email,
+    phone: appointment.phone,
+    vehicle_make: appointment.vehicle_make,
+    vehicle_model: appointment.vehicle_model,
+    vehicle_year: appointment.vehicle_year,
+    vehicle_plate: appointment.vehicle_plate,
+    vehicle_color: appointment.vehicle_color,
+    chassis_number: appointment.chassis_number,
+    engine_number: appointment.engine_number,
+    assignee_driver: appointment.assignee_driver,
+    service: appointment.service,
+    preferred_date: appointment.preferred_date,
+    message: appointment.message,
+    final_status: appointment.status,
+    repair_status: appointment.repair_status,
+    current_repair_part: appointment.current_repair_part,
+    costing: appointment.costing,
+    original_created_at: appointment.created_at,
+    completed_at: appointment.status === "completed" ? new Date().toISOString() : null,
+    archived_reason: reason || "Archived by admin",
+    insurance: appointment.insurance || null,
+    estimate_number: appointment.estimate_number || null,
+    paul_notes: appointment.paul_notes || null,
+    loa_attachment: appointment.loa_attachment || null,
+    loa_attachment_2: appointment.loa_attachment_2 || null,
+    loa_attachments: appointment.loa_attachments || null,
+    is_backjob: appointment.is_backjob || false,
+    is_synced: appointment.is_synced || false,
+    synced_at: appointment.synced_at || null,
+  }
+
+  let { error: insertError } = await supabase
     .from("appointment_history")
-    .insert({
-      original_id: appointment.id,
-      tracking_code: appointment.tracking_code,
-      name: appointment.name,
-      email: appointment.email,
-      phone: appointment.phone,
-      vehicle_make: appointment.vehicle_make,
-      vehicle_model: appointment.vehicle_model,
-      vehicle_year: appointment.vehicle_year,
-      vehicle_plate: appointment.vehicle_plate,
-      vehicle_color: appointment.vehicle_color,
-      chassis_number: appointment.chassis_number,
-      engine_number: appointment.engine_number,
-      assignee_driver: appointment.assignee_driver,
-      service: appointment.service,
-      preferred_date: appointment.preferred_date,
-      message: appointment.message,
-      final_status: appointment.status,
-      repair_status: appointment.repair_status,
-      current_repair_part: appointment.current_repair_part,
-      costing: appointment.costing,
-      original_created_at: appointment.created_at,
-      completed_at: appointment.status === "completed" ? new Date().toISOString() : null,
-      archived_reason: reason || "Archived by admin",
-      insurance: appointment.insurance || null,
-      estimate_number: appointment.estimate_number || null,
-      paul_notes: appointment.paul_notes || null,
-      loa_attachment: appointment.loa_attachment || null,
-      loa_attachment_2: appointment.loa_attachment_2 || null,
-      loa_attachments: appointment.loa_attachments || null,
-      is_backjob: appointment.is_backjob || false,
-      is_synced: appointment.is_synced || false,
-    })
+    .insert(historyDraft)
+
+  // Fallback if synced_at column is missing
+  if (insertError && (insertError.code === '42703' || insertError.message?.includes('synced_at'))) {
+    console.warn("synced_at column missing in history, retrying without it")
+    const fallbackDraft = { ...historyDraft }
+    delete (fallbackDraft as any).synced_at
+    const { error: retryError } = await supabase
+      .from("appointment_history")
+      .insert(fallbackDraft)
+    insertError = retryError
+  }
 
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 })

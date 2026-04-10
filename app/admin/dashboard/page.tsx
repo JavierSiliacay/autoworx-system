@@ -134,6 +134,7 @@ interface AppointmentDB {
   loa_attachments?: string[]
   is_backjob?: boolean
   is_synced?: boolean
+  synced_at?: string
 }
 
 // Frontend interface (camelCase)
@@ -172,6 +173,7 @@ interface Appointment {
   loaAttachments?: string[]
   isBackJob?: boolean
   isSynced?: boolean
+  syncedAt?: string
   source?: 'active' | 'history' // For unified monitoring logic
 }
 
@@ -210,6 +212,7 @@ interface HistoryRecord {
   loa_attachments?: string[]
   is_backjob?: boolean
   is_synced?: boolean
+  synced_at?: string
 }
 
 interface Announcement {
@@ -248,6 +251,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     repairStatus: apt.repair_status,
     currentRepairPart: apt.current_repair_part,
     statusUpdatedAt: apt.status_updated_at,
+    syncedAt: apt.synced_at,
     costing: costing,
     damageImages: apt.damage_images,
     orcrImage: apt.orcr_image,
@@ -2163,13 +2167,19 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: appointment.id,
-          isSynced: newSyncState
+          isSynced: newSyncState,
+          syncedAt: newSyncState ? new Date().toISOString() : appointment.syncedAt
         })
       })
 
       if (response.ok) {
         setAppointments(prev => prev.map(apt =>
-          apt.id === appointment.id ? { ...apt, isSynced: newSyncState, is_synced: newSyncState } : apt
+          apt.id === appointment.id ? { 
+            ...apt, 
+            isSynced: newSyncState, 
+            is_synced: newSyncState,
+            syncedAt: newSyncState ? new Date().toISOString() : apt.syncedAt 
+          } : apt
         ))
 
         if (newSyncState) {
@@ -2192,7 +2202,11 @@ export default function AdminDashboard() {
     } catch (e: any) {
       toast({
         title: "Sync Failed",
-        description: e.message.includes('column') ? "Database update failed: Missing 'is_synced' column in Supabase." : "Could not register unit in sales. Please try again.",
+        description: e.message.includes('synced_at') 
+          ? "Database update required: Please add the 'synced_at' column to your Supabase tables."
+          : e.message.includes('column') 
+            ? "Database update failed: Missing 'is_synced' column in Supabase." 
+            : "Could not register unit in sales. Please try again.",
         variant: "destructive"
       })
     } finally {

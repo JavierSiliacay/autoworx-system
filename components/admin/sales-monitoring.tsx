@@ -43,7 +43,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
 
     records.forEach(r => {
         // For Sales Monitoring, we primarily care about the ENTRY date (created_at or original_created_at)
-        const dateStr = r.createdAt || r.original_created_at || r.created_at
+        const dateStr = r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at
         if (dateStr) {
             const d = new Date(dateStr)
             if (!isNaN(d.getTime())) {
@@ -122,7 +122,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             // Include all records in Sales Monitoring / Unit Entry regardless of backjob status
 
 
-            const dateStr = r.createdAt || r.original_created_at || r.created_at
+            const dateStr = r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at
             if (!dateStr) return false
             const d = new Date(dateStr)
             if (isNaN(d.getTime())) return false
@@ -160,8 +160,10 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
 
             return true
         }).sort((a, b) => {
-            const da = new Date(a.createdAt || a.original_created_at || a.created_at).getTime()
-            const db = new Date(b.createdAt || b.original_created_at || b.created_at).getTime()
+            const daStr = a.syncedAt || a.synced_at || a.createdAt || a.original_created_at || a.created_at
+            const dbStr = b.syncedAt || b.synced_at || b.createdAt || b.original_created_at || b.created_at
+            const da = new Date(daStr || 0).getTime()
+            const db = new Date(dbStr || 0).getTime()
             return da - db 
         })
     }, [records, selectedMonth, selectedYear, reportPeriod, searchQuery, claimTypeFilter])
@@ -215,7 +217,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             total: 0
         }))
         tableRecords.forEach(r => {
-            const dateStr = r.createdAt || r.original_created_at || r.created_at
+            const dateStr = r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at
             const d = new Date(dateStr)
             const m = d.getMonth()
             const costs = getCategorizedCosts(r.costing)
@@ -587,7 +589,15 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                         {tableRecords.length > 0 ? (
                             tableRecords.map((r, idx) => {
                                 const unitStr = `${r.vehicle_year || r.vehicleYear || ""} ${r.vehicle_make || r.vehicleMake || ""} ${r.vehicle_model || r.vehicleModel || ""}`.trim()
-                                const dateStr = (r.createdAt || r.original_created_at || r.created_at) ? new Date(r.createdAt || r.original_created_at || r.created_at).toLocaleDateString("en-US") : ""
+                                const syncDateStr = r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at
+                                const dateStr = syncDateStr ? new Date(syncDateStr).toLocaleString("en-US", {
+                                    month: "numeric",
+                                    day: "numeric",
+                                    year: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    hour12: true
+                                }) : ""
                                 const costs = getCategorizedCosts(r.costing)
                                 const currentVal = (field: string) => editedData[r.id]?.[field] !== undefined ? editedData[r.id][field] : (r[field] || "")
 
