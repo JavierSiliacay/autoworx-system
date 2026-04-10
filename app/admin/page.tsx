@@ -5,6 +5,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { signIn, useSession } from "next-auth/react" // Using NextAuth
 import { Wrench, Loader2 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 
 export default function AdminLoginPage() {
@@ -33,9 +34,45 @@ export default function AdminLoginPage() {
   // Show loading while checking authentication
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <AnimatePresence>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] text-white"
+        >
+          <div className="relative flex flex-col items-center">
+            <motion.div 
+              animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.7, 0.4] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="absolute -inset-4 bg-blue-500/10 rounded-full blur-2xl" 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="relative w-24 h-24 mb-8"
+            >
+              <img 
+                src="/autoworxlogo.png" 
+                alt="Autoworx logo" 
+                className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                style={{ animation: 'pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
+              />
+            </motion.div>
+            <motion.div 
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-2"
+            >
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+              <span className="text-[10px] font-black tracking-[0.2em] text-muted-foreground uppercase opacity-80">
+                Verifying Credentials...
+              </span>
+            </motion.div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
     )
   }
 
