@@ -2209,6 +2209,7 @@ export default function AdminDashboard() {
             variant: "default",
           })
         }
+        loadAppointments()
       } else {
         const errorData = await response.json()
         throw new Error(errorData.error || "Sync failed")

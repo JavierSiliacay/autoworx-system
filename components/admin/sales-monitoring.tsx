@@ -140,13 +140,15 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                 const matches = [
                     r.name,
                     r.insurance,
-                    r.vehicle_plate,
-                    r.vehicle_make,
-                    r.vehicle_model,
-                    r.vehicle_year?.toString(),
-                    r.estimate_number,
-                    r.paul_notes,
-                    r.current_repair_part
+                    r.vehicle_plate || r.vehiclePlate,
+                    r.vehicle_color || r.vehicleColor,
+                    r.vehicle_make || r.vehicleMake,
+                    r.vehicle_model || r.vehicleModel,
+                    r.vehicle_year?.toString() || r.vehicleYear?.toString(),
+                    r.estimate_number || r.estimateNumber,
+                    r.paul_notes || r.paulNotes,
+                    r.current_repair_part || r.currentRepairPart,
+                    r.trackingCode || r.tracking_code
                 ].some(field => normalizeString(field || "").includes(q))
                 if (!matches) return false
             }
