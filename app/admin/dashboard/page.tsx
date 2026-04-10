@@ -98,6 +98,19 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { cn, compressImage } from "@/lib/utils"
 
+// Helper functions for numeric input with commas
+const formatNumberForInput = (val: number | string | undefined | null) => {
+  if (val === undefined || val === null || val === "" || val === 0) return val === 0 ? "0" : ""
+  const stringVal = val.toString().replace(/,/g, "")
+  const parts = stringVal.split(".")
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+  return parts.join(".")
+}
+
+const parseNumberFromInput = (val: string) => {
+  return val.replace(/,/g, "")
+}
+
 // Database response interface (snake_case from Supabase)
 interface AppointmentDB {
   id: string
@@ -6413,17 +6426,19 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-2 gap-4 md:col-span-2 border-t border-border pt-4 mt-2">
-              <div className="space-y-2">
+<div className="space-y-2">
                 <Label htmlFor="gate-brpad">BRPAD (Body/Paint/Detail)</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
                   <Input
                     id="gate-brpad"
                     className="pl-8 font-mono"
-                    type="number"
-                    value={gatepassData.brpad}
+                    type="text"
+                    value={formatNumberForInput(gatepassData.brpad)}
                     onChange={(e) => {
-                      const val = Number(e.target.value) || 0;
+                      const raw = parseNumberFromInput(e.target.value);
+                      if (raw !== "" && isNaN(Number(raw))) return;
+                      const val = Number(raw) || 0;
                       setGatepassData(prev => ({
                         ...prev,
                         brpad: val,
@@ -6440,10 +6455,12 @@ export default function AdminDashboard() {
                   <Input
                     id="gate-aircon"
                     className="pl-8 font-mono"
-                    type="number"
-                    value={gatepassData.aircon}
+                    type="text"
+                    value={formatNumberForInput(gatepassData.aircon)}
                     onChange={(e) => {
-                      const val = Number(e.target.value) || 0;
+                      const raw = parseNumberFromInput(e.target.value);
+                      if (raw !== "" && isNaN(Number(raw))) return;
+                      const val = Number(raw) || 0;
                       setGatepassData(prev => ({
                         ...prev,
                         aircon: val,
@@ -6460,10 +6477,12 @@ export default function AdminDashboard() {
                   <Input
                     id="gate-electrical"
                     className="pl-8 font-mono"
-                    type="number"
-                    value={gatepassData.electrical}
+                    type="text"
+                    value={formatNumberForInput(gatepassData.electrical)}
                     onChange={(e) => {
-                      const val = Number(e.target.value) || 0;
+                      const raw = parseNumberFromInput(e.target.value);
+                      if (raw !== "" && isNaN(Number(raw))) return;
+                      const val = Number(raw) || 0;
                       setGatepassData(prev => ({
                         ...prev,
                         electrical: val,
@@ -6481,7 +6500,7 @@ export default function AdminDashboard() {
                     id="gate-amount"
                     className="pl-8 font-mono bg-muted"
                     readOnly
-                    value={gatepassData.amount}
+                    value={formatNumberForInput(gatepassData.amount)}
                   />
                 </div>
               </div>
@@ -6492,10 +6511,12 @@ export default function AdminDashboard() {
                   <Input
                     id="gate-mechanical"
                     className="pl-8 font-mono"
-                    type="number"
-                    value={gatepassData.mechanical}
+                    type="text"
+                    value={formatNumberForInput(gatepassData.mechanical)}
                     onChange={(e) => {
-                      const val = Number(e.target.value) || 0;
+                      const raw = parseNumberFromInput(e.target.value);
+                      if (raw !== "" && isNaN(Number(raw))) return;
+                      const val = Number(raw) || 0;
                       setGatepassData(prev => ({
                         ...prev,
                         mechanical: val,
