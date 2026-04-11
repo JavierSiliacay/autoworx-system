@@ -230,6 +230,7 @@ function getAppointmentStatusLabel(status: string): string {
 export interface PDFOptions {
   serviceAdvisor?: string;
   deliveryDate?: number | string;
+  documentDate?: string;
 }
 
 export async function generateTrackingPDF(appointment: TrackingAppointment, role: 'admin' | 'user' = 'user', reportTitle?: string, options: PDFOptions = {}): Promise<string> {
@@ -280,6 +281,25 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
 
   const totalRows = (appointment.costing?.items.length || 0) + activeCategories.length
   const shouldScale = totalRows > 12
+
+  // Helper to format the custom document date or fallback to today
+  const getFormattedDate = () => {
+    if (options.documentDate) {
+      // Input from type="date" is "YYYY-MM-DD"
+      // Split and manually format as MM/DD/YYYY to avoid timezone shifts or locale DD/MM vs MM/DD issues
+      const parts = options.documentDate.split("-");
+      if (parts.length === 3) {
+        return `${parts[1]}/${parts[2]}/${parts[0]}`;
+      }
+      return options.documentDate; // Fallback to raw string if completely invalid
+    }
+    
+    // Default to today MM/DD/YYYY
+    const today = new Date();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${mm}/${dd}/${today.getFullYear()}`;
+  };
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -381,12 +401,12 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     
     ${appointment.status === 'pending' ? `
     <div class="estimate-meta">
-      <div>DATE: ${new Date().toLocaleDateString("en-PH", { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
+      <div>DATE: ${getFormattedDate()}</div>
       <div>TRACKING NO: ${appointment.trackingCode}</div>
     </div>
     ` : (isAdmin ? `
     <div class="estimate-meta">
-      <div>DATE: ${new Date().toLocaleDateString("en-PH", { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
+      <div>DATE: ${getFormattedDate()}</div>
       <div>ESTIMATE NUMBER: ${appointment.estimateNumber || "PENDING"}</div>
     </div>
     ` : `

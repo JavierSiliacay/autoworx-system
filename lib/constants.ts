@@ -118,6 +118,7 @@ export interface CostingData {
   serviceAdvisorName?: string
   brpAdvisorName?: string
   deliveryDate?: string
+  documentDate?: string
   includePaulSignature?: boolean
   includeAlfredSignature?: boolean
   loaAttachment?: string

@@ -98,7 +98,9 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { cn, compressImage } from "@/lib/utils"
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar as CalendarUI } from "@/components/ui/calendar"
+import { format } from "date-fns"
 // Helper functions for numeric input with commas
 const formatNumberForInput = (val: number | string | undefined | null) => {
   if (val === undefined || val === null || val === "" || val === 0) return val === 0 ? "0" : ""
@@ -1815,6 +1817,7 @@ export default function AdminDashboard() {
     // Download immediately using existing S/A
     const savedSA = appointment.costing?.serviceAdvisorName || appointment.serviceAdvisor || "N/A"
     const savedDelivery = appointment.costing?.deliveryDate
+    const savedDocDate = appointment.costing?.documentDate
 
     toast({
       title: "Downloading Report...",
@@ -1823,7 +1826,8 @@ export default function AdminDashboard() {
 
     handlePrintReport(appointment, {
       serviceAdvisor: savedSA,
-      deliveryDate: savedDelivery?.toString() || ""
+      deliveryDate: savedDelivery?.toString() || "",
+      documentDate: savedDocDate
     })
   }
 
@@ -2034,7 +2038,7 @@ export default function AdminDashboard() {
 
   const handlePrintReport = async (
     appointment: Appointment,
-    overrides?: { serviceAdvisor?: string, deliveryDate?: string }
+    overrides?: { serviceAdvisor?: string, deliveryDate?: string, documentDate?: string }
   ) => {
     // 1. Format professional filename for the document title
     const currentEstimateNumber = appointment.estimateNumber || "PENDING";
@@ -2098,7 +2102,8 @@ export default function AdminDashboard() {
       // Pass the extra data (S/A and Delivery Date) - use overrides if provided
       const pdfOptions = {
         serviceAdvisor: overrides?.serviceAdvisor || "N/A",
-        deliveryDate: overrides?.deliveryDate || ""
+        deliveryDate: overrides?.deliveryDate || "",
+        documentDate: overrides?.documentDate || ""
       }
 
       const htmlContent = await generateTrackingPDF(
@@ -2582,23 +2587,13 @@ export default function AdminDashboard() {
     }, false)
   }
 
-  const updateAdvisorNames = (appointmentId: string, field: 'serviceAdvisorName' | 'brpAdvisorName', name: string) => {
+  const updateCostingStringField = (appointmentId: string, field: 'serviceAdvisorName' | 'brpAdvisorName' | 'deliveryDate' | 'documentDate', val: string) => {
     const appointment = appointments.find((apt) => apt.id === appointmentId)
     if (!appointment?.costing) return
 
     updateCosting(appointmentId, {
       ...appointment.costing,
-      [field]: name,
-    }, false)
-  }
-
-  const updateDeliveryDate = (appointmentId: string, deliveryDate: string) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
-
-    updateCosting(appointmentId, {
-      ...appointment.costing,
-      deliveryDate,
+      [field]: val,
     }, false)
   }
 
@@ -4698,7 +4693,7 @@ export default function AdminDashboard() {
                                           <label className="text-sm font-medium text-foreground">Service Advisor Name</label>
                                           <Input
                                             value={appointment.costing?.serviceAdvisorName ?? "Ryan Christopher D. Quintos"}
-                                            onChange={(e) => updateAdvisorNames(appointment.id, 'serviceAdvisorName', e.target.value)}
+                                            onChange={(e) => updateCostingStringField(appointment.id, 'serviceAdvisorName', e.target.value)}
                                             placeholder="e.g. Ryan Christopher D. Quintos"
                                             className="h-9 text-sm bg-background border-border"
                                           />
@@ -4707,24 +4702,58 @@ export default function AdminDashboard() {
                                           <label className="text-sm font-medium text-foreground">BRP Advisor Name</label>
                                           <Input
                                             value={appointment.costing?.brpAdvisorName || ""}
-                                            onChange={(e) => updateAdvisorNames(appointment.id, 'brpAdvisorName', e.target.value)}
+                                            onChange={(e) => updateCostingStringField(appointment.id, 'brpAdvisorName', e.target.value)}
                                             placeholder="e.g. John Doe (Leave blank if none)"
                                             className="h-9 text-sm bg-background border-border"
                                           />
                                         </div>
                                       </div>
 
-                                      {/* Delivery Info */}
+                                      {/* Delivery & Form Info */}
                                       <div className="grid grid-cols-1 gap-4">
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium text-foreground uppercase tracking-widest text-[10px]">Delivery Date (Working Days)</label>
-                                          <Input
-                                            type="text"
-                                            value={appointment.costing?.deliveryDate || ""}
-                                            onChange={(e) => updateDeliveryDate(appointment.id, e.target.value)}
-                                            placeholder="e.g. 5-7"
-                                            className="h-9 text-sm bg-background border-border"
-                                          />
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                          <div className="space-y-2">
+                                            <label className="text-sm font-medium text-foreground uppercase tracking-widest text-[10px]">Delivery Date (Working Days)</label>
+                                            <Input
+                                              type="text"
+                                              value={appointment.costing?.deliveryDate || ""}
+                                              onChange={(e) => updateCostingStringField(appointment.id, 'deliveryDate', e.target.value)}
+                                              placeholder="e.g. 5-7"
+                                              className="h-9 text-sm bg-background border-border"
+                                            />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <label className="text-[10px] font-medium text-primary uppercase tracking-widest flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Report/Doc Date Overlay</label>
+                                            <Popover>
+                                              <PopoverTrigger asChild>
+                                                <Button
+                                                  variant={"outline"}
+                                                  className={cn(
+                                                    "w-full justify-start text-left font-normal bg-primary/5 focus-visible:ring-primary border-primary/20",
+                                                    !appointment.costing?.documentDate && "text-muted-foreground"
+                                                  )}
+                                                  title="Leave blank to use the exact current calendar day"
+                                                >
+                                                  {appointment.costing?.documentDate ? (
+                                                    format(new Date(appointment.costing.documentDate), "MM/dd/yyyy")
+                                                  ) : (
+                                                    <span className="text-secondary-foreground text-xs opacity-70">Pick a date</span>
+                                                  )}
+                                                </Button>
+                                              </PopoverTrigger>
+                                              <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                                                <CalendarUI
+                                                  mode="single"
+                                                  selected={appointment.costing?.documentDate ? new Date(appointment.costing.documentDate) : undefined}
+                                                  onSelect={(date) => {
+                                                    const formatted = date ? format(date, "yyyy-MM-dd") : "";
+                                                    updateCostingStringField(appointment.id, 'documentDate', formatted);
+                                                  }}
+                                                  initialFocus
+                                                />
+                                              </PopoverContent>
+                                            </Popover>
+                                          </div>
                                         </div>
 
                                         {/* E-Signature Toggles */}
