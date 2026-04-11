@@ -4405,11 +4405,29 @@ export default function AdminDashboard() {
                                         return (
                                           <div key={item.id}>
                                             {isNewGroup && (
-                                              <div className={cn("flex items-center gap-3 py-4", index > 0 ? "mt-6" : "mt-2")}>
+                                              <div className={cn("flex items-center gap-3 py-4 group/header cursor-pointer", index > 0 ? "mt-6" : "mt-2")} onClick={() => {
+                                                const itemsToCopy = appointment.costing!.items.filter(i => 
+                                                  (i.type === 'parts' ? 'Parts' : (i.category || "Others")) === currentCategory
+                                                );
+                                                const textBody = itemsToCopy.map(i => `${i.description}`).join('\n');
+                                                const fullText = `${textBody}`;
+                                                navigator.clipboard.writeText(fullText).then(() => {
+                                                  toast({ title: "Copied List", description: `Copied ${itemsToCopy.length} item(s) from ${currentCategory} to your clipboard.` });
+                                                });
+                                              }} title={`Click to copy all ${currentCategory} list to clipboard`}>
                                                 <div className="h-px bg-blue-500/20 flex-grow" />
-                                                <span className="text-[10px] font-bold uppercase tracking-wider text-white whitespace-nowrap bg-blue-600 px-3 py-1 rounded-full border border-blue-400/50 shadow-[0_0_15px_rgba(37,99,235,0.2)]">
-                                                  {currentCategory}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-[10px] font-bold uppercase tracking-wider text-white whitespace-nowrap bg-blue-600 px-3 py-1 rounded-full border border-blue-400/50 shadow-[0_0_15px_rgba(37,99,235,0.2)] hover:bg-blue-500 transition-colors">
+                                                    {currentCategory}
+                                                  </span>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="w-6 h-6 rounded-full opacity-0 group-hover/header:opacity-100 transition-opacity bg-primary/10 hover:bg-primary/20 text-primary pointer-events-none group-hover/header:pointer-events-auto"
+                                                  >
+                                                    <Copy className="w-3 h-3" />
+                                                  </Button>
+                                                </div>
                                                 <div className="h-px bg-blue-500/20 flex-grow" />
                                               </div>
                                             )}
