@@ -1,4 +1,5 @@
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const HF_TOKEN = process.env.HF_TOKEN;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2:1b";
 
 /**
@@ -16,23 +17,164 @@ function cleanResponse(text: string): string {
 }
 
 /**
- * Generic function to chat with AI using OpenRouter (primary) or Ollama (fallback)
+ * Creates an async generator to stream tokens from OpenRouter or Ollama
  */
-export async function chatWithAI(messages: { role: string; content: string }[], options?: { raw?: boolean }) {
-    // 1. Try OpenRouter (User preferred method using fetch)
-    if (OPENROUTER_API_KEY) {
+export async function* chatWithAIStream(messages: { role: string; content: string; image?: string }[]) {
+    const formattedMessages = messages.map(m => {
+        if (m.image) {
+            const contentArray: any[] = [
+                { type: "image_url", image_url: { url: m.image } }
+            ];
+
+            // Text after image
+            if (m.content && m.content.trim() !== "") {
+                contentArray.push({ type: "text", text: m.content });
+            } else {
+                contentArray.push({ type: "text", text: "Please analyze the damage or contents of this uploaded image." });
+            }
+
+            return { role: m.role, content: contentArray };
+        }
+        return { role: m.role, content: m.content };
+    });
+
+    if (HF_TOKEN) {
         try {
-            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-                    "HTTP-Referer": "http://localhost:3000",
-                    "X-Title": "Autoworx System",
+                    "Authorization": `Bearer ${HF_TOKEN}`,
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    "model": "arcee-ai/trinity-large-preview:free",
-                    "messages": messages
+                    "model": "google/gemma-4-31B-it:novita",
+                    "messages": formattedMessages,
+                    "stream": true
+                })
+            });
+
+            if (response.ok && response.body) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || "";
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const dataStr = line.slice(6).trim();
+                            if (dataStr === "[DONE]") return;
+                            try {
+                                const data = JSON.parse(dataStr);
+                                const content = data.choices?.[0]?.delta?.content;
+                                if (content) {
+                                    // Strip markdown symbols for a clean "car-owner-friendly" response
+                                    const cleanContent = content.replace(/\*/g, "").replace(/#/g, "");
+                                    yield cleanContent;
+                                }
+                            } catch (e) { }
+                        }
+                    }
+                }
+                return;
+            } else {
+                const errorText = await response.text();
+                console.error("HuggingFace Router Stream Error Status:", response.status);
+                console.error("HuggingFace Router Stream Error Body:", errorText);
+            }
+        } catch (error) {
+            console.error("HuggingFace Streaming Error:", error);
+        }
+    }
+
+    // Fallback streaming for local Ollama
+    try {
+        const prompt = messages[messages.length - 1].content;
+        const response = await fetch("http://localhost:11434/api/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: OLLAMA_MODEL,
+                prompt: prompt,
+                stream: true
+            })
+        });
+
+        if (response.ok && response.body) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || "";
+                for (const line of lines) {
+                    if (line.trim()) {
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.response) yield data.response;
+                        } catch (e) { }
+                    }
+                }
+            }
+            return;
+        }
+    } catch (error) {
+        console.error("Ollama Streaming Error:", error);
+    }
+    throw new Error("No AI providers available for streaming.");
+}
+
+/**
+ * Generic function to chat with AI using OpenRouter (primary) or Ollama (fallback)
+ */
+export async function chatWithAI(messages: { role: string; content: string; image?: string }[], options?: { raw?: boolean }) {
+
+    const formattedMessages = messages.map(m => {
+        if (m.image) {
+            const contentArray: any[] = [];
+
+            // Text first, then image
+            if (m.content && m.content.trim() !== "") {
+                contentArray.push({ type: "text", text: m.content });
+            } else {
+                contentArray.push({ type: "text", text: "Please analyze the damage or contents of this uploaded image." });
+            }
+
+            contentArray.push({
+                type: "image_url",
+                image_url: { url: m.image }
+            });
+
+            return {
+                role: m.role,
+                content: contentArray
+            };
+        }
+        return {
+            role: m.role,
+            content: m.content
+        };
+    });
+    // 1. Try Hugging Face
+    if (HF_TOKEN) {
+        try {
+            const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${HF_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    "model": "google/gemma-4-31B-it:novita",
+                    "messages": formattedMessages
                 })
             });
 
@@ -44,10 +186,10 @@ export async function chatWithAI(messages: { role: string; content: string }[], 
                 }
             } else {
                 const errorData = await response.json();
-                console.error("OpenRouter API error:", errorData);
+                console.error("HuggingFace API error:", errorData);
             }
         } catch (error) {
-            console.error("OpenRouter Fetch Error:", error);
+            console.error("HuggingFace Fetch Error:", error);
         }
     }
 

@@ -30,6 +30,7 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { createClient } from "@/lib/supabase/client"
 import { compressImage } from "@/lib/image-utils"
+import { FaceVerification } from "./face-verification"
 
 const years = Array.from({ length: 35 }, (_, i) => (new Date().getFullYear() - i).toString())
 const services = SERVICES; // Declare the services variable
@@ -124,7 +125,7 @@ export function BookingForm() {
     if (!formData.vehicleColor.trim()) newErrors.vehicleColor = "Color is required"
     if (!formData.service || (Array.isArray(formData.service) && formData.service.length === 0)) newErrors.service = "Service type is required"
     if (!orcrImage) newErrors.orcrImage = "ORCR Photo 1 is required"
-    if (!captchaVerified) newErrors.captcha = "Please verify you're not a robot"
+    if (!captchaVerified) newErrors.captcha = "Please complete face verification"
 
     setErrors(newErrors)
     return newErrors
@@ -448,7 +449,7 @@ export function BookingForm() {
         </div>
         <h3 className="mt-4 font-serif text-2xl font-bold text-foreground animate-in slide-in-from-top-2 duration-700">Request Submitted!</h3>
         <p className="mt-2 text-muted-foreground animate-in slide-in-from-bottom-2 duration-700">
-          Thank you for choosing Autoworx Repairs. We'll contact you within 24 hours to confirm your appointment.
+          Thank you for choosing Autoworx Repairs. Please proceed to our location at Zone 7 Sepulvida Street, Kauswagan Highway, Cagayan de Oro City to continue your appointment.
         </p>
 
         {/* Tracking Code Section */}
@@ -539,7 +540,7 @@ export function BookingForm() {
           <h3 className="font-semibold text-foreground mb-4">Personal Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2 group">
-              <Label htmlFor="name" className={`transition-colors ${errors.name ? 'text-red-500' : 'group-hover:text-primary'}`}>Full Name *</Label>
+              <Label htmlFor="name" className={`transition-colors ${errors.name ? 'text-red-500' : 'group-hover:text-primary'}`}>Full Name <span className="text-red-500">*</span></Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -602,7 +603,7 @@ export function BookingForm() {
           <h3 className="font-semibold text-foreground mb-4">Vehicle Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2 group">
-              <Label htmlFor="vehicleMake" className={`transition-colors ${errors.vehicleMake ? 'text-red-500' : 'group-hover:text-primary'}`}>Manufacturer *</Label>
+              <Label htmlFor="vehicleMake" className={`transition-colors ${errors.vehicleMake ? 'text-red-500' : 'group-hover:text-primary'}`}>Manufacturer <span className="text-red-500">*</span></Label>
               {!useCustomMake ? (
                 <Select
                   value={formData.vehicleMake}
@@ -654,7 +655,7 @@ export function BookingForm() {
               {errors.vehicleMake && <p className="text-xs text-red-500 font-medium">{errors.vehicleMake}</p>}
             </div>
             <div className="space-y-2 group">
-              <Label htmlFor="vehicleModel" className={`transition-colors ${errors.vehicleModel ? 'text-red-500' : 'group-hover:text-primary'}`}>Model *</Label>
+              <Label htmlFor="vehicleModel" className={`transition-colors ${errors.vehicleModel ? 'text-red-500' : 'group-hover:text-primary'}`}>Model <span className="text-red-500">*</span></Label>
               <Input
                 id="vehicleModel"
                 value={formData.vehicleModel}
@@ -665,7 +666,7 @@ export function BookingForm() {
               {errors.vehicleModel && <p className="text-xs text-red-500 font-medium">{errors.vehicleModel}</p>}
             </div>
             <div className="space-y-2 group">
-              <Label htmlFor="vehicleYear" className={`transition-colors ${errors.vehicleYear ? 'text-red-500' : 'group-hover:text-primary'}`}>Year Model (optional)</Label>
+              <Label htmlFor="vehicleYear" className={`transition-colors ${errors.vehicleYear ? 'text-red-500' : 'group-hover:text-primary'}`}>Year Model</Label>
               <Select
                 value={formData.vehicleYear}
                 onValueChange={(value) => updateField("vehicleYear", value)}
@@ -686,7 +687,7 @@ export function BookingForm() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div className="space-y-2 group">
-              <Label htmlFor="vehiclePlate" className={`transition-colors ${errors.vehiclePlate ? 'text-red-500' : 'group-hover:text-primary'}`}>Vehicle Plate Number * (MUST ALL BIG LETTERS)</Label>
+              <Label htmlFor="vehiclePlate" className={`transition-colors ${errors.vehiclePlate ? 'text-red-500' : 'group-hover:text-primary'}`}>Vehicle Plate Number <span className="text-red-500">*</span> (MUST ALL BIG LETTERS)</Label>
               <Input
                 id="vehiclePlate"
                 value={formData.vehiclePlate}
@@ -701,7 +702,7 @@ export function BookingForm() {
               {errors.vehiclePlate && <p className="text-xs text-red-500 font-medium">{errors.vehiclePlate}</p>}
             </div>
             <div className="space-y-2 group">
-              <Label htmlFor="vehicleColor" className={`transition-colors ${errors.vehicleColor ? 'text-red-500' : 'group-hover:text-primary'}`}>Vehicle Color *</Label>
+              <Label htmlFor="vehicleColor" className={`transition-colors ${errors.vehicleColor ? 'text-red-500' : 'group-hover:text-primary'}`}>Vehicle Color <span className="text-red-500">*</span></Label>
               <Input
                 id="vehicleColor"
                 value={formData.vehicleColor}
@@ -741,7 +742,7 @@ export function BookingForm() {
           <h3 className="font-semibold text-foreground mb-4">Service Details</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-4 col-span-full">
-              <Label className={`transition-colors ${errors.service ? 'text-red-500' : 'group-hover:text-primary'}`}>Requested Services * (Select all that apply)</Label>
+              <Label className={`transition-colors ${errors.service ? 'text-red-500' : 'group-hover:text-primary'}`}>Requested Services <span className="text-red-500">*</span> (Select all that apply)</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-xl bg-muted/5">
                 {services.map((service) => {
                   const isChecked = Array.isArray(formData.service) && formData.service.includes(service);
@@ -935,7 +936,7 @@ export function BookingForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* ORCR Photo 1 */}
             <div className="space-y-4 text-center">
-              <Label className={errors.orcrImage ? "text-red-500 font-bold" : "font-medium"}>ORCR Photo 1 *</Label>
+              <Label className={errors.orcrImage ? "text-red-500 font-bold" : "font-medium"}>ORCR Photo 1 <span className="text-red-500">*</span></Label>
               {orcrImage ? (
                 <div className="relative w-full mx-auto">
                   <div className="relative aspect-[3/2] rounded-lg overflow-hidden border-2 border-primary/50 group">
@@ -1042,37 +1043,25 @@ export function BookingForm() {
             </div>
           </div>
         </div>
-
-        {/* CAPTCHA Verification */}
-        <div className={`p-4 rounded-lg border transition-all ${errors.captcha ? 'bg-red-50 border-red-500' : 'bg-secondary/50 border-border'}`}>
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="captcha"
-              checked={captchaVerified}
-              onCheckedChange={(checked) => {
-                setCaptchaVerified(checked as boolean)
-                if (checked && errors.captcha) {
-                  setErrors(prev => {
-                    const next = { ...prev }
-                    delete next.captcha
-                    return next
-                  })
-                }
-              }}
-            />
-            <div className="flex-1">
-              <Label htmlFor="captcha" className={`font-semibold cursor-pointer ${errors.captcha ? 'text-red-600' : 'text-foreground'}`}>
-                I'm not a robot
-              </Label>
-              {errors.captcha ? (
-                <p className="text-xs text-red-500 font-bold mt-1 animate-pulse">{errors.captcha}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground mt-1">
-                  By checking this box, you verify that you are not a robot and agree to our terms.
-                </p>
-              )}
-            </div>
-          </div>
+        {/* Human/Face Verification */}
+        <div className={`p-1 rounded-2xl border-2 transition-all ${errors.captcha ? 'bg-red-50/50 border-red-500/50' : 'bg-transparent border-transparent'}`}>
+          <FaceVerification 
+            onVerified={(verified) => {
+              setCaptchaVerified(verified)
+              if (verified) {
+                setErrors(prev => {
+                  const newErrs = { ...prev }
+                  delete newErrs.captcha
+                  return newErrs
+                })
+              }
+            }} 
+          />
+          {errors.captcha && (
+            <p className="text-[10px] text-red-600 font-bold text-center mt-2 uppercase tracking-tighter animate-pulse">
+              {errors.captcha}
+            </p>
+          )}
         </div>
 
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>

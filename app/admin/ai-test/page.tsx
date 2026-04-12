@@ -1,106 +1,131 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Brain, FileText, Sparkles } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 export default function AITestPage() {
-    const [loading, setLoading] = useState(false)
-    const [report, setReport] = useState<string | null>(null)
-    const [error, setError] = useState<string | null>(null)
+    const [prompt, setPrompt] = useState("Describe this image in one sentence.");
+    const [model, setModel] = useState("google/gemma-4-31B-it:novita");
+    const [mediaData, setMediaData] = useState("");
+    const [result, setResult] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    const generateTestReport = async () => {
-        setLoading(true)
-        setError(null)
-        setReport(null)
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setMediaData(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setMediaData("");
+        }
+    };
 
+    const handleTest = async () => {
+        setLoading(true);
+        setResult("");
+        setError("");
         try {
-            // For testing, we'll try to get reports for February 2026 (current month)
-            const response = await fetch("/api/admin/ai-report", {
+            const res = await fetch("/api/admin/ai-test", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    month: 2,
-                    year: 2026
-                })
-            })
+                body: JSON.stringify({ prompt, model, mediaData })
+            });
 
-            const data = await response.json()
-
-            if (!response.ok) {
-                throw new Error(data.error || "Failed to generate report")
+            const data = await res.json();
+            
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to fetch from AI");
             }
 
-            setReport(data.report)
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Something went wrong")
+            setResult(data.result);
+        } catch (err: any) {
+            setError(err.message);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
     return (
-        <div className="p-8 max-w-4xl mx-auto space-y-8">
-            <div className="flex flex-col items-center text-center space-y-4">
-                <div className="p-3 bg-primary/10 rounded-full text-primary">
-                    <Brain className="w-12 h-12" />
-                </div>
-                <h1 className="text-4xl font-bold tracking-tight">AI Business Analyst Test</h1>
-                <p className="text-muted-foreground text-lg max-w-2xl">
-                    Test the new AI Intelligence System for Autoworx. This will analyze your history data for February 2026.
-                </p>
-                <Button
-                    onClick={generateTestReport}
-                    disabled={loading}
-                    size="lg"
-                    className="gap-2 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-primary/20 transition-all font-bold"
-                >
-                    {loading ? (
-                        <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            AI is analyzing your data...
-                        </>
-                    ) : (
-                        <>
-                            <Sparkles className="w-5 h-5" />
-                            Generate AI Monthly Report
-                        </>
-                    )}
-                </Button>
+        <div className="p-6 max-w-4xl mx-auto space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">AI Model Tester</h1>
+                <p className="text-muted-foreground mt-2">Test HuggingFace Router models directly from within the application.</p>
             </div>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Test Configuration</CardTitle>
+                    <CardDescription>Specify the HF model ID and your prompt below. The default is set to novita's gemma-4 endpoint.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Model ID</label>
+                        <Input 
+                            value={model} 
+                            onChange={(e) => setModel(e.target.value)} 
+                            placeholder="e.g. google/gemma-4-31B-it:novita"
+                        />
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Test Prompt</label>
+                        <Textarea 
+                            rows={4}
+                            value={prompt} 
+                            onChange={(e) => setPrompt(e.target.value)} 
+                            placeholder="Type a message to test..."
+                        />
+                    </div>
 
-            {error && (
-                <div className="p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-center font-medium animate-in fade-in slide-in-from-top-2 duration-300">
-                    {error}
-                    {error.includes("No data found") && (
-                        <p className="text-sm mt-1 opacity-80">Make sure you have archived some appointments in February 2026 first!</p>
-                    )}
-                </div>
-            )}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Image / Video Upload (Optional)</label>
+                        <Input 
+                            type="file"
+                            accept="image/*,video/*"
+                            onChange={handleFileChange}
+                        />
+                        {mediaData && (
+                            <p className="text-xs text-green-600 font-medium">
+                                Media attached successfully. Size: {(mediaData.length / 1024).toFixed(2)} KB
+                            </p>
+                        )}
+                    </div>
+                    
+                    <Button onClick={handleTest} disabled={loading || (!prompt && !mediaData)} className="w-40">
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {loading ? "Generating..." : "Run AI Test"}
+                    </Button>
+                </CardContent>
+            </Card>
 
-            {report && (
-                <Card className="border-primary/20 shadow-2xl animate-in zoom-in-95 fade-in duration-500 overflow-hidden">
-                    <CardHeader className="bg-primary/5 border-b border-primary/10 py-6">
-                        <CardTitle className="flex items-center gap-3 text-2xl">
-                            <FileText className="w-7 h-7 text-primary" />
-                            Monthly Business Briefing
-                        </CardTitle>
+            {(result || error) && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Response Output</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-8">
-                        <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:text-primary prose-a:text-primary prose-strong:text-foreground">
-                            {/* Note: In a real app we'd use a markdown parser, but for this test we'll just show text */}
-                            <pre className="whitespace-pre-wrap font-sans text-lg leading-relaxed text-foreground/90">
-                                {report}
-                            </pre>
-                        </div>
-                        <div className="mt-8 pt-6 border-t border-border flex justify-between items-center text-sm text-muted-foreground italic">
-                            <p>Generated by Autoworx AIS (Automotive Intelligence System)</p>
-                            <p>February 2026</p>
-                        </div>
+                    <CardContent>
+                        {error && (
+                            <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-md whitespace-pre-wrap font-mono text-sm">
+                                {error}
+                            </div>
+                        )}
+                        {result && (
+                            <div className="p-4 bg-muted/50 rounded-md whitespace-pre-wrap text-sm leading-relaxed">
+                                {result}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             )}
         </div>
-    )
+    );
 }
+
