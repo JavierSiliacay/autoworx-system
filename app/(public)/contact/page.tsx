@@ -61,7 +61,7 @@ export default function ContactPage() {
             <div className="w-24 h-1.5 bg-primary mx-auto mt-8 mb-8 rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
             <p className="mt-4 text-xl text-white/80 leading-relaxed font-light max-w-2xl mx-auto">
               Ready to get your vehicle serviced? Fill out the form below and we&apos;ll
-              contact you within 24 hours to confirm your appointment.
+              be happy to assist you when you visit us. The details you should provide will match exactly on your ORCR.
             </p>
           </div>
         </div>
