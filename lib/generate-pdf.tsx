@@ -650,10 +650,10 @@ export interface GatepassData {
   orNo: string;
   joNo: string;
   amount: number | string;
-  brpad?: number;
-  aircon?: number;
-  electrical?: number;
-  mechanical?: number;
+  brpad?: number | string;
+  aircon?: number | string;
+  electrical?: number | string;
+  mechanical?: number | string;
   costing?: any;
   cashier: string;
   serviceAdvisor: string;

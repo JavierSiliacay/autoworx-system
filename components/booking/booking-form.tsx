@@ -176,8 +176,9 @@ export function BookingForm() {
             }
           }
 
-          const fileExt = file.name.split(".").pop()
-          const fileName = `${trackingCodeGenerated}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+          const isCompressed = file.type.startsWith('image/');
+          const fileExt = isCompressed ? 'webp' : file.name.split(".").pop();
+          const fileName = `${trackingCodeGenerated}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
           const { data, error } = await supabase.storage
             .from("damage-images")

@@ -57,7 +57,8 @@ import {
   Eye,
   Undo2,
   Code2,
-  TrendingUp
+  TrendingUp,
+  Database
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -103,7 +104,8 @@ import { Calendar as CalendarUI } from "@/components/ui/calendar"
 import { format } from "date-fns"
 // Helper functions for numeric input with commas
 const formatNumberForInput = (val: number | string | undefined | null) => {
-  if (val === undefined || val === null || val === "" || val === 0) return val === 0 ? "0" : ""
+  if (val === undefined || val === null || val === "") return ""
+  if (val === 0 || val === "0") return "0"
   const stringVal = val.toString().replace(/,/g, "")
   const parts = stringVal.split(".")
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",")
@@ -902,6 +904,17 @@ export default function AdminDashboard() {
             statusUpdatedAt: new Date().toISOString()
           }),
         })
+
+        // 4. Background Sync to Office Network
+        fetch("/api/admin/sync-loa", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appointmentId: appointmentId,
+            fileUrl: publicUrl,
+            type: "LOA"
+          }),
+        }).catch(err => console.error("Background sync trigger failed:", err));
       }
 
       toast({
@@ -1055,6 +1068,17 @@ export default function AdminDashboard() {
             updates: { costing: updatedCosting }
           }),
         })
+
+        // 4. Background Sync to Office Network
+        fetch("/api/admin/sync-loa", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appointmentId: recordId,
+            fileUrl: publicUrl,
+            type: "LOA_HISTORY"
+          }),
+        }).catch(err => console.error("Background sync trigger failed:", err));
       }
 
       toast({
@@ -2985,6 +3009,12 @@ export default function AdminDashboard() {
                 <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-primary transition-all">
                   <Package className="w-4 h-4 mr-2" />
                   Parts Room
+                </Button>
+              </Link>
+              <Link href="/admin/maintenance">
+                <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-primary transition-all">
+                  <Database className="w-4 h-4 mr-2" />
+                  Maintenance
                 </Button>
               </Link>
             </div>
@@ -6573,12 +6603,12 @@ export default function AdminDashboard() {
                     value={formatNumberForInput(gatepassData.brpad)}
                     onChange={(e) => {
                       const raw = parseNumberFromInput(e.target.value);
-                      if (raw !== "" && isNaN(Number(raw))) return;
-                      const val = Number(raw) || 0;
+                      if (raw !== "" && raw !== "." && isNaN(Number(raw))) return;
+                      const numericVal = Number(raw) || 0;
                       setGatepassData(prev => ({
                         ...prev,
-                        brpad: val,
-                        amount: val + (Number(prev.aircon) || 0) + (Number(prev.electrical) || 0) + (Number(prev.mechanical) || 0)
+                        brpad: raw,
+                        amount: numericVal + (Number(prev.aircon) || 0) + (Number(prev.electrical) || 0) + (Number(prev.mechanical) || 0)
                       }));
                     }}
                   />
@@ -6595,12 +6625,12 @@ export default function AdminDashboard() {
                     value={formatNumberForInput(gatepassData.aircon)}
                     onChange={(e) => {
                       const raw = parseNumberFromInput(e.target.value);
-                      if (raw !== "" && isNaN(Number(raw))) return;
-                      const val = Number(raw) || 0;
+                      if (raw !== "" && raw !== "." && isNaN(Number(raw))) return;
+                      const numericVal = Number(raw) || 0;
                       setGatepassData(prev => ({
                         ...prev,
-                        aircon: val,
-                        amount: (Number(prev.brpad) || 0) + val + (Number(prev.electrical) || 0) + (Number(prev.mechanical) || 0)
+                        aircon: raw,
+                        amount: (Number(prev.brpad) || 0) + numericVal + (Number(prev.electrical) || 0) + (Number(prev.mechanical) || 0)
                       }));
                     }}
                   />
@@ -6617,12 +6647,12 @@ export default function AdminDashboard() {
                     value={formatNumberForInput(gatepassData.electrical)}
                     onChange={(e) => {
                       const raw = parseNumberFromInput(e.target.value);
-                      if (raw !== "" && isNaN(Number(raw))) return;
-                      const val = Number(raw) || 0;
+                      if (raw !== "" && raw !== "." && isNaN(Number(raw))) return;
+                      const numericVal = Number(raw) || 0;
                       setGatepassData(prev => ({
                         ...prev,
-                        electrical: val,
-                        amount: (Number(prev.brpad) || 0) + (Number(prev.aircon) || 0) + val + (Number(prev.mechanical) || 0)
+                        electrical: raw,
+                        amount: (Number(prev.brpad) || 0) + (Number(prev.aircon) || 0) + numericVal + (Number(prev.mechanical) || 0)
                       }));
                     }}
                   />
@@ -6651,12 +6681,12 @@ export default function AdminDashboard() {
                     value={formatNumberForInput(gatepassData.mechanical)}
                     onChange={(e) => {
                       const raw = parseNumberFromInput(e.target.value);
-                      if (raw !== "" && isNaN(Number(raw))) return;
-                      const val = Number(raw) || 0;
+                      if (raw !== "" && raw !== "." && isNaN(Number(raw))) return;
+                      const numericVal = Number(raw) || 0;
                       setGatepassData(prev => ({
                         ...prev,
-                        mechanical: val,
-                        amount: (Number(prev.brpad) || 0) + (Number(prev.aircon) || 0) + (Number(prev.electrical) || 0) + val
+                        mechanical: raw,
+                        amount: (Number(prev.brpad) || 0) + (Number(prev.aircon) || 0) + (Number(prev.electrical) || 0) + numericVal
                       }));
                     }}
                   />

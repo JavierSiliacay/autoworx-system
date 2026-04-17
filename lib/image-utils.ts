@@ -42,7 +42,7 @@ export async function compressImage(file: File, maxWidth = 1024, quality = 0.6):
                             reject(new Error('Canvas to Blob conversion failed'));
                         }
                     },
-                    'image/jpeg',
+                    'image/webp',
                     quality
                 );
             };

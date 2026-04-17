@@ -35,31 +35,43 @@ export async function POST(request: Request) {
   */
 
   const uploadedUrls: string[] = []
+  const sharp = (await import('sharp')).default
 
   for (const file of files) {
     if (!file.type.startsWith("image/")) continue
 
-    const fileExt = file.name.split(".").pop()
-    const fileName = `${trackingCode}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const webpBuffer = await sharp(buffer)
+        .resize({ width: 1024, withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer()
 
-    const { data, error } = await supabase.storage
-      .from("damage-images")
-      .upload(fileName, file, {
-        cacheControl: "3600",
-        upsert: false,
-      })
+      const fileName = `${trackingCode}/${Date.now()}-${Math.random().toString(36).substring(7)}.webp`
 
-    if (error) {
-      console.error("Error uploading file:", error)
+      const { data, error } = await supabase.storage
+        .from("damage-images")
+        .upload(fileName, webpBuffer, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: 'image/webp'
+        })
+
+      if (error) {
+        console.error("Error uploading file:", error)
+        continue
+      }
+
+      // Get public URL
+      const { data: publicUrl } = supabase.storage
+        .from("damage-images")
+        .getPublicUrl(data.path)
+
+      uploadedUrls.push(publicUrl.publicUrl)
+    } catch (err) {
+      console.error("Error processing image with sharp:", err)
       continue
     }
-
-    // Get public URL
-    const { data: publicUrl } = supabase.storage
-      .from("damage-images")
-      .getPublicUrl(data.path)
-
-    uploadedUrls.push(publicUrl.publicUrl)
   }
 
   return NextResponse.json({ urls: uploadedUrls })

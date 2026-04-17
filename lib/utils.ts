@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export async function compressImage(file: File, maxWidth = 1200, quality = 0.7): Promise<File> {
+export async function compressImage(file: File, maxWidth = 1024, quality = 0.65): Promise<File> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.readAsDataURL(file)
@@ -31,8 +31,8 @@ export async function compressImage(file: File, maxWidth = 1200, quality = 0.7):
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: 'image/jpeg',
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                type: 'image/webp',
                 lastModified: Date.now(),
               })
               resolve(compressedFile)
@@ -40,7 +40,7 @@ export async function compressImage(file: File, maxWidth = 1200, quality = 0.7):
               reject(new Error('Canvas to Blob failed'))
             }
           },
-          'image/jpeg',
+          'image/webp',
           quality
         )
       }

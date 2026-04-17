@@ -46,8 +46,17 @@ export async function POST(request: Request) {
 
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const base64 = buffer.toString('base64');
-        const contentType = response.headers.get("content-type") || "image/jpeg";
+        
+        // Convert to WebP using sharp for better compression
+        const webpBuffer = await import('sharp').then(sharp => 
+            sharp.default(buffer)
+                .resize({ width: 1024, withoutEnlargement: true })
+                .webp({ quality: 80 })
+                .toBuffer()
+        );
+
+        const base64 = webpBuffer.toString('base64');
+        const contentType = "image/webp"; // Force webp content type
 
         return NextResponse.json({ image: `data:${contentType};base64,${base64}` })
 
