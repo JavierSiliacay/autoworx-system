@@ -6,9 +6,8 @@
 export const MAINTENANCE_CONFIG = {
   // --- LOCAL DOCUMENT SYNC ---
   
-  // The network path (UNC) where LOA documents should be backed up.
-  // Note: We use double backslashes for JS strings.
-  LOCAL_STORAGE_PATH: "\\\\ADMIN\\autoworx repair estimate\\LOA Documents",
+  // The root network path for the testing phase.
+  LOCAL_STORAGE_PATH: "\\\\ADMIN\\autoworx repair estimate\\TESTING PHASE FOR SYSTEM FILES",
   
   // When enabled, the app will try to copy LOAs from Supabase to the local network path automatically.
   ENABLE_AUTO_LOA_SYNC: true,

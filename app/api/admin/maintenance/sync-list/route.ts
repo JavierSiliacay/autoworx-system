@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const scope = searchParams.get("scope") || "all";
 
-    const files: { id: string; url: string; metadata: any }[] = [];
+    const files: { id: string; url: string; type: "LOA" | "PHOTO"; metadata: any }[] = [];
 
     // 1. Fetch from active appointments
     if (scope === "all" || scope === "active") {
@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
           loa_attachments, 
           loa_attachment, 
           loa_attachment_2,
+          damage_photos,
           vehicle_plate,
           vehicle_model,
           name,
@@ -33,24 +34,26 @@ export async function GET(req: NextRequest) {
 
       if (activeApts) {
         activeApts.forEach(apt => {
-          const urls = Array.from(new Set([
+          const meta = {
+            id: apt.id,
+            plate: apt.vehicle_plate,
+            model: apt.vehicle_model,
+            customer: apt.name,
+            insurance: apt.insurance
+          };
+
+          // LOA URLs
+          const loaUrls = Array.from(new Set([
             ...(apt.loa_attachments || []),
             ...(apt.loa_attachment ? [apt.loa_attachment] : []),
             ...(apt.loa_attachment_2 ? [apt.loa_attachment_2] : [])
           ])).filter(Boolean) as string[];
 
-          urls.forEach(url => {
-            files.push({ 
-              id: apt.id, 
-              url,
-              metadata: {
-                plate: apt.vehicle_plate,
-                model: apt.vehicle_model,
-                customer: apt.name,
-                insurance: apt.insurance
-              }
-            });
-          });
+          loaUrls.forEach(url => files.push({ id: apt.id, url, type: "LOA", metadata: meta }));
+
+          // Damage Photo URLs
+          const photoUrls = (apt.damage_photos || []).filter(Boolean) as string[];
+          photoUrls.forEach(url => files.push({ id: apt.id, url, type: "PHOTO", metadata: meta }));
         });
       }
     }
@@ -63,19 +66,21 @@ export async function GET(req: NextRequest) {
 
       if (historyApts) {
         historyApts.forEach(hist => {
-          const urls = hist.costing?.loaAttachments || [];
-          urls.forEach((url: string) => {
-            files.push({ 
-              id: hist.id, 
-              url,
-              metadata: {
-                plate: hist.vehicle_plate,
-                model: hist.vehicle_model,
-                customer: hist.name,
-                insurance: hist.insurance
-              }
-            });
-          });
+          const meta = {
+            id: hist.id,
+            plate: hist.vehicle_plate,
+            model: hist.vehicle_model,
+            customer: hist.name,
+            insurance: hist.insurance
+          };
+
+          // LOA URLs from costing
+          const loaUrls = hist.costing?.loaAttachments || [];
+          loaUrls.forEach((url: string) => files.push({ id: hist.id, url, type: "LOA", metadata: meta }));
+
+          // Damage Photo URLs from costing or hist.damage_photos (checking common keys)
+          const photoUrls = hist.costing?.damagePhotos || [];
+          photoUrls.forEach((url: string) => files.push({ id: hist.id, url, type: "PHOTO", metadata: meta }));
         });
       }
     }
