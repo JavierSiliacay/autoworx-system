@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,33 +23,103 @@ import { MAINTENANCE_CONFIG } from "@/lib/maintenance-config";
 export default function MaintenancePage() {
   const [syncing, setSyncing] = useState(false);
   const [syncStats, setSyncStats] = useState<any>(null);
+  const [networkStatus, setNetworkStatus] = useState<"scanning" | "online" | "offline" | "ready">("scanning");
+  const [dirHandle, setDirHandle] = useState<any>(null);
+
+  useEffect(() => {
+    // Check if browser supports File System Access API
+    if (typeof window !== "undefined" && !('showDirectoryPicker' in window)) {
+       setNetworkStatus("offline");
+       return;
+    }
+
+    if (dirHandle) {
+      setNetworkStatus("ready");
+    } else {
+      setNetworkStatus("scanning");
+    }
+  }, [dirHandle]);
+
+  const handleSelectFolder = async () => {
+    try {
+      const handle = await (window as any).showDirectoryPicker({
+        mode: 'readwrite'
+      });
+      setDirHandle(handle);
+      toast({
+        title: "Folder Selected",
+        description: "Successfully connected to local storage.",
+      });
+    } catch (e) {
+      console.error("Folder selection failed:", e);
+      toast({
+        title: "Selection Cancelled",
+        description: "Could not access local folder.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleSyncAll = async (scope: "all" | "active" | "history") => {
-    if (MAINTENANCE_CONFIG.IS_DEV_LAPTOP) {
+    if (!dirHandle) {
        toast({
-         title: "Sync Blocked",
-         description: "Dev Laptop Mode is active. Cannot connect to network path.",
+         title: "No Folder Selected",
+         description: "Please select the office network folder first.",
          variant: "destructive"
        });
        return;
     }
 
     setSyncing(true);
+    const stats = { processed: 0, synced: 0, alreadyExists: 0, errors: 0, details: [] as any[] };
     setSyncStats(null);
+
     try {
-      const res = await fetch("/api/admin/maintenance/sync-all", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scope })
-      });
+      // 1. Fetch the list of files to sync from the API
+      const res = await fetch(`/api/admin/maintenance/sync-list?scope=${scope}`);
+      const { files } = await res.json();
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Bulk sync failed");
+      if (!res.ok) throw new Error("Failed to fetch sync list");
 
-      setSyncStats(data);
+      // 2. Process each file client-side
+      for (const item of files) {
+        stats.processed++;
+        try {
+          const fileName = item.url.split('/').pop().split('?')[0];
+          
+          // Check if exists
+          try {
+            await dirHandle.getFileHandle(fileName);
+            stats.alreadyExists++;
+            continue;
+          } catch (e) {
+            // File doesn't exist, proceed with sync
+          }
+
+          // Download
+          const dlRes = await fetch(item.url);
+          const blob = await dlRes.blob();
+
+          // Write
+          const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          
+          stats.synced++;
+        } catch (err: any) {
+          stats.errors++;
+          stats.details.push({ id: item.id, error: err.message });
+        }
+        
+        // Update stats progress every 5 files
+        if (stats.processed % 5 === 0) setSyncStats({...stats});
+      }
+
+      setSyncStats(stats);
       toast({
         title: "Sync Complete",
-        description: `Processed ${data.processed} documents.`,
+        description: `Successfully processed ${stats.processed} documents.`,
       });
     } catch (err: any) {
       toast({
@@ -106,9 +176,47 @@ export default function MaintenancePage() {
                         Synchronize LOA documents from Supabase to your local network path.
                       </CardDescription>
                    </div>
-                   <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 px-3 py-1 animate-pulse">
-                      Office Network: {MAINTENANCE_CONFIG.IS_DEV_LAPTOP ? 'Dev Restricted' : 'Scanning...'}
+                   <Badge 
+                     variant="outline" 
+                     className={`px-3 py-1 transition-all duration-500 ${
+                       networkStatus === "ready" 
+                         ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.1)]" 
+                         : networkStatus === "online" 
+                           ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
+                           : networkStatus === "offline"
+                             ? "bg-red-500/10 text-red-400 border-red-500/20 animate-pulse"
+                             : "bg-white/5 text-white/40 border-white/10"
+                     }`}
+                   >
+                      Office Network: {
+                         networkStatus === "ready" 
+                           ? "Ready to Sync" 
+                           : networkStatus === "online" 
+                             ? "Connected" 
+                             : networkStatus === "offline"
+                               ? "Feature Unsupported"
+                               : "Pick Folder..."
+                      }
                    </Badge>
+                </div>
+                <div className="mt-2 text-right">
+                   {!dirHandle ? (
+                     <Button 
+                       onClick={handleSelectFolder} 
+                       variant="outline" 
+                       size="sm" 
+                       className="bg-primary/10 border-primary/20 hover:bg-primary/20 text-xs font-bold gap-2 text-primary shadow-lg shadow-primary/5"
+                     >
+                       <HardDrive className="w-3 h-3" />
+                       Select Office Sync Folder
+                     </Button>
+                   ) : (
+                     <div className="flex items-center gap-2 text-[10px] text-emerald-400 font-bold bg-emerald-500/5 w-fit px-3 py-1.5 rounded-full border border-emerald-500/10 ml-auto">
+                       <CheckCircle2 className="w-3 h-3" />
+                       FOLDER CONNECTED
+                       <button onClick={() => setDirHandle(null)} className="ml-2 text-white/40 hover:text-white underline font-medium tracking-normal text-[9px]">Change</button>
+                     </div>
+                   )}
                 </div>
              </CardHeader>
              <CardContent className="space-y-8">
@@ -184,13 +292,16 @@ export default function MaintenancePage() {
              <Card className="bg-white/[0.01] border-white/5 backdrop-blur-md">
                 <CardHeader className="pb-2">
                    <CardTitle className="text-sm font-bold text-white/60 flex items-center gap-2 uppercase tracking-widest">
-                      <HardDrive className="w-4 h-4" /> Destination Path
+                      <HardDrive className="w-4 h-4" /> Recommended Path
                    </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                    <code className="text-[11px] bg-white/5 p-3 rounded-lg block border border-white/10 text-emerald-400 font-mono break-all leading-relaxed">
                       {MAINTENANCE_CONFIG.LOCAL_STORAGE_PATH}
                    </code>
+                   <p className="text-[10px] text-muted-foreground leading-relaxed italic">
+                      * When syncing via cloud, you must manually select this folder once to grant browser access.
+                   </p>
                 </CardContent>
              </Card>
              <Card className="bg-white/[0.01] border-white/5 backdrop-blur-md">

@@ -66,3 +66,14 @@ export async function syncFileToLocal(fileUrl: string, appointmentId: string) {
     return { status: "error", message: error.message };
   }
 }
+/**
+ * Checks if the office network path is reachable.
+ */
+export function checkNetwork() {
+  try {
+    if (MAINTENANCE_CONFIG.IS_DEV_LAPTOP) return false;
+    return fs.existsSync(MAINTENANCE_CONFIG.LOCAL_STORAGE_PATH);
+  } catch (e) {
+    return false;
+  }
+}

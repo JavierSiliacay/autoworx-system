@@ -45,6 +45,11 @@ export async function POST(req: NextRequest) {
             } else if (syncResult.status === "error") {
               results.errors++;
               results.details.push({ id: apt.id, error: syncResult.message, url });
+            } else if (syncResult.status === "offline") {
+              results.errors++;
+              results.details.push({ id: apt.id, error: "NETWORK OFFLINE", url });
+              // Early exit if network is unreachable
+              return NextResponse.json({ ...results, message: "Sync aborted: Office Network unreachable" }, { status: 503 });
             }
           }
         }
@@ -69,6 +74,10 @@ export async function POST(req: NextRequest) {
             } else if (syncResult.status === "error") {
               results.errors++;
               results.details.push({ id: hist.id, error: syncResult.message, url });
+            } else if (syncResult.status === "offline") {
+                results.errors++;
+                results.details.push({ id: hist.id, error: "NETWORK OFFLINE", url });
+                return NextResponse.json({ ...results, message: "Sync aborted: Office Network unreachable" }, { status: 503 });
             }
           }
         }
