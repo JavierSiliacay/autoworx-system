@@ -21,10 +21,11 @@ export async function GET(req: NextRequest) {
         .from("appointments")
         .select(`
           id, 
+          estimate_number,
           loa_attachments, 
           loa_attachment, 
           loa_attachment_2,
-          damage_photos,
+          damage_images,
           vehicle_plate,
           vehicle_model,
           name,
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
       if (activeApts) {
         activeApts.forEach(apt => {
           const meta = {
-            id: apt.id,
+            id: apt.estimate_number || apt.id, // Prefer estimate number for folder naming
             plate: apt.vehicle_plate,
             model: apt.vehicle_model,
             customer: apt.name,
@@ -51,9 +52,16 @@ export async function GET(req: NextRequest) {
 
           loaUrls.forEach(url => files.push({ id: apt.id, url, type: "LOA", metadata: meta }));
 
-          // Damage Photo URLs
-          const photoUrls = (apt.damage_photos || []).filter(Boolean) as string[];
-          photoUrls.forEach(url => files.push({ id: apt.id, url, type: "PHOTO", metadata: meta }));
+          // Damage Photo URLs (corrected column name & absolute URL construction)
+          const photoUrls = (apt.damage_images || []).filter(Boolean) as string[];
+          const bucket = "damage-images";
+          const baseUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${bucket}`;
+
+          photoUrls.forEach(url => {
+            // Only prepend if it doesn't look like a full URL
+            const finalUrl = url.startsWith("http") ? url : `${baseUrl}/${url}`;
+            files.push({ id: apt.id, url: finalUrl, type: "PHOTO", metadata: meta });
+          });
         });
       }
     }
@@ -62,12 +70,12 @@ export async function GET(req: NextRequest) {
     if (scope === "all" || scope === "history") {
       const { data: historyApts } = await supabase
         .from("appointment_history")
-        .select("id, vehicle_plate, vehicle_model, name, insurance, costing");
+        .select("id, estimate_number, vehicle_plate, vehicle_model, name, insurance, costing");
 
       if (historyApts) {
         historyApts.forEach(hist => {
           const meta = {
-            id: hist.id,
+            id: hist.estimate_number || hist.id,
             plate: hist.vehicle_plate,
             model: hist.vehicle_model,
             customer: hist.name,
@@ -78,9 +86,15 @@ export async function GET(req: NextRequest) {
           const loaUrls = hist.costing?.loaAttachments || [];
           loaUrls.forEach((url: string) => files.push({ id: hist.id, url, type: "LOA", metadata: meta }));
 
-          // Damage Photo URLs from costing or hist.damage_photos (checking common keys)
-          const photoUrls = hist.costing?.damagePhotos || [];
-          photoUrls.forEach((url: string) => files.push({ id: hist.id, url, type: "PHOTO", metadata: meta }));
+          // Damage Photo URLs (try both naming conventions & absolute URL construction)
+          const photoUrls = hist.costing?.damage_images || hist.costing?.damagePhotos || hist.costing?.damageImages || [];
+          const bucket = "damage-images";
+          const baseUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${bucket}`;
+
+          photoUrls.forEach((url: string) => {
+            const finalUrl = url.startsWith("http") ? url : `${baseUrl}/${url}`;
+            files.push({ id: hist.id, url: finalUrl, type: "PHOTO", metadata: meta });
+          });
         });
       }
     }
