@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const scope = searchParams.get("scope") || "all";
-    
+
     const files: { id: string, url: string }[] = [];
 
     // 1. Fetch from active appointments
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
             ...(apt.loa_attachment ? [apt.loa_attachment] : []),
             ...(apt.loa_attachment_2 ? [apt.loa_attachment_2] : [])
           ])).filter(Boolean) as string[];
-          
+
           urls.forEach(url => files.push({ id: apt.id, url }));
         });
       }
