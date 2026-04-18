@@ -235,9 +235,14 @@ export default function MaintenancePage() {
             <CardHeader className="pb-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                    <FolderTree className={`w-5 h-5 text-blue-400 ${syncing ? "animate-pulse" : ""}`} />
-                    Root Folder Archive
+                  <CardTitle className="text-2xl font-bold flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <div className="flex items-center gap-2">
+                      <FolderTree className={`w-5 h-5 text-blue-400 ${syncing ? "animate-pulse" : ""}`} />
+                      Root Folder Archive
+                    </div>
+                    <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2 py-1 rounded-md border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)] normal-case tracking-normal">
+                      select: {MAINTENANCE_CONFIG.LOCAL_STORAGE_PATH}
+                    </span>
                   </CardTitle>
                   <CardDescription className="text-white/40 text-sm">
                     All LOA Docs and Damage Photos will be mirrored to your local office share.
@@ -271,9 +276,9 @@ export default function MaintenancePage() {
 
             <CardContent className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SyncButton title="Click here to Sync Active Appointments"     description="Incoming & Ongoing"  icon={<Zap className="w-5 h-5" />}         onClick={() => handleSyncAll("active")}  loading={syncing} color="from-blue-600/20 to-indigo-600/20" />
-                <SyncButton title="Click here to Sync History"    description="Archived Records"   icon={<Clock className="w-5 h-5" />}       onClick={() => handleSyncAll("history")} loading={syncing} color="from-emerald-600/20 to-teal-600/20" />
-                <SyncButton title="Click here to Sync All Media"   description="Full Bulk Backup"   icon={<ShieldCheck className="w-5 h-5" />} onClick={() => handleSyncAll("all")}     loading={syncing} color="from-purple-600/20 to-pink-600/20" />
+                <SyncButton title="Click here to Sync LoA in Active Appointments"     description="Incoming & Ongoing"  icon={<Zap className="w-5 h-5" />}         onClick={() => handleSyncAll("active")}  loading={syncing} color="from-blue-600/20 to-indigo-600/20" />
+                <SyncButton title="Click here to Sync LoA in History"    description="Archived Records"   icon={<Clock className="w-5 h-5" />}       onClick={() => handleSyncAll("history")} loading={syncing} color="from-emerald-600/20 to-teal-600/20" />
+                <SyncButton title="Click here to all Sync Damage Photos and LoA"   description="Full Bulk Backup"   icon={<ShieldCheck className="w-5 h-5" />} onClick={() => handleSyncAll("all")}     loading={syncing} color="from-purple-600/20 to-pink-600/20" />
               </div>
 
               {syncStats && (
