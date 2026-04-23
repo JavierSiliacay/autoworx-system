@@ -855,7 +855,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
 
   const footerHtml = records.length > 0 ? `
     <tr style="background: #f8f9fa; font-weight: bold;">
-      <td colspan="7" class="text-right" style="padding-right: 15px; border-top: 2px solid #000;">GRAND TOTAL</td>
+      <td colspan="7" class="text-right" style="padding-right: 15px; border-top: 2px solid #000;">${title.includes("SALES") ? "TOTAL SALES" : "GRAND TOTAL"}</td>
       <td class="text-right" style="border-top: 2px solid #000;">${totalBRPAD.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000;">${totalAircon.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000;">${totalElectrical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>

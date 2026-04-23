@@ -228,11 +228,17 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
         return data
     }, [tableRecords, reportPeriod])
 
-    const totalYearlySales = useMemo(() => {
-        return tableRecords.reduce((sum, r) => {
+    const tableTotals = useMemo(() => {
+        return tableRecords.reduce((acc, r) => {
             const costs = getCategorizedCosts(r.costing)
-            return sum + costs.total
-        }, 0)
+            return {
+                brpad: acc.brpad + costs.brpad,
+                aircon: acc.aircon + costs.aircon,
+                electrical: acc.electrical + costs.electrical,
+                mechanical: acc.mechanical + costs.mechanical,
+                total: acc.total + costs.total
+            }
+        }, { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 })
     }, [tableRecords])
 
     const handlePrint = async () => {
@@ -520,31 +526,32 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             </div>
 
             {/* Charts section similar to ReleaseMonitoring but for Entry Data */}
-            {reportPeriod === "yearly" && tableRecords.length > 0 && (
+            {tableRecords.length > 0 && (
                 <div className="p-6 bg-muted/5 border-b border-border">
-                    {/* ... (Same chart logic as ReleaseMonitoring) ... */}
                     <div className="flex flex-col md:flex-row gap-6 items-start">
                          <div className="w-full md:w-1/3 p-6 bg-primary/5 rounded-2xl border border-primary/10 flex flex-col justify-center">
                             <div className="flex items-center gap-2 text-primary mb-2">
                                 <TrendingUp className="w-4 h-4" />
                                 <span className="text-xs font-bold uppercase tracking-wider">Entry Performance</span>
                             </div>
-                            <h4 className="text-sm text-muted-foreground">Est. Total Entry for {selectedYear}</h4>
+                            <h4 className="text-sm text-muted-foreground">Est. Total Entry for {reportPeriodLabel}</h4>
                             <p className="text-4xl font-black text-primary mt-2">
-                                ₱{totalYearlySales.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                ₱{tableTotals.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                             </p>
                         </div>
-                        <div className="w-full md:w-2/3 h-[200px]">
-                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={yearlyChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} />
-                                    <YAxis hide />
-                                    <Tooltip />
-                                    <Bar dataKey="total" radius={[4, 4, 0, 0]} className="fill-primary" />
-                                </BarChart>
-                             </ResponsiveContainer>
-                        </div>
+                        {reportPeriod === "yearly" && (
+                            <div className="w-full md:w-2/3 h-[200px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={yearlyChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} />
+                                        <YAxis hide />
+                                        <Tooltip />
+                                        <Bar dataKey="total" radius={[4, 4, 0, 0]} className="fill-primary" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -638,6 +645,19 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                             <tr><td colSpan={16} className="p-8 text-center text-muted-foreground">No entry logs found for this period.</td></tr>
                         )}
                     </tbody>
+                    {tableRecords.length > 0 && (
+                        <tfoot>
+                            <tr className="bg-[#FFD966]/20 font-bold border-t-2 border-border">
+                                <td colSpan={7} className="p-2 border border-border text-right uppercase text-[10px]">Total Sales for {reportPeriodLabel}</td>
+                                <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.brpad > 0 ? tableTotals.brpad.toLocaleString() : "-"}</td>
+                                <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.aircon > 0 ? tableTotals.aircon.toLocaleString() : "-"}</td>
+                                <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.electrical > 0 ? tableTotals.electrical.toLocaleString() : "-"}</td>
+                                <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.mechanical > 0 ? tableTotals.mechanical.toLocaleString() : "-"}</td>
+                                <td className="p-2 border border-border text-right font-mono text-primary text-[11px] font-black">₱{tableTotals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                <td colSpan={4} className="p-2 border border-border"></td>
+                            </tr>
+                        </tfoot>
+                    )}
                 </table>
             </div>
         </div>
