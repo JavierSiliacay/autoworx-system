@@ -88,6 +88,7 @@ import { ReleaseMonitoring } from "@/components/admin/release-monitoring"
 import { AddAppointmentModal } from "@/components/admin/add-appointment-modal"
 import { DeveloperTasksModal } from "@/components/admin/developer-tasks-modal"
 import { SalesMonitoring } from "@/components/admin/sales-monitoring"
+import { WhatIsNewModal } from "@/components/admin/what-is-new-modal"
 import {
   Dialog,
   DialogContent,
@@ -481,6 +482,45 @@ export default function AdminDashboard() {
   const [archiveModalOpen, setArchiveModalOpen] = useState(false)
   const [archiveAppointmentId, setArchiveAppointmentId] = useState<string | null>(null)
   const [archiveReason, setArchiveReason] = useState("")
+
+  // System Update & Auto-Logout Logic
+  useEffect(() => {
+    async function checkSystemUpdate() {
+      try {
+        const response = await fetch("/api/admin/system-updates/latest");
+        if (response.ok) {
+          const latestUpdate = await response.json();
+          if (latestUpdate) {
+            const lastSeenId = localStorage.getItem("last_seen_update_id");
+            
+            // If a new update is detected and we have a previous baseline, force logout
+            if (lastSeenId && lastSeenId !== latestUpdate.id) {
+              toast({
+                title: "🚀 Major Update Detected",
+                description: "The system has been updated to v" + latestUpdate.version + ". You will be logged out in 5 seconds to apply changes.",
+                variant: "destructive",
+                duration: 5000,
+              });
+              
+              setTimeout(() => {
+                signOut({ callbackUrl: "/auth/signin" });
+              }, 5000);
+            } else if (!lastSeenId) {
+              // Initialize baseline for new users
+              localStorage.setItem("last_seen_update_id", latestUpdate.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Update check failed:", error);
+      }
+    }
+
+    // Check on mount and every 5 minutes
+    checkSystemUpdate();
+    const interval = setInterval(checkSystemUpdate, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // History search, filter, and sort states
   const [historySearchQuery, setHistorySearchQuery] = useState<string>("")
@@ -6998,6 +7038,7 @@ export default function AdminDashboard() {
         userEmail={session?.user?.email || ""}
         isDeveloper={isDeveloperUser}
       />
+      <WhatIsNewModal />
     </div>
   )
 }

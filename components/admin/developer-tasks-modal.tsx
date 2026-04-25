@@ -372,7 +372,7 @@ export function DeveloperTasksModal({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8 min-h-0 custom-scrollbar">
           {/* Publish Update Section (Developer Only) */}
-          {isDeveloper && tasks.some(t => t.status === "Done" && !(t as any).update_id) && (
+          {isDeveloper && (
             <section className="animate-in slide-in-from-top-4 duration-500">
               {!publishForm.isOpen ? (
                 <div className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 p-4 rounded-xl border border-blue-500/30 flex items-center justify-between gap-4">
@@ -381,18 +381,23 @@ export function DeveloperTasksModal({
                       <Rocket className="w-5 h-5 text-blue-400" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm text-blue-100">Ready to Publish Update?</h4>
+                      <h4 className="font-bold text-sm text-blue-100">
+                        {tasks.filter(t => t.status === "Done" && !(t as any).update_id).length === 0 ? "System Synchronized" : "Ready to Publish Update?"}
+                      </h4>
                       <p className="text-xs text-blue-400 font-medium">
-                        You have {tasks.filter(t => t.status === "Done" && !(t as any).update_id).length} completed tasks ready for release.
+                        {tasks.filter(t => t.status === "Done" && !(t as any).update_id).length === 0 
+                          ? "All completed tasks have been published to the team."
+                          : `You have ${tasks.filter(t => t.status === "Done" && !(t as any).update_id).length} completed tasks ready for release.`}
                       </p>
                     </div>
                   </div>
                   <Button 
                     onClick={prepareRelease}
                     size="sm" 
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4"
+                    disabled={tasks.filter(t => t.status === "Done" && !(t as any).update_id).length === 0}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 disabled:bg-slate-800 disabled:text-slate-500"
                   >
-                    Prepare Release
+                    {tasks.filter(t => t.status === "Done" && !(t as any).update_id).length === 0 ? "System Up to Date" : "Prepare Release"}
                   </Button>
                 </div>
               ) : (
