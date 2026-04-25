@@ -487,14 +487,18 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function checkSystemUpdate() {
       try {
-        const response = await fetch("/api/admin/system-updates/latest");
+        const response = await fetch("/api/admin/system-updates/latest", { cache: 'no-store' });
         if (response.ok) {
           const latestUpdate = await response.json();
           if (latestUpdate) {
             const lastSeenId = localStorage.getItem("last_seen_update_id");
+            const notifiedId = localStorage.getItem("update_notified_id");
             
-            // If a new update is detected and we have a previous baseline, force logout
-            if (lastSeenId && lastSeenId !== latestUpdate.id) {
+            // If a new update is detected, we haven't notified for it yet, and we have a previous baseline
+            if (lastSeenId && lastSeenId !== latestUpdate.id && notifiedId !== latestUpdate.id) {
+              // Mark as notified immediately to prevent loops
+              localStorage.setItem("update_notified_id", latestUpdate.id);
+              
               toast({
                 title: "🚀 Major Update Detected",
                 description: "The system has been updated to v" + latestUpdate.version + ". You will be logged out in 5 seconds to apply changes.",
@@ -508,6 +512,7 @@ export default function AdminDashboard() {
             } else if (!lastSeenId) {
               // Initialize baseline for new users
               localStorage.setItem("last_seen_update_id", latestUpdate.id);
+              localStorage.setItem("update_notified_id", latestUpdate.id);
             }
           }
         }
@@ -518,7 +523,7 @@ export default function AdminDashboard() {
 
     // Check on mount and every 5 minutes
     checkSystemUpdate();
-    const interval = setInterval(checkSystemUpdate, 5 * 60 * 1000);
+    const interval = setInterval(checkSystemUpdate, 2 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 

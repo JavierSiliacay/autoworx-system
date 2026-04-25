@@ -39,7 +39,7 @@ export function WhatIsNewModal() {
   useEffect(() => {
     async function checkUpdate() {
       try {
-        const response = await fetch("/api/admin/system-updates/latest");
+        const response = await fetch("/api/admin/system-updates/latest", { cache: 'no-store' });
         if (response.ok) {
           const latestUpdate = await response.json();
           if (latestUpdate) {
