@@ -479,23 +479,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       </tr>
     </table>
     
-    ${(appointment.damageImages && appointment.damageImages.length > 0) ? `
-    <div class="section-title">Visual Damage Records</div>
-    <div class="image-gallery" style="margin-top: 4px;">
-      ${appointment.damageImages.map(img => `
-        <div class="image-item"><img src="${img}" alt="Damage Photo" /></div>
-      `).join("")}
-    </div>
-    ` : ""}
-
-    ${(appointment.orcrImage || appointment.orcrImage2) ? `
-    <div class="section-title">Official Documents (OR/CR)</div>
-    <div class="doc-gallery" style="margin-top: 4px;">
-      ${[appointment.orcrImage, appointment.orcrImage2].filter(Boolean).map(img => `
-        <div class="doc-item"><img src="${img}" alt="ORCR Document" /></div>
-      `).join("")}
-    </div>
-    ` : ""}
+    ${/* Removed Visual Damage Records and Official Documents sections per user request */ ""}
 
     ${appointment.status === 'pending' ? `
     <div style="text-align: center; margin: 15px 0; display: flex; flex-direction: column; justify-content: center; align-items: center;">
