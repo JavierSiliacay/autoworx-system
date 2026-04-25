@@ -13,7 +13,7 @@ async function globalRepair() {
     
     for (const table of ['appointments', 'appointment_history']) {
         console.log(`\nScanning table: ${table}...`)
-        const { data: records, error } = await supabase
+        const { data, error } = await supabase
             .from(table)
             .select(`id, tracking_code, ${FIELDS.join(', ')}`)
 
@@ -22,6 +22,7 @@ async function globalRepair() {
             continue
         }
 
+        const records = (data || []) as any[]
         console.log(`  Found ${records.length} records.`)
 
         for (const rec of records) {

@@ -31,7 +31,10 @@ import {
   Trash2,
   Calendar,
   User,
-  ExternalLink
+  ExternalLink,
+  Rocket,
+  Sparkles,
+  Wand2
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
@@ -73,6 +76,14 @@ export function DeveloperTasksModal({
     description: "",
     type: "New Feature",
     customType: "",
+  });
+
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishForm, setPublishForm] = useState({
+    isOpen: false,
+    version: "",
+    title: "",
+    summary: ""
   });
 
   const loadTasks = useCallback(async () => {
@@ -182,6 +193,127 @@ export function DeveloperTasksModal({
     }
   };
 
+  const [isGenerating, setIsGenerating] = useState(false);
+  const handleGenerateWithAI = async () => {
+    const unpublishedDoneTasks = tasks.filter(t => t.status === "Done" && !(t as any).update_id);
+    if (unpublishedDoneTasks.length === 0) return;
+
+    setIsGenerating(true);
+    try {
+      const response = await fetch("/api/developer/generate-release-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks: unpublishedDoneTasks }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPublishForm(prev => ({
+          ...prev,
+          title: data.title || prev.title,
+          summary: data.summary || prev.summary
+        }));
+        toast({ title: "AI Generated! ✨", description: "Release notes have been drafted based on your tasks." });
+      }
+    } catch (error) {
+      console.error("Error generating notes:", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const incrementVersion = (current: string, tasksToPublish: DeveloperTask[]) => {
+    try {
+      // Remove 'v' if present
+      const clean = current.replace(/^v/, '');
+      const parts = clean.split('.').map(Number);
+      
+      if (parts.length !== 3 || parts.some(isNaN)) return `v${current}.1`;
+
+      let [major, minor, patch] = parts;
+
+      // Determine bump type
+      const hasFeatures = tasksToPublish.some(t => t.type === "New Feature");
+      
+      if (hasFeatures) {
+        minor += 1;
+        patch = 0;
+      } else {
+        patch += 1;
+      }
+
+      return `v${major}.${minor}.${patch}`;
+    } catch {
+      return "v1.0.0";
+    }
+  };
+
+  const prepareRelease = async () => {
+    const unpublishedDoneTasks = tasks.filter(t => t.status === "Done" && !(t as any).update_id);
+    
+    if (unpublishedDoneTasks.length === 0) {
+      toast({ title: "Nothing to publish", description: "All completed tasks are already published.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      // 1. Fetch latest version
+      const res = await fetch("/api/admin/system-updates/latest");
+      const latestUpdate = await res.json();
+      const currentVersion = latestUpdate?.version || "1.0.0";
+      
+      // 2. Suggest new version
+      const suggestedVersion = incrementVersion(currentVersion, unpublishedDoneTasks);
+      
+      setPublishForm({
+        ...publishForm,
+        isOpen: true,
+        version: suggestedVersion,
+        title: "",
+        summary: ""
+      });
+    } catch (error) {
+      console.error("Error preparing release:", error);
+      setPublishForm({ ...publishForm, isOpen: true, version: "v1.0.0" });
+    }
+  };
+
+  const handlePublish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const unpublishedDoneTasks = tasks.filter(t => t.status === "Done" && !(t as any).update_id);
+    
+    if (unpublishedDoneTasks.length === 0) {
+      toast({ title: "Nothing to publish", description: "All completed tasks are already published.", variant: "destructive" });
+      return;
+    }
+
+    setIsPublishing(true);
+    try {
+      const response = await fetch("/api/developer/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          version: publishForm.version,
+          title: publishForm.title,
+          summary: publishForm.summary
+        }),
+      });
+
+      if (response.ok) {
+        toast({ title: "Update Published! 🚀", description: "Admins will see the 'What's New' modal on their next visit." });
+        setPublishForm({ ...publishForm, isOpen: false, version: "", title: "", summary: "" });
+        loadTasks();
+      } else {
+        const error = await response.json();
+        toast({ title: "Publish Failed", description: error.error, variant: "destructive" });
+      }
+    } catch (error) {
+      console.error("Error publishing update:", error);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const filteredTasks = tasks.filter(task => 
     filter === "All" ? true : task.status === filter
   );
@@ -239,6 +371,98 @@ export function DeveloperTasksModal({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8 min-h-0 custom-scrollbar">
+          {/* Publish Update Section (Developer Only) */}
+          {isDeveloper && tasks.some(t => t.status === "Done" && !(t as any).update_id) && (
+            <section className="animate-in slide-in-from-top-4 duration-500">
+              {!publishForm.isOpen ? (
+                <div className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 p-4 rounded-xl border border-blue-500/30 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                      <Rocket className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-blue-100">Ready to Publish Update?</h4>
+                      <p className="text-xs text-blue-400 font-medium">
+                        You have {tasks.filter(t => t.status === "Done" && !(t as any).update_id).length} completed tasks ready for release.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={prepareRelease}
+                    size="sm" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4"
+                  >
+                    Prepare Release
+                  </Button>
+                </div>
+              ) : (
+                <div className="bg-slate-900 border border-blue-500/50 rounded-xl p-6 space-y-6 shadow-2xl shadow-blue-900/20">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-black tracking-tight text-blue-400 flex items-center gap-2">
+                        <Sparkles className="w-5 h-5" />
+                        Release New Update
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleGenerateWithAI}
+                        disabled={isGenerating}
+                        className="h-8 bg-purple-600/10 border-purple-500/20 text-purple-400 hover:bg-purple-600 hover:text-white transition-all gap-2"
+                      >
+                        {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                        {isGenerating ? "Analyzing..." : "Suggest with AI"}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setPublishForm({...publishForm, isOpen: false})} className="text-slate-500 h-8">Cancel</Button>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handlePublish} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] uppercase tracking-widest text-slate-500 font-black">Version Tag</Label>
+                            <Input 
+                                placeholder="v1.2.0" 
+                                value={publishForm.version}
+                                onChange={(e) => setPublishForm({...publishForm, version: e.target.value})}
+                                required
+                                className="bg-white/5 border-white/10"
+                            />
+                        </div>
+                        <div className="sm:col-span-2 space-y-2">
+                            <Label className="text-[10px] uppercase tracking-widest text-slate-500 font-black">Release Title</Label>
+                            <Input 
+                                placeholder="The Performance Update" 
+                                value={publishForm.title}
+                                onChange={(e) => setPublishForm({...publishForm, title: e.target.value})}
+                                required
+                                className="bg-white/5 border-white/10"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-[10px] uppercase tracking-widest text-slate-500 font-black">Release Summary (Optional)</Label>
+                        <Textarea 
+                            placeholder="A brief summary of what's new..." 
+                            value={publishForm.summary}
+                            onChange={(e) => setPublishForm({...publishForm, summary: e.target.value})}
+                            className="bg-white/5 border-white/10 resize-none h-20"
+                        />
+                    </div>
+                    <Button 
+                        type="submit" 
+                        disabled={isPublishing} 
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 gap-2 shadow-lg shadow-blue-600/20"
+                    >
+                        {isPublishing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Rocket className="w-5 h-5" /> Publish to all Admins</>}
+                    </Button>
+                  </form>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Create Task Section (Admin Only - though here all authorized share it) */}
           <section className="space-y-4">
             <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">

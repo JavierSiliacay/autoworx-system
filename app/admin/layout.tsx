@@ -1,5 +1,6 @@
 import React from "react"
 import type { Metadata } from "next"
+import { WhatIsNewModal } from "@/components/admin/what-is-new-modal"
 
 export const metadata: Metadata = {
   title: "Admin Panel | Autoworx Repairs",
@@ -11,5 +12,10 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <>{children}</>
+  return (
+    <>
+      <WhatIsNewModal />
+      {children}
+    </>
+  )
 }

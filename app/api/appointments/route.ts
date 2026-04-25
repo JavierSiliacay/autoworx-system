@@ -12,57 +12,100 @@ export async function GET(request: Request) {
     const trackingCode = searchParams.get("trackingCode")
 
     if (trackingCode) {
+      const cleanCode = trackingCode.trim().replace(/[\s\-_]+/g, "").toUpperCase()
+
+      // 1. Try active appointments
+      // Generate a broad ilike pattern (e.g., "M%5%K%2%") to catch records with internal dashes/spaces
+      const fuzzyPattern = `%${cleanCode.split("").join("%")}%`
+      
       let { data, error } = await supabase
         .from("appointments")
         .select("*")
-        .eq("tracking_code", trackingCode)
-        .single()
+        .or(`tracking_code.eq.${trackingCode},tracking_code.ilike.${fuzzyPattern}`)
+        .limit(10)
 
-      if (error || !data) {
-        // Try searching in history
-        const { data: historyData, error: historyError } = await supabase
+      // Filter for best match in JS to handle normalization perfectly
+      let bestMatch = data?.find(apt => 
+        apt.tracking_code.toUpperCase() === trackingCode.toUpperCase() ||
+        apt.tracking_code.replace(/[\s\-_]+/g, "").toUpperCase() === cleanCode
+      )
+
+      if (!bestMatch) {
+        // 2. Try history
+        const { data: historyData } = await supabase
           .from("appointment_history")
           .select("*")
-          .eq("tracking_code", trackingCode)
-          .single()
+          .or(`tracking_code.eq.${trackingCode},tracking_code.ilike.${fuzzyPattern}`)
+          .limit(10)
 
-        if (historyError) {
-          return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
-        }
+        const bestHistoryMatch = historyData?.find(h => 
+          h.tracking_code.toUpperCase() === trackingCode.toUpperCase() ||
+          h.tracking_code.replace(/[\s\-_]+/g, "").toUpperCase() === cleanCode
+        )
 
-        // Format history data to match appointment format
-        // Note: final_status in history maps to status in active
-        data = {
-          ...historyData,
-          status: historyData.final_status,
-          created_at: historyData.original_created_at
+        if (bestHistoryMatch) {
+          bestMatch = {
+            ...bestHistoryMatch,
+            status: bestHistoryMatch.final_status,
+            created_at: bestHistoryMatch.original_created_at,
+            is_archived: true
+          }
         }
       }
+
+      if (!bestMatch) {
+        return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
+      }
+
+      const finalData = bestMatch
 
       // Check authorization for costing data
       const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET })
       const isAdmin = isAuthorizedAdminEmail(token?.email)
 
-      if (!isAdmin) {
-        delete data.costing
+      if (!isAdmin && (finalData as any).costing) {
+        delete (finalData as any).costing
       }
 
-      return NextResponse.json(data)
+      return NextResponse.json(finalData)
     }
 
     const isCountRequest = searchParams.get("count") === "true"
+    const countType = searchParams.get("type") || "pending"
 
     if (isCountRequest) {
-      const { count, error } = await supabase
-        .from("appointments")
-        .select("*", { count: "exact", head: true })
-        .or("repair_status.eq.pending_inspection,repair_status.is.null")
+      if (countType === "completed") {
+        // Count active completed
+        const { count: activeCount, error: activeError } = await supabase
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "completed")
+          .is("deleted_at", null)
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        if (activeError) return NextResponse.json({ error: activeError.message }, { status: 500 })
+
+        // Count history (excluding deleted records)
+        const { count: historyCount, error: historyError } = await supabase
+          .from("appointment_history")
+          .select("*", { count: "exact", head: true })
+          .is("deleted_at", null)
+
+        if (historyError) return NextResponse.json({ error: historyError.message }, { status: 500 })
+
+        return NextResponse.json({ count: (activeCount || 0) + (historyCount || 0) })
+      } else {
+        const { count, error } = await supabase
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .or("repair_status.eq.pending_inspection,repair_status.is.null")
+          .is("deleted_at", null)
+
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 500 })
+        }
+
+        return NextResponse.json({ count: count || 0 })
       }
-
-      return NextResponse.json({ count: count || 0 })
     }
 
     // Get all appointments (admin only)
@@ -265,7 +308,14 @@ export async function PUT(request: Request) {
   // Convert camelCase to snake_case for database
   const dbUpdates: Record<string, unknown> = {}
 
-  if (updates.status !== undefined) dbUpdates.status = updates.status
+  if (updates.status !== undefined) {
+    dbUpdates.status = updates.status
+    // Automatically set repair status to 'completed_ready' if appointment is marked as completed
+    if (updates.status?.toLowerCase() === "completed") {
+      dbUpdates.repair_status = "completed_ready"
+      dbUpdates.status_updated_at = new Date().toISOString()
+    }
+  }
   if (updates.repairStatus !== undefined) dbUpdates.repair_status = updates.repairStatus
   if (updates.estimateNumber !== undefined) dbUpdates.estimate_number = updates.estimateNumber
   if (updates.currentRepairPart !== undefined) dbUpdates.current_repair_part = updates.currentRepairPart
@@ -283,6 +333,7 @@ export async function PUT(request: Request) {
   if (updates.isBackJob !== undefined) dbUpdates.is_backjob = updates.isBackJob
   if (updates.isSynced !== undefined) dbUpdates.is_synced = updates.isSynced
   if (updates.syncedAt !== undefined) dbUpdates.synced_at = updates.syncedAt
+  if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt
 
   // New editable fields
   if (updates.name !== undefined) dbUpdates.name = updates.name

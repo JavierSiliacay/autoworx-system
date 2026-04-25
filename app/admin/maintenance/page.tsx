@@ -149,10 +149,15 @@ export default function MaintenancePage() {
       for (const item of files) {
         stats.processed++;
         try {
+          const res = await fetch(item.url);
+          if (!res.ok) {
+             throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          const blob = await res.blob();
+
           if (item.type === "LOA") {
             const fileName = buildLOAFileName(item.metadata, item.url);
             try { await loaDir.getFileHandle(fileName); stats.alreadyExists++; continue; } catch { /* next */ }
-            const blob     = await (await fetch(item.url)).blob();
             const fh       = await loaDir.getFileHandle(fileName, { create: true });
             const writable = await fh.createWritable();
             await writable.write(blob);
@@ -163,13 +168,11 @@ export default function MaintenancePage() {
             const unitFolderName = buildUnitFolderName(item.metadata);
             const unitDir = await photoDir.getDirectoryHandle(unitFolderName, { create: true });
             
-            // Name it photo_N based on count for this unit
             if (!photoCounters[unitFolderName]) photoCounters[unitFolderName] = 0;
             const fileName = getPhotoFileName(item.url, photoCounters[unitFolderName]);
             photoCounters[unitFolderName]++;
 
             try { await unitDir.getFileHandle(fileName); stats.alreadyExists++; continue; } catch { /* next */ }
-            const blob     = await (await fetch(item.url)).blob();
             const fh       = await unitDir.getFileHandle(fileName, { create: true });
             const writable = await fh.createWritable();
             await writable.write(blob);
@@ -178,7 +181,7 @@ export default function MaintenancePage() {
           }
         } catch (err: any) {
           stats.errors++;
-          stats.details.push({ id: item.id, error: err.message });
+          stats.details.push({ id: item.id, url: item.url, type: item.type, error: err.message });
         }
         if (stats.processed % 10 === 0) setSyncStats({ ...stats });
       }
@@ -293,6 +296,26 @@ export default function MaintenancePage() {
                     <StatCard label="Up-to-date"     value={syncStats.alreadyExists} color="text-white/40" />
                     <StatCard label="Failed"         value={syncStats.errors}        color="text-red-400" />
                   </div>
+
+                  {syncStats.errors > 0 && (
+                    <div className="mt-6 p-4 rounded-xl bg-red-500/5 border border-red-500/10 space-y-3">
+                      <h4 className="text-xs font-black text-red-400 uppercase tracking-widest flex items-center gap-2">
+                        <AlertCircle className="w-3 h-3" />
+                        Error Log ({syncStats.errors} failures)
+                      </h4>
+                      <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                        {syncStats.details.map((detail: any, i: number) => (
+                          <div key={i} className="p-2 rounded bg-black/20 border border-white/5 text-[10px] space-y-1">
+                            <div className="flex justify-between font-mono">
+                              <span className="text-white/40">ID: {detail.id}</span>
+                              <span className="text-red-400/80">{detail.error}</span>
+                            </div>
+                            <div className="text-white/20 truncate">{detail.url}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

@@ -34,6 +34,10 @@ interface TrackingAppointment {
   loaAttachment?: string
   loaAttachment2?: string
   loaAttachments?: string[]
+  isArchived?: boolean
+  damageImages?: string[]
+  orcrImage?: string
+  orcrImage2?: string
 }
 
 export async function generateConfirmationPDF(options: PDFGeneratorOptions): Promise<string> {
@@ -235,10 +239,11 @@ export interface PDFOptions {
 
 export async function generateTrackingPDF(appointment: TrackingAppointment, role: 'admin' | 'user' = 'user', reportTitle?: string, options: PDFOptions = {}): Promise<string> {
   const isAdmin = role === 'admin'
-  const repairStatus = getRepairStatusLabel(appointment.repairStatus)
-  const appointmentStatus = getAppointmentStatusLabel(appointment.status)
+  const isReleased = appointment.isArchived
+  const repairStatus = getRepairStatusLabel(isReleased ? "completed_ready" : appointment.repairStatus)
+  const appointmentStatus = isReleased ? "Released / History" : getAppointmentStatusLabel(appointment.status)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : PRODUCTION_URL
-  const displayTitle = reportTitle || (appointment.status === 'pending' ? "Appointment Confirmation" : (isAdmin ? "Repair Estimate" : "Repair Status Report"))
+  const displayTitle = reportTitle || (appointment.status === 'pending' ? "Appointment Confirmation" : (isReleased ? "Final Status Report (Released)" : (isAdmin ? "Repair Estimate" : "Repair Status Report")))
 
   const categoryOrder = ["Parts", "Tinsmith/Alignment", "Mechanical Works", "Electrical", "Aircon", "Painting", "Detailing", "Glassworks", "Remove and Install", "Others"];
 
@@ -381,6 +386,14 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     .conforme-section { margin-top: 3px; font-weight: bold; font-size: 8.5px; }
     .conforme-line { border-bottom: 1px solid #333; display: inline-block; width: 150px; height: 10px; }
     .signature-img { width: 55px; height: auto; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); z-index: 10; pointer-events: none; }
+    
+    /* New styles for images in report */
+    .image-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+    .image-item { border: 1px solid #ddd; border-radius: 3px; overflow: hidden; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; background: #f9f9f9; }
+    .image-item img { width: 100%; height: 100%; object-cover: cover; }
+    .doc-gallery { display: flex; gap: 8px; margin-bottom: 8px; }
+    .doc-item { border: 1px solid #ddd; border-radius: 3px; overflow: hidden; width: 140px; aspect-ratio: 3/2; background: #f9f9f9; }
+    .doc-item img { width: 100%; height: 100%; object-cover: cover; }
   </style>
 </head>
 <body>
@@ -465,6 +478,24 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         <td class="value-cell">${appointment.engineNumber || "N/A"}</td>
       </tr>
     </table>
+    
+    ${(appointment.damageImages && appointment.damageImages.length > 0) ? `
+    <div class="section-title">Visual Damage Records</div>
+    <div class="image-gallery" style="margin-top: 4px;">
+      ${appointment.damageImages.map(img => `
+        <div class="image-item"><img src="${img}" alt="Damage Photo" /></div>
+      `).join("")}
+    </div>
+    ` : ""}
+
+    ${(appointment.orcrImage || appointment.orcrImage2) ? `
+    <div class="section-title">Official Documents (OR/CR)</div>
+    <div class="doc-gallery" style="margin-top: 4px;">
+      ${[appointment.orcrImage, appointment.orcrImage2].filter(Boolean).map(img => `
+        <div class="doc-item"><img src="${img}" alt="ORCR Document" /></div>
+      `).join("")}
+    </div>
+    ` : ""}
 
     ${appointment.status === 'pending' ? `
     <div style="text-align: center; margin: 15px 0; display: flex; flex-direction: column; justify-content: center; align-items: center;">
@@ -823,7 +854,10 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
   const rowsHtml = records.map((r, idx) => {
     const claimType = r.insurance ? r.insurance.toUpperCase() : "";
     const unitStr = `${r.vehicle_year || r.vehicleYear || ""} ${r.vehicle_make || r.vehicleMake || ""} ${r.vehicle_model || r.vehicleModel || ""}`.trim();
-    const dateStr = r.completed_at || r.original_created_at || r.createdAt ? new Date(r.completed_at || r.original_created_at || r.createdAt).toLocaleDateString("en-US") : "";
+    const completeDateStr = (r.status_updated_at || r.statusUpdatedAt) 
+      ? new Date(r.status_updated_at || r.statusUpdatedAt).toLocaleDateString("en-US") 
+      : (r.completed_at || r.completedAt ? new Date(r.completed_at || r.completedAt).toLocaleDateString("en-US") : "-");
+    const releaseDateStr = r.completed_at || r.original_created_at || r.createdAt ? new Date(r.completed_at || r.original_created_at || r.createdAt).toLocaleDateString("en-US") : "";
     const costs = getCategorizedCosts(r.costing);
 
     totalBRPAD += costs.brpad;
@@ -831,6 +865,9 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
     totalElectrical += costs.electrical;
     totalMechanical += costs.mechanical;
     grandTotal += costs.total;
+
+    const isSales = title.includes("SALES");
+    const showCompleteDate = !isSales;
 
     return `
       <tr>
@@ -847,7 +884,8 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         <td class="text-right">${costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right" style="font-weight: bold;">${costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td>${r.current_repair_part || r.currentRepairPart || ""}</td>
-        <td>${dateStr}</td>
+        ${showCompleteDate ? `<td>${completeDateStr}</td>` : ""}
+        <td>${releaseDateStr}</td>
         <td class="text-left">${r.paul_notes || r.paulNotes || r.remarks || ""}</td>
       </tr>
     `;
@@ -861,7 +899,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       <td class="text-right" style="border-top: 2px solid #000;">${totalElectrical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000;">${totalMechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000; color: #c00;">${grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-      <td colspan="3" style="border-top: 2px solid #000;"></td>
+      <td colspan="${title.includes("SALES") ? "3" : "4"}" style="border-top: 2px solid #000;"></td>
     </tr>
   ` : "";
 
@@ -923,7 +961,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
   <table>
     <thead>
       <tr>
-        <th colspan="15" style="text-align: left; border: none; padding-bottom: 10px;">
+        <th colspan="${title.includes("SALES") ? "15" : "16"}" style="text-align: left; border: none; padding-bottom: 10px;">
           <h1>
             <span style="color: #FF0000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc; padding-right: 5px;">${title.split(' ')[0]}</span>
             <span style="color: #000000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;">${title.split(' ').slice(1).join(' ')}</span>
@@ -948,6 +986,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         <th style="font-size: 8px; width: 6%;">MECHANICAL</th>
         <th style="font-size: 8px; width: 7%;">TOTAL<br/><span style="font-size: 5px; font-weight: normal; letter-spacing: -0.5px;">(w/ VAT/DISCOUNT)</span></th>
         <th style="font-size: 8px; width: 4%;">MOD</th>
+        ${!title.includes("SALES") ? `<th style="font-size: 8px; width: 7%;">DATE COMPLETE</th>` : ""}
         <th style="font-size: 8px; width: 7%;">${dateColumnLabel}</th>
         <th style="font-size: 8px; width: 10%;">REMARKS</th>
       </tr>

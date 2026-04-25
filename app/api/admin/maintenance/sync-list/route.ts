@@ -14,6 +14,8 @@ export async function GET(req: NextRequest) {
     const scope = searchParams.get("scope") || "all";
 
     const files: { id: string; url: string; type: "LOA" | "PHOTO"; metadata: any }[] = [];
+    const bucket = "damage-images";
+    const baseUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${bucket}`;
 
     // 1. Fetch from active appointments
     if (scope === "all" || scope === "active") {
@@ -30,8 +32,7 @@ export async function GET(req: NextRequest) {
           vehicle_model,
           name,
           insurance
-        `)
-        .not("loa_attachments", "is", null);
+        `);
 
       if (activeApts) {
         activeApts.forEach(apt => {
@@ -54,8 +55,6 @@ export async function GET(req: NextRequest) {
 
           // Damage Photo URLs (corrected column name & absolute URL construction)
           const photoUrls = (apt.damage_images || []).filter(Boolean) as string[];
-          const bucket = "damage-images";
-          const baseUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${bucket}`;
 
           photoUrls.forEach(url => {
             // Only prepend if it doesn't look like a full URL
@@ -84,12 +83,14 @@ export async function GET(req: NextRequest) {
 
           // LOA URLs from costing
           const loaUrls = hist.costing?.loaAttachments || [];
-          loaUrls.forEach((url: string) => files.push({ id: hist.id, url, type: "LOA", metadata: meta }));
+
+          loaUrls.forEach((url: string) => {
+            const finalUrl = url.startsWith("http") ? url : `${baseUrl}/${url}`;
+            files.push({ id: hist.id, url: finalUrl, type: "LOA", metadata: meta });
+          });
 
           // Damage Photo URLs (try both naming conventions & absolute URL construction)
           const photoUrls = hist.costing?.damage_images || hist.costing?.damagePhotos || hist.costing?.damageImages || [];
-          const bucket = "damage-images";
-          const baseUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${bucket}`;
 
           photoUrls.forEach((url: string) => {
             const finalUrl = url.startsWith("http") ? url : `${baseUrl}/${url}`;

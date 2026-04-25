@@ -75,6 +75,28 @@ interface AppointmentDB {
 
 // Helper to convert DB response to frontend format
 function dbToFrontend(apt: AppointmentDB): Appointment {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ovovmpxfzhpndpajisgh.supabase.co";
+  const bucket = "damage-images";
+  const publicBaseUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}`;
+
+  const fixUrl = (url: string | null | undefined): string | undefined => {
+    if (!url) return undefined;
+    if (url.startsWith('http')) return url;
+
+    // Relative path starting with the bucket name — prepend supabase base
+    if (url.startsWith(`${bucket}/`)) {
+      return `${supabaseUrl}/storage/v1/object/public/${url}`;
+    }
+
+    // Path with subfolder structure
+    if (url.includes('/')) {
+      return `${publicBaseUrl}/${url}`;
+    }
+
+    // Legacy bare filename — assume root of bucket
+    return `${publicBaseUrl}/${url}`;
+  };
+
   return {
     id: apt.id,
     trackingCode: apt.tracking_code,
@@ -93,14 +115,15 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     currentRepairPart: apt.current_repair_part,
     statusUpdatedAt: apt.status_updated_at,
     costing: apt.costing,
-    damageImages: apt.damage_images,
-    orcrImage: apt.orcr_image,
-    orcrImage2: apt.orcr_image_2,
+    damageImages: (apt.damage_images || []).map(fixUrl).filter(Boolean) as string[],
+    orcrImage: fixUrl(apt.orcr_image),
+    orcrImage2: fixUrl(apt.orcr_image_2),
     insurance: apt.insurance,
     estimateNumber: apt.estimate_number,
-    loaAttachment: apt.loa_attachment || apt.costing?.loaAttachment,
-    loaAttachment2: apt.loa_attachment_2 || apt.costing?.loaAttachment2,
-    loaAttachments: apt.loa_attachments || apt.costing?.loaAttachments || [],
+    loaAttachment: fixUrl(apt.loa_attachment || apt.costing?.loaAttachment),
+    loaAttachment2: fixUrl(apt.loa_attachment_2 || apt.costing?.loaAttachment2),
+    loaAttachments: (apt.loa_attachments || apt.costing?.loaAttachments || []).map(fixUrl).filter(Boolean) as string[],
+    isArchived: (apt as any).is_archived,
   }
 }
 
@@ -133,6 +156,7 @@ interface Appointment {
   loaAttachment?: string
   loaAttachment2?: string
   loaAttachments?: string[]
+  isArchived?: boolean
 }
 
 import { Suspense } from "react"
@@ -142,7 +166,7 @@ function TrackingContent() {
   const [appointment, setAppointment] = useState<Appointment | null>(null)
   const [error, setError] = useState("")
   const [isSearching, setIsSearching] = useState(false)
-  const [pendingCount, setPendingCount] = useState(0)
+  const [completedCount, setCompletedCount] = useState(0)
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
   const [zoomModalOpen, setZoomModalOpen] = useState(false)
   const [zoomImages, setZoomImages] = useState<string[]>([])
@@ -166,6 +190,10 @@ function TrackingContent() {
     }
   }, [])
 
+  const normalizeTrackingCode = (code: string) => {
+    return code.trim().replace(/[\s\-_]+/g, "").toUpperCase()
+  }
+
   const performSearch = useCallback(async (code: string) => {
     if (!mountedRef.current) return
     setError("")
@@ -178,7 +206,8 @@ function TrackingContent() {
 
     try {
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-      const response = await fetch(`${baseUrl}/api/appointments?trackingCode=${encodeURIComponent(code.toUpperCase())}`, {
+      const normalizedCode = normalizeTrackingCode(code)
+      const response = await fetch(`${baseUrl}/api/appointments?trackingCode=${encodeURIComponent(normalizedCode)}`, {
         signal: abortControllerRef.current.signal
       })
       const data = await response.json()
@@ -218,18 +247,18 @@ function TrackingContent() {
     }
   }, [searchParams, appointment, isSearching, performSearch])
 
-  // Load pending appointments count
-  const loadPendingCount = useCallback(async (signal?: AbortSignal) => {
+  // Load total completed units count
+  const loadCompletedCount = useCallback(async (signal?: AbortSignal) => {
     try {
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-      const response = await fetch(`${baseUrl}/api/appointments?count=true`, { signal })
+      const response = await fetch(`${baseUrl}/api/appointments?count=true&type=completed`, { signal })
       if (response.ok) {
         const data = await response.json()
-        if (mountedRef.current) setPendingCount(data.count)
+        if (mountedRef.current) setCompletedCount(data.count)
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return
-      console.error("Error loading pending count:", error)
+      console.error("Error loading completed count:", error)
     }
     if (mountedRef.current) setLastRefreshed(new Date())
   }, [])
@@ -251,19 +280,19 @@ function TrackingContent() {
       if (error instanceof Error && error.name === 'AbortError') return
       console.error("Error refreshing appointment:", error)
     }
-    await loadPendingCount(signal)
-  }, [appointment, trackingCode, loadPendingCount])
+    await loadCompletedCount(signal)
+  }, [appointment, trackingCode, loadCompletedCount])
 
   // Initial load and polling setup
   useEffect(() => {
     const controller = new AbortController()
 
-    loadPendingCount(controller.signal)
+    loadCompletedCount(controller.signal)
 
     // Poll every 10 seconds for real-time updates
     const interval = setInterval(() => {
       if (mountedRef.current) {
-        loadPendingCount(controller.signal)
+        loadCompletedCount(controller.signal)
         refreshAppointmentData(controller.signal)
       }
     }, 10000)
@@ -272,7 +301,7 @@ function TrackingContent() {
       clearInterval(interval)
       controller.abort()
     }
-  }, [loadPendingCount, refreshAppointmentData])
+  }, [loadCompletedCount, refreshAppointmentData])
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -296,7 +325,9 @@ function TrackingContent() {
     }
   }
 
-  const repairStatusInfo = appointment ? getRepairStatusInfo(appointment.repairStatus) : null
+  const repairStatusInfo = appointment 
+    ? getRepairStatusInfo(appointment.isArchived ? "completed_ready" : appointment.repairStatus) 
+    : null
 
   const handleDownloadPDF = async () => {
     if (!appointment) return
@@ -327,16 +358,19 @@ function TrackingContent() {
           </p>
         </div>
 
-        {/* Pending Appointments Counter */}
-        <div className="mb-8 p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+        {/* Total Completed Units Counter */}
+        <div className="mb-8 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-orange-500/20 rounded-lg">
-                <Users className="w-5 h-5 text-orange-500" />
+              <div className="flex items-center justify-center w-10 h-10 bg-emerald-500/20 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending Appointments</p>
-                <p className="text-2xl font-bold text-orange-500">{pendingCount}</p>
+                <p className="text-sm text-muted-foreground font-medium">Total Completed Units</p>
+                <div className="flex items-baseline gap-1.5">
+                  <p className="text-2xl font-bold text-emerald-500">{completedCount}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">since February 2026</p>
+                </div>
               </div>
             </div>
             <div className="text-right">
@@ -344,7 +378,7 @@ function TrackingContent() {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  loadPendingCount()
+                  loadCompletedCount()
                   refreshAppointmentData()
                 }}
                 className="text-muted-foreground hover:text-foreground"
@@ -394,6 +428,19 @@ function TrackingContent() {
         {/* Appointment Details */}
         {appointment && (
           <div className="space-y-6">
+            {/* Released Status Notice */}
+            {appointment.isArchived && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-4">
+                <div className="flex items-center justify-center w-10 h-10 bg-emerald-500/20 rounded-full text-emerald-500">
+                  <CheckCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-emerald-500 uppercase tracking-tight">Record Released</h3>
+                  <p className="text-sm text-muted-foreground">This unit is already completed and released.</p>
+                </div>
+              </div>
+            )}
+
             {/* Download PDF Button */}
             <div className="flex justify-end">
               <Button
@@ -446,8 +493,8 @@ function TrackingContent() {
                     {REPAIR_STATUS_OPTIONS.map((option, index) => {
                       const currentStep = repairStatusInfo.step
                       const optionStep = index + 1
-                      const isCompleted = currentStep >= optionStep
-                      const isCurrent = appointment.repairStatus === option.value
+                      const isCompleted = appointment.isArchived || currentStep >= optionStep
+                      const isCurrent = !appointment.isArchived && appointment.repairStatus === option.value
 
                       return (
                         <React.Fragment key={option.value}>

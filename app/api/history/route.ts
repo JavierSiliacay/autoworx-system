@@ -225,7 +225,8 @@ export async function POST(request: Request) {
     current_repair_part: appointment.current_repair_part,
     costing: appointment.costing,
     original_created_at: appointment.created_at,
-    completed_at: appointment.status === "completed" ? new Date().toISOString() : null,
+    status_updated_at: appointment.status_updated_at || null,
+    completed_at: new Date().toISOString(), // This is the archival/released date
     archived_reason: reason || "Archived by admin",
     insurance: appointment.insurance || null,
     estimate_number: appointment.estimate_number || null,
@@ -236,6 +237,9 @@ export async function POST(request: Request) {
     is_backjob: appointment.is_backjob || false,
     is_synced: appointment.is_synced || false,
     synced_at: appointment.synced_at || null,
+    damage_images: appointment.damage_images || [],
+    orcr_image: appointment.orcr_image || null,
+    orcr_image_2: appointment.orcr_image_2 || null,
   }
 
   let { error: insertError } = await supabase
@@ -257,19 +261,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: insertError.message }, { status: 500 })
   }
 
-  // Delete images from storage if any
-  if (appointment.damage_images && appointment.damage_images.length > 0) {
-    const imagePaths = appointment.damage_images
-      .map((url: string) => {
-        const match = url.match(/damage-images\/(.+)$/)
-        return match ? match[1] : null
-      })
-      .filter(Boolean)
-
-    if (imagePaths.length > 0) {
-      await supabase.storage.from("damage-images").remove(imagePaths)
-    }
-  }
+  // Images are no longer deleted to preserve history
 
   // Delete from active appointments
   const { error: deleteError } = await supabase

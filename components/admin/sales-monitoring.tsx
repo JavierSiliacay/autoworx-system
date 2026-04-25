@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react"
 import { Printer, Calendar as CalendarIcon, FileDown, Eye, Edit, Save, Loader2, X, FileCheck, FileX, Trash2, RefreshCw, BarChart3, TrendingUp, Search } from "lucide-react"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -22,6 +22,11 @@ import { Label } from "@/components/ui/label"
 import { PlusCircle } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { isAuthorizedForSales } from "@/lib/auth"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     const { data: session } = useSession()
@@ -546,7 +551,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} />
                                         <YAxis hide />
-                                        <Tooltip />
+                                        <ChartTooltip />
                                         <Bar dataKey="total" radius={[4, 4, 0, 0]} className="fill-primary" />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -634,9 +639,25 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         <td className="p-2 border border-border text-center">{dateStr}</td>
                                         <td className="p-2 border border-border">{r.paul_notes || r.paulNotes || r.remarks}</td>
                                         <td className="p-2 border border-border text-center no-print">
-                                            <Badge variant={r.source === 'history' || r.completed_at ? "outline" : "default"} className="text-[8px] px-1 h-4">
-                                                {r.source === 'history' || r.completed_at ? "RELEASED" : "IN-PROGRESS"}
-                                            </Badge>
+                                            {r.source === 'history' || r.completed_at ? (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Badge variant="outline" className="text-[8px] px-1 h-4 cursor-help">
+                                                            RELEASED
+                                                        </Badge>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="bg-emerald-600 text-white border-none shadow-lg">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <p className="font-bold">Released on:</p>
+                                                            <p>{new Date(r.completed_at || r.synced_at || r.created_at).toLocaleDateString("en-US", { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                                                        </div>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            ) : (
+                                                <Badge variant="default" className="text-[8px] px-1 h-4">
+                                                    IN-PROGRESS
+                                                </Badge>
+                                            )}
                                         </td>
                                     </tr>
                                 )

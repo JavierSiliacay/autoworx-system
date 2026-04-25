@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { Printer, Calendar as CalendarIcon, FileDown, Eye, Edit, Save, Loader2, X, FileCheck, FileX, Trash2, RefreshCw, BarChart3, TrendingUp } from "lucide-react"
+import { Printer, Calendar as CalendarIcon, FileDown, Eye, Edit, Save, Loader2, X, FileCheck, FileX, Trash2, RefreshCw, BarChart3, TrendingUp, Search } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { generateReleaseMonitoringDoc } from "@/lib/generate-pdf"
 import { useToast } from "@/components/ui/use-toast"
@@ -271,21 +272,67 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                 throw new Error("Delete failed")
             }
         } catch (e) {
-            toast({ title: "Error", description: "Could not remove record.", variant: "destructive" })
+            toast({ title: "Error", description: "Operation failed.", variant: "destructive" })
         } finally {
             setIsSaving(false)
         }
     }
 
+    const handleBatchUpdate = async () => {
+        const entryIds = Object.keys(editedData)
+        if (entryIds.length === 0) {
+            setIsEditing(false)
+            return
+        }
+
+        setIsSaving(true)
+        try {
+            const updates = entryIds.map(id => ({
+                id,
+                ...editedData[id]
+            }))
+
+            const response = await fetch("/api/history", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ updates })
+            })
+
+            if (response.ok) {
+                toast({ title: "Success", description: "Records updated successfully." })
+                setIsEditing(false)
+                setEditedData({})
+                onUpdate?.()
+            } else {
+                throw new Error("Update failed")
+            }
+        } catch (e) {
+            toast({ title: "Error", description: "Could not save changes.", variant: "destructive" })
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const isSales = false;
     return (
         <div className="space-y-4 bg-card rounded-xl border border-border overflow-hidden">
             <div className="p-4 border-b border-border bg-muted/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h3 className="text-lg font-bold text-foreground">Release Monitoring Report</h3>
-                    <p className="text-sm text-muted-foreground">{reportPeriod === "monthly" ? "Monthly" : "Yearly"} sales performance and released units</p>
+                    <h3 className="text-lg font-bold text-foreground">Release Monitoring</h3>
+                    <p className="text-sm text-muted-foreground">{reportPeriod === "monthly" ? "Monthly" : "Yearly"} release logs and repair costs</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search unit, plate, owner..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 w-[220px] bg-background"
+                            disabled={isEditing || isSaving}
+                        />
+                    </div>
                     <div className="flex items-center gap-2">
                         <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                         <Select value={reportPeriod} onValueChange={(v: any) => setReportPeriod(v)} disabled={isEditing || isSaving}>
@@ -348,29 +395,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                 <X className="w-4 h-4" />
                                 Cancel
                             </Button>
-                            <Button onClick={async () => {
-                                setIsSaving(true)
-                                try {
-                                    for (const [id, updates] of Object.entries(editedData)) {
-                                        if (Object.keys(updates).length > 0) {
-                                            await fetch("/api/history", {
-                                                method: "PUT",
-                                                headers: { "Content-Type": "application/json" },
-                                                body: JSON.stringify({ id, updates })
-                                            })
-                                        }
-                                    }
-                                    toast({ title: "Saved successfully", description: "The records have been updated." })
-                                    setIsEditing(false)
-                                    setEditedData({})
-                                    onUpdate?.()
-                                    toast({ title: "Report Updated", description: "Changes have been successfully saved." })
-                                } catch (error) {
-                                    toast({ title: "Error", description: "Failed to save changes.", variant: "destructive" })
-                                } finally {
-                                    setIsSaving(false)
-                                }
-                            }} disabled={isSaving} className="gap-2 shrink-0">
+                            <Button onClick={handleBatchUpdate} disabled={isSaving} className="gap-2 shrink-0">
                                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                 Save Changes
                             </Button>
@@ -386,22 +411,22 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[500px]">
                             <DialogHeader>
-                                <DialogTitle>Add Manual Record</DialogTitle>
+                                <DialogTitle>Add Manual Entry</DialogTitle>
                                 <DialogDescription>
-                                    Add a completed unit that is not currently in the system for sales tracking.
+                                    Add a unit entry directly to the Release Monitoring sheet.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="name" className="text-right">Owner</Label>
-                                    <Input id="name" value={manualEntry.name} onChange={(e) => setManualEntry({ ...manualEntry, name: e.target.value })} className="col-span-3" />
+                                    <Label htmlFor="m_name" className="text-right">Owner</Label>
+                                    <Input id="m_name" value={manualEntry.name} onChange={(e) => setManualEntry({ ...manualEntry, name: e.target.value })} className="col-span-3" />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="plate" className="text-right">Plate</Label>
-                                    <Input id="plate" value={manualEntry.vehicle_plate} onChange={(e) => setManualEntry({ ...manualEntry, vehicle_plate: e.target.value })} className="col-span-3" />
+                                    <Label htmlFor="m_plate" className="text-right">Plate</Label>
+                                    <Input id="m_plate" value={manualEntry.vehicle_plate} onChange={(e) => setManualEntry({ ...manualEntry, vehicle_plate: e.target.value })} className="col-span-3" />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="unit" className="text-right">Unit</Label>
+                                    <Label htmlFor="m_unit" className="text-right">Unit</Label>
                                     <div className="col-span-3 flex gap-2">
                                         <Input className="w-20" placeholder="Year" value={manualEntry.vehicle_year} onChange={(e) => setManualEntry({ ...manualEntry, vehicle_year: e.target.value })} />
                                         <Input placeholder="Make" value={manualEntry.vehicle_make} onChange={(e) => setManualEntry({ ...manualEntry, vehicle_make: e.target.value })} />
@@ -409,12 +434,12 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="insurance" className="text-right">Claim</Label>
-                                    <Input id="insurance" value={manualEntry.insurance} onChange={(e) => setManualEntry({ ...manualEntry, insurance: e.target.value })} className="col-span-3" />
+                                    <Label htmlFor="m_insurance" className="text-right">Claim</Label>
+                                    <Input id="m_insurance" value={manualEntry.insurance} onChange={(e) => setManualEntry({ ...manualEntry, insurance: e.target.value })} className="col-span-3" />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="date" className="text-right">Release Date</Label>
-                                    <Input id="date" type="date" value={manualEntry.completed_at} onChange={(e) => setManualEntry({ ...manualEntry, completed_at: e.target.value })} className="col-span-3" />
+                                    <Label htmlFor="m_date" className="text-right">Release Date</Label>
+                                    <Input id="m_date" type="date" value={manualEntry.completed_at} onChange={(e) => setManualEntry({ ...manualEntry, completed_at: e.target.value })} className="col-span-3" />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label className="text-right">Breakdown</Label>
@@ -450,7 +475,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4 pt-2 border-t mt-2">
-                                    <Label htmlFor="amount" className="text-right font-bold">TOTAL</Label>
+                                    <Label className="text-right font-bold">TOTAL</Label>
                                     <div className="col-span-3 text-lg font-bold text-primary">₱{manualEntry.total_amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</div>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4 pt-2">
@@ -644,6 +669,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                             <th className="p-2 border border-border text-center font-bold text-[10px]">MECHANICAL</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px]">TOTAL</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px] w-12">MOD</th>
+                            {!isSales && <th className="p-2 border border-border text-center font-bold text-[10px]">DATE COMPLETE</th>}
                             <th className="p-2 border border-border text-center font-bold text-[10px]">DATE RELEASED</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px] w-32">REMARKS</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px] w-16 no-print">DOCS</th>
@@ -654,7 +680,10 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                             tableRecords.map((r, idx) => {
                                 const claimType = r.insurance ? r.insurance.toUpperCase() : ""
                                 const unitStr = `${r.vehicle_year || ""} ${r.vehicle_make || ""} ${r.vehicle_model || ""}`.trim()
-                                const dateStr = r.completed_at || r.original_created_at ? new Date(r.completed_at || r.original_created_at).toLocaleDateString("en-US") : ""
+                                const completeDateStr = (r.status_updated_at || r.statusUpdatedAt) 
+                                    ? new Date(r.status_updated_at || r.statusUpdatedAt).toLocaleDateString("en-US") 
+                                    : (r.completed_at ? new Date(r.completed_at).toLocaleDateString("en-US") : "-")
+                                const releaseDateStr = r.completed_at || r.original_created_at ? new Date(r.completed_at || r.original_created_at).toLocaleDateString("en-US") : ""
                                 const modVal = r.current_repair_part || ""
                                 const costs = getCategorizedCosts(r.costing)
 
@@ -789,6 +818,18 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 <Input className="h-7 px-2 text-[10px] w-full" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} />
                                             ) : (modVal)}
                                         </td>
+                                        {!isSales && (
+                                            <td className="p-2 border border-border text-center">
+                                                {isEditing ? (
+                                                    <Input
+                                                        type="date"
+                                                        className="h-7 px-2 text-[10px] w-full"
+                                                        value={currentVal("status_updated_at") ? new Date(currentVal("status_updated_at")).toISOString().split('T')[0] : ""}
+                                                        onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), status_updated_at: new Date(e.target.value).toISOString() } }))}
+                                                    />
+                                                ) : (completeDateStr)}
+                                            </td>
+                                        )}
                                         <td className="p-2 border border-border text-center">
                                             {isEditing ? (
                                                 <Input
@@ -797,7 +838,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                     value={currentVal("completed_at") ? new Date(currentVal("completed_at")).toISOString().split('T')[0] : ""}
                                                     onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), completed_at: new Date(e.target.value).toISOString() } }))}
                                                 />
-                                            ) : (dateStr)}
+                                            ) : (releaseDateStr)}
                                         </td>
                                         <td className="p-2 border border-border text-left truncate max-w-[120px]" title={r.paul_notes || ""}>
                                             {isEditing ? (
@@ -837,7 +878,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                             })
                         ) : (
                             <tr>
-                                <td colSpan={16} className="p-8 text-center text-muted-foreground italic border border-border">
+                                <td colSpan={isSales ? 16 : 17} className="p-8 text-center text-muted-foreground italic border border-border">
                                     No completed units found for this {reportPeriod === "monthly" ? "month" : "year"}.
                                 </td>
                             </tr>

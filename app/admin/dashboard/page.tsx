@@ -97,6 +97,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider
+} from "@/components/ui/tooltip"
 import { Textarea } from "@/components/ui/textarea"
 import { cn, compressImage } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -171,6 +177,7 @@ interface Appointment {
   engineNumber: string
   assigneeDriver: string
   service: string
+  preferredDate?: string
   message: string
   status: "pending" | "contacted" | "completed" | "confirm"
   createdAt: string
@@ -215,9 +222,10 @@ interface HistoryRecord {
   preferred_date: string
   message: string
   final_status: string
-  repair_status: string
-  current_repair_part: string
-  costing: CostingData
+  repair_status?: string
+  isActiveRecord?: boolean
+  current_repair_part?: string
+  costing?: CostingData
   original_created_at: string
   completed_at: string
   archived_at: string
@@ -225,6 +233,9 @@ interface HistoryRecord {
   insurance?: string
   estimate_number?: string
   paul_notes?: string
+  damage_images?: string[]
+  orcr_image?: string
+  orcr_image_2?: string
   loa_attachment?: string
   loa_attachment_2?: string
   loa_attachments?: string[]
@@ -240,6 +251,28 @@ interface Announcement {
   author_email: string
   created_at: string
 }
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ovovmpxfzhpndpajisgh.supabase.co";
+const storageBucket = "damage-images";
+const publicBaseUrl = `${supabaseUrl}/storage/v1/object/public/${storageBucket}`;
+
+const fixImageUrl = (url: string | null | undefined): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
+
+  // Relative path starting with the bucket name — prepend supabase base
+  if (url.startsWith(`${storageBucket}/`)) {
+    return `${supabaseUrl}/storage/v1/object/public/${url}`;
+  }
+
+  // Path with subfolder structure
+  if (url.includes('/')) {
+    return `${publicBaseUrl}/${url}`;
+  }
+
+  // Legacy bare filename — assume root of bucket
+  return `${publicBaseUrl}/${url}`;
+};
 
 // Helper to convert DB response to frontend format
 function dbToFrontend(apt: AppointmentDB): Appointment {
@@ -263,6 +296,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     engineNumber: apt.engine_number,
     assigneeDriver: apt.assignee_driver,
     service: apt.service,
+    preferredDate: apt.preferred_date,
     message: apt.message,
     status: apt.status,
     createdAt: apt.created_at,
@@ -271,42 +305,26 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     statusUpdatedAt: apt.status_updated_at,
     syncedAt: apt.synced_at,
     costing: costing,
-    damageImages: apt.damage_images,
-    orcrImage: apt.orcr_image,
-    orcrImage2: apt.orcr_image_2,
+    damageImages: (apt.damage_images || []).map(fixImageUrl).filter(Boolean) as string[],
+    orcrImage: fixImageUrl(apt.orcr_image),
+    orcrImage2: fixImageUrl(apt.orcr_image_2),
     insurance: apt.insurance,
     estimateNumber: apt.estimate_number,
     paulNotes: apt.paul_notes,
     serviceAdvisor: apt.service_advisor,
     updatedAt: apt.status_updated_at || apt.created_at,
-    loaAttachment: apt.loa_attachment || apt.costing?.loaAttachment,
-    loaAttachment2: apt.loa_attachment_2 || apt.costing?.loaAttachment2,
-    loaAttachments: apt.loa_attachments || apt.costing?.loaAttachments || [],
+    loaAttachment: fixImageUrl(apt.loa_attachment || apt.costing?.loaAttachment),
+    loaAttachment2: fixImageUrl(apt.loa_attachment_2 || apt.costing?.loaAttachment2),
+    loaAttachments: Array.from(new Set([
+      ...(apt.loa_attachments || []),
+      ...(apt.costing?.loaAttachments || []),
+      ...(apt.loa_attachment ? [apt.loa_attachment] : []),
+      ...(apt.loa_attachment_2 ? [apt.loa_attachment_2] : [])
+    ])).map(fixImageUrl).filter(Boolean) as string[],
     isBackJob: apt.is_backjob,
     isSynced: apt.is_synced
   }
 }
-
-// Helper to normalize strings for search (remove whitespace, casing, and separators)
-const normalizeString = (str: string) => {
-  if (!str) return ""
-  return str.toLowerCase().replace(/[\s\-\.\/\,]/g, "")
-}
-
-const MONTHS = [
-  { full: "january", short: "jan", index: 0, variations: ["january"] },
-  { full: "february", short: "feb", index: 1, variations: ["february", "feburary", "feb"] },
-  { full: "march", short: "mar", index: 2, variations: ["march", "mar"] },
-  { full: "april", short: "apr", index: 3, variations: ["april", "apr"] },
-  { full: "may", short: "may", index: 4, variations: ["may"] },
-  { full: "june", short: "jun", index: 5, variations: ["june", "jun"] },
-  { full: "july", short: "jul", index: 6, variations: ["july", "jul"] },
-  { full: "august", short: "aug", index: 7, variations: ["august", "aug"] },
-  { full: "september", short: "sep", index: 8, variations: ["september", "sept", "sep"] },
-  { full: "october", short: "oct", index: 9, variations: ["october", "oct"] },
-  { full: "november", short: "nov", index: 10, variations: ["november", "nov"] },
-  { full: "december", short: "dec", index: 11, variations: ["december", "dec"] },
-]
 
 const COST_CATEGORY_ORDER = [
   "Parts",
@@ -321,7 +339,7 @@ const COST_CATEGORY_ORDER = [
   "Others"
 ];
 
-const sortCostingItems = (items: CostItem[]): CostItem[] => {
+function sortCostingItems(items: CostItem[]): CostItem[] {
   if (!items) return [];
   return [...items].sort((a, b) => {
     // Normalize category names for comparison
@@ -347,7 +365,28 @@ const sortCostingItems = (items: CostItem[]): CostItem[] => {
 
     return 0; // Maintain order within same category
   });
-};
+}
+
+// Helper to normalize strings for search (remove whitespace, casing, and separators)
+const normalizeString = (str: string) => {
+  if (!str) return ""
+  return str.toLowerCase().replace(/[\s\-\.\/\,]/g, "")
+}
+
+const MONTHS = [
+  { full: "january", short: "jan", index: 0, variations: ["january"] },
+  { full: "february", short: "feb", index: 1, variations: ["february", "feburary", "feb"] },
+  { full: "march", short: "mar", index: 2, variations: ["march", "mar"] },
+  { full: "april", short: "apr", index: 3, variations: ["april", "apr"] },
+  { full: "may", short: "may", index: 4, variations: ["may"] },
+  { full: "june", short: "jun", index: 5, variations: ["june", "jun"] },
+  { full: "july", short: "jul", index: 6, variations: ["july", "jul"] },
+  { full: "august", short: "aug", index: 7, variations: ["august", "aug"] },
+  { full: "september", short: "sep", index: 8, variations: ["september", "sept", "sep"] },
+  { full: "october", short: "oct", index: 9, variations: ["october", "oct"] },
+  { full: "november", short: "nov", index: 10, variations: ["november", "nov"] },
+  { full: "december", short: "dec", index: 11, variations: ["december", "dec"] },
+]
 
 const getMatchedMonth = (query: string) => {
   const norm = query.toLowerCase().trim()
@@ -509,6 +548,32 @@ export default function AdminDashboard() {
   const [newAnnouncement, setNewAnnouncement] = useState("")
   const [isPostingAnnouncement, setIsPostingAnnouncement] = useState(false)
 
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const handleGlobalRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        loadAppointments(),
+        loadHistory(),
+        loadAnnouncements(),
+        loadRecommendations()
+      ])
+      toast({
+        title: "Data Refreshed",
+        description: "Dashboard content has been updated.",
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Refresh Failed",
+        description: "Could not fetch latest data.",
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   // Trash / History States
   const [showDeletedHistory, setShowDeletedHistory] = useState(false)
   const [deletedAppointments, setDeletedAppointments] = useState<Appointment[]>([])
@@ -549,7 +614,20 @@ export default function AdminDashboard() {
       const response = await fetch("/api/history")
       if (response.ok) {
         const data = await response.json() as HistoryRecord[]
-        setHistoryRecords(data)
+        const fixedData = data.map(record => ({
+          ...record,
+          orcr_image: fixImageUrl(record.orcr_image),
+          orcr_image_2: fixImageUrl(record.orcr_image_2),
+          loa_attachment: fixImageUrl(record.loa_attachment),
+          loa_attachment_2: fixImageUrl(record.loa_attachment_2),
+          loa_attachments: (record.loa_attachments || []).map(fixImageUrl).filter(Boolean) as string[],
+          damage_images: (record.damage_images || []).map(fixImageUrl).filter(Boolean) as string[],
+          costing: record.costing ? {
+            ...record.costing,
+            loaAttachments: (record.costing.loaAttachments || []).map(fixImageUrl).filter(Boolean) as string[]
+          } : record.costing
+        }));
+        setHistoryRecords(fixedData)
       }
     } catch (error) {
       console.error("Error loading history:", error)
@@ -789,15 +867,22 @@ export default function AdminDashboard() {
       const confirmed = window.confirm("Are you sure that this unit is completed?")
       if (!confirmed) return
     }
+    const statusUpdatedAt = newStatus === "completed" ? new Date().toISOString() : undefined
+
     const updated = appointments.map((apt) =>
-      apt.id === id ? { ...apt, status: newStatus } : apt
+      apt.id === id ? {
+        ...apt,
+        status: newStatus,
+        statusUpdatedAt,
+        repairStatus: newStatus === "completed" ? "completed_ready" : apt.repairStatus
+      } : apt
     )
     setAppointments(updated)
 
     await fetch("/api/appointments", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status: newStatus }),
+      body: JSON.stringify({ id, status: newStatus, statusUpdatedAt }),
     })
   }
 
@@ -842,7 +927,7 @@ export default function AdminDashboard() {
       const supabase = createClient()
       const fileExt = fileToUpload.name.split('.').pop()
       const fileName = `loa-${appointmentId}-${Date.now()}.${fileExt}`
-      const filePath = `damage-images/${fileName}`
+      const filePath = fileName
 
       const { data, error } = await supabase.storage
         .from("damage-images")
@@ -1015,7 +1100,7 @@ export default function AdminDashboard() {
       const supabase = createClient()
       const fileExt = fileToUpload.name.split('.').pop()
       const fileName = `loa-hist-${recordId}-${Date.now()}.${fileExt}`
-      const filePath = `damage-images/${fileName}`
+      const filePath = fileName
 
       const { data, error } = await supabase.storage
         .from("damage-images")
@@ -1178,7 +1263,7 @@ export default function AdminDashboard() {
 
         const fileExt = fileToUpload.name.split('.').pop()
         const fileName = `${appointmentId}-damage-${Date.now()}-${i}.${fileExt}`
-        const filePath = `damage-images/${fileName}`
+        const filePath = fileName
 
         const { error } = await supabase.storage
           .from("damage-images")
@@ -1279,7 +1364,7 @@ export default function AdminDashboard() {
 
       const fileExt = fileToUpload.name.split('.').pop()
       const fileName = `${appointmentId}-orcr-${slot}-${Date.now()}.${fileExt}`
-      const filePath = `damage-images/${fileName}`
+      const filePath = fileName
 
       const { error } = await supabase.storage
         .from("damage-images")
@@ -1706,7 +1791,7 @@ export default function AdminDashboard() {
 
   const handleEditAppointment = (appointment: Appointment) => {
     setUseCustomEditMake(!!appointment.vehicleMake && !VEHICLE_BRANDS.includes(appointment.vehicleMake))
-    
+
     // Extract custom service if exists
     const services = appointment.service?.split(", ") || []
     const otherService = services.find(s => s.startsWith("Other: "))
@@ -1727,12 +1812,12 @@ export default function AdminDashboard() {
     const endpoint = isHistory ? "/api/history" : "/api/appointments";
 
     // Finalize service string with custom input if Other is selected
-    const finalService = editingAppointment.service?.split(", ").map(s => 
-      s === "Other" || s.startsWith("Other: ") 
-        ? (editingCustomService ? `Other: ${editingCustomService}` : "Other") 
+    const finalService = editingAppointment.service?.split(", ").map(s =>
+      s === "Other" || s.startsWith("Other: ")
+        ? (editingCustomService ? `Other: ${editingCustomService}` : "Other")
         : s
     ).join(", ");
-    
+
     const updatedAppointment = { ...editingAppointment, service: finalService };
 
     // Prepare updates
@@ -2164,7 +2249,7 @@ export default function AdminDashboard() {
 
   const handleCopyAppointment = (appointment: Appointment, includeCosting: boolean = false) => {
     setUseCustomCopyMake(!!appointment.vehicleMake && !VEHICLE_BRANDS.includes(appointment.vehicleMake))
-    
+
     // Extract custom service if exists
     const services = appointment.service?.split(", ") || []
     const otherService = services.find(s => s.startsWith("Other: "))
@@ -2217,11 +2302,11 @@ export default function AdminDashboard() {
 
       if (response.ok) {
         setAppointments(prev => prev.map(apt =>
-          apt.id === appointment.id ? { 
-            ...apt, 
-            isSynced: newSyncState, 
+          apt.id === appointment.id ? {
+            ...apt,
+            isSynced: newSyncState,
             is_synced: newSyncState,
-            syncedAt: newSyncState ? new Date().toISOString() : apt.syncedAt 
+            syncedAt: newSyncState ? new Date().toISOString() : apt.syncedAt
           } : apt
         ))
 
@@ -2246,10 +2331,10 @@ export default function AdminDashboard() {
     } catch (e: any) {
       toast({
         title: "Sync Failed",
-        description: e.message.includes('synced_at') 
+        description: e.message.includes('synced_at')
           ? "Database update required: Please add the 'synced_at' column to your Supabase tables."
-          : e.message.includes('column') 
-            ? "Database update failed: Missing 'is_synced' column in Supabase." 
+          : e.message.includes('column')
+            ? "Database update failed: Missing 'is_synced' column in Supabase."
             : "Could not register unit in sales. Please try again.",
         variant: "destructive"
       })
@@ -2340,9 +2425,9 @@ export default function AdminDashboard() {
         finalOrcrImage2 = publicUrl
       }
 
-      const finalizedService = copyFormData.service?.split(", ").map((s: string) => 
-        s === "Other" || s.startsWith("Other: ") 
-          ? (copyCustomService ? `Other: ${copyCustomService}` : "Other") 
+      const finalizedService = copyFormData.service?.split(", ").map((s: string) =>
+        s === "Other" || s.startsWith("Other: ")
+          ? (copyCustomService ? `Other: ${copyCustomService}` : "Other")
           : s
       ).join(", ");
 
@@ -2705,6 +2790,8 @@ export default function AdminDashboard() {
         // Specific logic for Waiting for Approval (groups all waiting statuses)
         const waitingStatuses = ["waiting_for_client_approval", "waiting_for_insurance"]
         if (!apt.repairStatus || !waitingStatuses.includes(apt.repairStatus)) return false
+      } else if (filter === "insurance_approved") {
+        if (apt.repairStatus !== "insurance_approved") return false
       } else if (["pending", "contacted", "completed"].includes(filter)) {
         // Standard Appointment Status
         if (apt.status !== filter) return false
@@ -2716,135 +2803,187 @@ export default function AdminDashboard() {
     if (serviceFilter !== "all" && !apt.service?.split(", ").includes(serviceFilter)) return false
     // Date range filter
     if (!isInDateRange(apt.createdAt, dateRangeFilter)) return false
-    // Search filter
+    // Search filter (Tokenized for Relational/Multi-field matching)
     if (searchQuery.trim()) {
-      const normalizedQuery = normalizeString(searchQuery)
-      const matchedMonth = getMatchedMonth(searchQuery)
+      const tokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean)
 
-      const checkMonth = (dateStr?: string) => {
-        if (!dateStr) return false
-        const d = new Date(dateStr)
-        return d.getMonth() === matchedMonth?.index
-      }
+      const isRecordMatch = tokens.every(token => {
+        const normalizedToken = normalizeString(token)
+        const matchedMonth = getMatchedMonth(token)
 
-      const matchesMonth = matchedMonth ? (checkMonth(apt.createdAt) || checkMonth(apt.statusUpdatedAt)) : false
+        const checkMonth = (dateStr?: string) => {
+          if (!dateStr) return false
+          const d = new Date(dateStr)
+          return d.getMonth() === matchedMonth?.index
+        }
 
-      const matchesName = normalizeString(apt.name).includes(normalizedQuery)
-      const matchesEmail = normalizeString(apt.email).includes(normalizedQuery)
-      const matchesPhone = normalizeString(apt.phone).includes(normalizedQuery)
-      const matchesPlate = normalizeString(apt.vehiclePlate).includes(normalizedQuery)
-      const matchesBrand = normalizeString(apt.vehicleMake).includes(normalizedQuery)
-      const matchesModel = normalizeString(apt.vehicleModel).includes(normalizedQuery)
-      const matchesTrackingCode = normalizeString(apt.trackingCode).includes(normalizedQuery)
-      const matchesMessage = normalizeString(apt.message).includes(normalizedQuery)
+        const matchesMonth = matchedMonth ? (checkMonth(apt.createdAt) || checkMonth(apt.statusUpdatedAt)) : false
+        const matchesName = normalizeString(apt.name).includes(normalizedToken)
+        const matchesEmail = normalizeString(apt.email).includes(normalizedToken)
+        const matchesPhone = normalizeString(apt.phone).includes(normalizedToken)
+        const matchesPlate = normalizeString(apt.vehiclePlate).includes(normalizedToken)
+        const matchesBrand = normalizeString(apt.vehicleMake).includes(normalizedToken)
+        const matchesModel = normalizeString(apt.vehicleModel).includes(normalizedToken)
+        const matchesTrackingCode = normalizeString(apt.trackingCode).includes(normalizedToken)
+        const matchesMessage = normalizeString(apt.message).includes(normalizedToken)
+        const matchesEstimateNumber = normalizeString(apt.estimateNumber || "").includes(normalizedToken)
+        const matchesInsurance = normalizeString(apt.insurance || "").includes(normalizedToken)
+        const matchesServiceAdvisor = normalizeString(apt.serviceAdvisor || apt.costing?.serviceAdvisorName || "").includes(normalizedToken)
 
-      const matchesEstimateNumber = normalizeString(apt.estimateNumber || "").includes(normalizedQuery)
-      const matchesInsurance = normalizeString(apt.insurance || "").includes(normalizedQuery)
-      const matchesServiceAdvisor = normalizeString(apt.serviceAdvisor || apt.costing?.serviceAdvisorName || "").includes(normalizedQuery)
+        return matchesName || matchesEmail || matchesPhone || matchesPlate || matchesBrand ||
+          matchesModel || matchesTrackingCode || matchesMessage || matchesEstimateNumber ||
+          matchesInsurance || matchesServiceAdvisor || matchesMonth
+      })
 
-      if (!matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesBrand && !matchesModel && !matchesTrackingCode && !matchesMessage && !matchesEstimateNumber && !matchesInsurance && !matchesServiceAdvisor && !matchesMonth) return false
+      if (!isRecordMatch) return false
     }
     return true
   })
 
   const getMatchCategories = (apt: Appointment, query: string) => {
     if (!query.trim()) return []
+    const tokens = query.toLowerCase().split(/\s+/).filter(Boolean)
     const categories: Set<string> = new Set()
-    const normQuery = normalizeString(query)
-    const matchedMonth = getMatchedMonth(query)
 
-    const checkMonth = (dateStr?: string) => {
-      if (!dateStr || !matchedMonth) return false
-      const d = new Date(dateStr)
-      return d.getMonth() === matchedMonth.index
-    }
+    tokens.forEach(token => {
+      const normToken = normalizeString(token)
+      const matchedMonth = getMatchedMonth(token)
 
-    // Insurance Category
-    if (normalizeString(apt.insurance || "").includes(normQuery) || (matchedMonth && !!apt.insurance && checkMonth(apt.createdAt))) {
-      categories.add("Insurance")
-    }
+      const checkMonth = (dateStr?: string) => {
+        if (!dateStr || !matchedMonth) return false
+        const d = new Date(dateStr)
+        return d.getMonth() === matchedMonth.index
+      }
 
-    // Estimates Category
-    if (normalizeString(apt.estimateNumber || "").includes(normQuery) || (matchedMonth && !!apt.estimateNumber && checkMonth(apt.createdAt))) {
-      categories.add("Estimates")
-    }
+      // Insurance Category
+      if (normalizeString(apt.insurance || "").includes(normToken) || (matchedMonth && !!apt.insurance && checkMonth(apt.createdAt))) {
+        categories.add("Insurance")
+      }
 
-    // Vehicle Status Category
-    if (
-      normalizeString(apt.repairStatus || "").includes(normQuery) ||
-      normalizeString(apt.trackingCode).includes(normQuery) ||
-      checkMonth(apt.statusUpdatedAt)
-    ) {
-      categories.add("Vehicle Status")
-    }
+      // Estimates Category
+      if (normalizeString(apt.estimateNumber || "").includes(normToken) || (matchedMonth && !!apt.estimateNumber && checkMonth(apt.createdAt))) {
+        categories.add("Estimates")
+      }
+
+      // Vehicle Status Category
+      if (
+        normalizeString(apt.repairStatus || "").includes(normToken) ||
+        normalizeString(apt.trackingCode).includes(normToken) ||
+        checkMonth(apt.statusUpdatedAt)
+      ) {
+        categories.add("Vehicle Status")
+      }
+
+      // Customer Category
+      if (normalizeString(apt.name).includes(normToken)) {
+        categories.add("Customer")
+      }
+
+      // Vehicle Details Category
+      if (normalizeString(apt.vehiclePlate).includes(normToken) || normalizeString(apt.vehicleMake).includes(normToken) || normalizeString(apt.vehicleModel).includes(normToken)) {
+        categories.add("Vehicle")
+      }
+    })
 
     return Array.from(categories)
   }
 
-  const stats = {
-    total: appointments.length,
+  const getHistoryMatchCategories = (record: any, query: string) => {
+    if (!query.trim()) return []
+    const tokens = query.toLowerCase().split(/\s+/).filter(Boolean)
+    const matches: Set<string> = new Set()
+
+    tokens.forEach(token => {
+      const normToken = normalizeString(token)
+      const matchedMonth = getMatchedMonth(token)
+
+      const checkMonth = (dateStr?: string) => {
+        if (!dateStr || !matchedMonth) return false
+        const d = new Date(dateStr)
+        return d.getMonth() === matchedMonth.index
+      }
+
+      if (normalizeString(record.name).includes(normToken)) matches.add("Customer")
+      if (normalizeString(record.vehicle_plate).includes(normToken) || normalizeString(record.vehicle_make).includes(normToken) || normalizeString(record.vehicle_model).includes(normToken)) matches.add("Vehicle")
+      if (normalizeString(record.tracking_code).includes(normToken) || checkMonth(record.completed_at)) matches.add("History Status")
+      if (normalizeString(record.insurance || "").includes(normToken)) matches.add("Insurance")
+      if (normalizeString(record.estimate_number || "").includes(normToken)) matches.add("Estimate")
+    })
+
+    return Array.from(matches)
+  }
+
+  const dashboardStats = {
+    total: appointments.length + historyRecords.length,
     pending: appointments.filter((apt) => apt.status === "pending").length,
     contacted: appointments.filter((apt) => apt.status === "contacted").length,
-    completed: appointments.filter((apt) => apt.status === "completed").length,
+    completed: appointments.filter((apt) => apt.status === "completed").length + historyRecords.length,
     pendingInspection: appointments.filter((apt) => apt.repairStatus === "pending_inspection" || !apt.repairStatus).length,
     waitingForApproval: appointments.filter((apt) => apt.repairStatus === "waiting_for_insurance" || apt.repairStatus === "waiting_for_client_approval").length,
+    insuranceApproved: appointments.filter((apt) => apt.repairStatus === "insurance_approved").length,
   }
 
   // History filtering and sorting
-  const filteredAndSortedHistory = historyRecords
-    .filter((record) => {
-      // Date range filter
-      if (!isInDateRange(record.original_created_at, historyDateRangeFilter)) return false
+  const filteredAndSortedHistory = useMemo(() => {
+    return historyRecords
+      .filter((record) => {
+        // Date range filter
+        if (!isInDateRange(record.original_created_at, historyDateRangeFilter)) return false
 
-      // Service filter
-      if (historyServiceFilter !== "all" && !record.service?.split(", ").includes(historyServiceFilter)) return false
+        // Service filter
+        if (historyServiceFilter !== "all" && !record.service?.split(", ").includes(historyServiceFilter)) return false
 
-      // Search filter
-      if (historySearchQuery.trim()) {
-        const normalizedQuery = normalizeString(historySearchQuery)
-        const matchedMonth = getMatchedMonth(historySearchQuery)
+        // Search filter (Tokenized for Relational/Multi-field matching)
+        if (historySearchQuery.trim()) {
+          const tokens = historySearchQuery.toLowerCase().split(/\s+/).filter(Boolean)
 
-        const checkMonth = (dateStr?: string) => {
-          if (!dateStr || !matchedMonth) return false
-          const d = new Date(dateStr)
-          return d.getMonth() === matchedMonth.index
+          const isRecordMatch = tokens.every(token => {
+            const normalizedToken = normalizeString(token)
+            const matchedMonth = getMatchedMonth(token)
+
+            const checkMonth = (dateStr?: string) => {
+              if (!dateStr || !matchedMonth) return false
+              const d = new Date(dateStr)
+              return d.getMonth() === matchedMonth.index
+            }
+
+            const matchesMonth = matchedMonth ? (checkMonth(record.original_created_at) || checkMonth(record.completed_at)) : false
+            const matchesName = normalizeString(record.name).includes(normalizedToken)
+            const matchesEmail = normalizeString(record.email).includes(normalizedToken)
+            const matchesPhone = normalizeString(record.phone).includes(normalizedToken)
+            const matchesPlate = normalizeString(record.vehicle_plate).includes(normalizedToken)
+            const matchesBrand = normalizeString(record.vehicle_make).includes(normalizedToken)
+            const matchesModel = normalizeString(record.vehicle_model).includes(normalizedToken)
+            const matchesTrackingCode = normalizeString(record.tracking_code).includes(normalizedToken)
+            const matchesMessage = normalizeString(record.message || "").includes(normalizedToken)
+            const matchesEstimateNumber = normalizeString(record.estimate_number || "").includes(normalizedToken)
+            const matchesInsurance = normalizeString(record.insurance || "").includes(normalizedToken)
+
+            return matchesName || matchesEmail || matchesPhone || matchesPlate || matchesBrand ||
+              matchesModel || matchesTrackingCode || matchesMessage || matchesEstimateNumber ||
+              matchesInsurance || matchesMonth
+          })
+
+          if (!isRecordMatch) return false
         }
 
-        const matchesMonth = matchedMonth ? (checkMonth(record.original_created_at) || checkMonth(record.completed_at)) : false
-
-        const matchesTrackingCode = normalizeString(record.tracking_code).includes(normalizedQuery)
-        const matchesName = normalizeString(record.name).includes(normalizedQuery)
-        const matchesEmail = normalizeString(record.email).includes(normalizedQuery)
-        const matchesPhone = normalizeString(record.phone).includes(normalizedQuery)
-        const matchesPlate = normalizeString(record.vehicle_plate).includes(normalizedQuery)
-        const matchesMake = normalizeString(record.vehicle_make).includes(normalizedQuery)
-        const matchesModel = normalizeString(record.vehicle_model).includes(normalizedQuery)
-
-        const matchesInsurance = normalizeString(record.insurance || "").includes(normalizedQuery)
-        const matchesEstimateNumber = normalizeString(record.estimate_number || "").includes(normalizedQuery)
-        const matchesServiceAdvisor = normalizeString(record.costing?.serviceAdvisorName || (record as any).service_advisor || "").includes(normalizedQuery)
-
-        if (!matchesTrackingCode && !matchesName && !matchesEmail && !matchesPhone && !matchesPlate && !matchesMake && !matchesModel && !matchesInsurance && !matchesEstimateNumber && !matchesServiceAdvisor && !matchesMonth) {
-          return false
+        return true
+      })
+      .sort((a, b) => {
+        switch (historySortBy) {
+          case "latest":
+            return new Date(b.original_created_at).getTime() - new Date(a.original_created_at).getTime()
+          case "oldest":
+            return new Date(a.original_created_at).getTime() - new Date(b.original_created_at).getTime()
+          case "name":
+            return (a.name || "").localeCompare(b.name || "")
+          case "status":
+            return (a.final_status || "").localeCompare(b.final_status || "")
+          default:
+            return 0
         }
-      }
-
-      return true
-    })
-    .sort((a, b) => {
-      switch (historySortBy) {
-        case "latest":
-          return new Date(b.original_created_at).getTime() - new Date(a.original_created_at).getTime()
-        case "oldest":
-          return new Date(a.original_created_at).getTime() - new Date(b.original_created_at).getTime()
-        case "name":
-          return (a.name || "").localeCompare(b.name || "")
-        case "status":
-          return (a.final_status || "").localeCompare(b.final_status || "")
-        default:
-          return 0
-      }
-    })
+      })
+  }, [historyRecords, historyDateRangeFilter, historyServiceFilter, historySearchQuery, historySortBy])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -2876,7 +3015,7 @@ export default function AdminDashboard() {
   if (status === "loading" || isLoading) {
     return (
       <AnimatePresence>
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -2884,49 +3023,49 @@ export default function AdminDashboard() {
           className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] text-white overflow-hidden"
         >
           {/* Animated Background Gradients */}
-          <motion.div 
-            animate={{ 
+          <motion.div
+            animate={{
               scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3] 
+              opacity: [0.3, 0.5, 0.3]
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px]" 
+            className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px]"
           />
-          <motion.div 
-            animate={{ 
+          <motion.div
+            animate={{
               scale: [1.2, 1, 1.2],
-              opacity: [0.3, 0.5, 0.3] 
+              opacity: [0.3, 0.5, 0.3]
             }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-emerald-600/5 rounded-full blur-[120px]" 
+            className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-emerald-600/5 rounded-full blur-[120px]"
           />
-          
+
           <div className="relative flex flex-col items-center z-10">
             {/* Branded Logo Container */}
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
               className="relative w-32 h-32 md:w-40 md:h-40 mb-10 select-none"
             >
               {/* Soft Aura behind logo */}
-              <motion.div 
+              <motion.div
                 animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute inset-0 bg-blue-500/10 rounded-full blur-3xl" 
+                className="absolute inset-0 bg-blue-500/10 rounded-full blur-3xl"
               />
-              <motion.img 
-                src="/autoworxlogo.png" 
-                alt="Autoworx logo" 
+              <motion.img
+                src="/autoworxlogo.png"
+                alt="Autoworx logo"
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(59,130,246,0.4)] relative z-10"
               />
             </motion.div>
-            
+
             {/* Text Elements */}
             <div className="flex flex-col items-center gap-5 text-center">
-              <motion.h1 
+              <motion.h1
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4, duration: 0.6 }}
@@ -2934,8 +3073,8 @@ export default function AdminDashboard() {
               >
                 Autoworx
               </motion.h1>
-              
-              <motion.div 
+
+              <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
@@ -2949,23 +3088,24 @@ export default function AdminDashboard() {
             </div>
 
             {/* Premium Progress Bar */}
-            <motion.div 
+            <motion.div
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: 240, opacity: 1 }}
               transition={{ delay: 0.8, duration: 1 }}
               className="h-[1px] bg-white/10 mt-14 rounded-full overflow-hidden relative"
             >
-              <div 
+              <div
                 className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500 to-transparent w-full"
-                style={{ 
+                style={{
                   animation: 'shimmer-progress 2s infinite linear',
                   backgroundSize: '200% 100%'
-                }} 
+                }}
               />
             </motion.div>
           </div>
 
-          <style dangerouslySetInnerHTML={{ __html: `
+          <style dangerouslySetInnerHTML={{
+            __html: `
             @keyframes shimmer-progress {
               0% { transform: translateX(-100%); }
               100% { transform: translateX(100%); }
@@ -3014,7 +3154,7 @@ export default function AdminDashboard() {
               <Link href="/admin/maintenance">
                 <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-primary transition-all">
                   <Database className="w-4 h-4 mr-2" />
-                  Maintenance
+                  System Files
                 </Button>
               </Link>
             </div>
@@ -3029,24 +3169,6 @@ export default function AdminDashboard() {
                 <Code2 className="w-4 h-4" />
                 <span className="hidden lg:inline font-bold">Developer Tasks</span>
               </Button>
-              {!isElectron && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="hidden sm:flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/5 shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all"
-                  onClick={() => {
-                    window.open('https://drive.google.com/file/d/1QKgR1ooGJLMrUXAh5ZGtSOPnnAKMz4mW/view?usp=sharing', '_blank');
-
-                    toast({
-                      title: "Redirecting to Download",
-                      description: "Opening Google Drive. Once downloaded, extract the ZIP and run 'electron.exe'.",
-                    })
-                  }}
-                >
-                  <Monitor className="w-4 h-4" />
-                  <span className="hidden lg:inline">Get Windows App</span>
-                </Button>
-              )}
               <Button variant="outline" size="sm" onClick={handleLogout} className="bg-transparent">
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
@@ -3058,30 +3180,34 @@ export default function AdminDashboard() {
 
       <main className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
           <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+            <div className="text-2xl font-bold text-foreground">{dashboardStats.total}</div>
             <div className="text-sm text-muted-foreground font-medium">Total Requests</div>
           </div>
           <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-yellow-500">{stats.pending}</div>
+            <div className="text-2xl font-bold text-yellow-500">{dashboardStats.pending}</div>
             <div className="text-sm text-muted-foreground font-medium">Pending</div>
           </div>
           <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-blue-500">{stats.contacted}</div>
+            <div className="text-2xl font-bold text-blue-500">{dashboardStats.contacted}</div>
             <div className="text-sm text-muted-foreground font-medium">Contacted</div>
           </div>
           <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-green-500">{stats.completed}</div>
+            <div className="text-2xl font-bold text-green-500">{dashboardStats.completed}</div>
             <div className="text-sm text-muted-foreground font-medium">Completed</div>
           </div>
           <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-orange-500">{stats.pendingInspection}</div>
+            <div className="text-2xl font-bold text-orange-500">{dashboardStats.pendingInspection}</div>
             <div className="text-sm text-muted-foreground font-medium">Pending Inspection</div>
           </div>
           <div className="p-4 bg-card rounded-xl border border-primary/30">
-            <div className="text-2xl font-bold text-primary">{stats.waitingForApproval}</div>
+            <div className="text-2xl font-bold text-primary">{dashboardStats.waitingForApproval}</div>
             <div className="text-sm text-muted-foreground font-medium">Waiting for Approval</div>
+          </div>
+          <div className="p-4 bg-card rounded-xl border border-emerald-500/30">
+            <div className="text-2xl font-bold text-emerald-500">{dashboardStats.insuranceApproved}</div>
+            <div className="text-sm text-muted-foreground font-medium">Approved by Insurance</div>
           </div>
         </div>
 
@@ -3237,7 +3363,7 @@ export default function AdminDashboard() {
                 }`}
             >
               <Heart className="w-4 h-4 inline-block mr-2" />
-              Developer Tasks ({recommendations.length})
+              Developer Recommendations ({recommendations.length})
             </button>
           )}
         </div>
@@ -3260,14 +3386,20 @@ export default function AdminDashboard() {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {stats.pending} pending request{stats.pending !== 1 ? "s" : ""} waiting for your attention
+                    {dashboardStats.pending} pending request{dashboardStats.pending !== 1 ? "s" : ""} waiting for your attention
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <AIAnalystDialog />
-                  <Button variant="outline" size="sm" onClick={loadAppointments} className="bg-transparent">
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Refresh
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGlobalRefresh}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-2 border-white/20 text-white hover:bg-white/10 hover:text-white shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all bg-transparent"
+                  >
+                    <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+                    <span className="hidden sm:inline font-bold">{isRefreshing ? "Refreshing..." : "Refresh"}</span>
                   </Button>
                 </div>
               </div>
@@ -3338,6 +3470,7 @@ export default function AdminDashboard() {
                     <SelectItem value="contacted">Contacted</SelectItem>
                     <SelectItem value="pending_inspection">Pending Inspection</SelectItem>
                     <SelectItem value="waiting_for_approval">Waiting for Approval</SelectItem>
+                    <SelectItem value="insurance_approved">Approved by Insurance</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
@@ -3451,9 +3584,21 @@ export default function AdminDashboard() {
                         </div>
 
                         <div className="ml-auto flex items-center gap-2">
-                          <Badge variant={status.variant} className="mr-2">
-                            {status.label}
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant={status.variant} className={cn("mr-2", appointment.status === "completed" && "cursor-help")}>
+                                {status.label}
+                              </Badge>
+                            </TooltipTrigger>
+                            {appointment.status === "completed" && appointment.statusUpdatedAt && (
+                              <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
+                                <div className="flex flex-col gap-0.5">
+                                  <p className="font-bold">Unit Completed on:</p>
+                                  <p className="font-mono text-[10px]">{formatDate(appointment.statusUpdatedAt)}</p>
+                                </div>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
                         </div>
                       </div>
 
@@ -3532,10 +3677,22 @@ export default function AdminDashboard() {
                                     </div>
                                   </div>
                                   <div className="flex flex-col gap-2 items-end">
-                                    <Badge variant={status.variant}>
-                                      <status.icon className="w-3 h-3 mr-1" />
-                                      {status.label}
-                                    </Badge>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge variant={status.variant} className={cn(appointment.status === "completed" && "cursor-help")}>
+                                          <status.icon className="w-3 h-3 mr-1" />
+                                          {status.label}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      {appointment.status === "completed" && appointment.statusUpdatedAt && (
+                                        <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
+                                          <div className="flex flex-col gap-0.5">
+                                            <p className="font-bold">Unit Completed on:</p>
+                                            <p className="font-mono text-[10px]">{formatDate(appointment.statusUpdatedAt)}</p>
+                                          </div>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
                                     {appointment.repairStatus && (
                                       <Badge
                                         variant="outline"
@@ -3935,15 +4092,32 @@ export default function AdminDashboard() {
                                 >
                                   Contacted
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant={appointment.status === "completed" ? "default" : "outline"}
-                                  onClick={() => updateStatus(appointment.id, "completed")}
-                                  disabled={appointment.status === "completed"}
-                                  className={appointment.status === "completed" ? "" : "bg-transparent"}
-                                >
-                                  Completed
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className={cn(appointment.status === "completed" && "cursor-help")}>
+                                      <Button
+                                        size="sm"
+                                        variant={appointment.status === "completed" ? "default" : "outline"}
+                                        onClick={() => updateStatus(appointment.id, "completed")}
+                                        disabled={appointment.status === "completed"}
+                                        className={cn(
+                                          "w-full",
+                                          appointment.status === "completed" ? "" : "bg-transparent"
+                                        )}
+                                      >
+                                        Completed
+                                      </Button>
+                                    </div>
+                                  </TooltipTrigger>
+                                  {appointment.status === "completed" && appointment.statusUpdatedAt && (
+                                    <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
+                                      <div className="flex flex-col gap-0.5">
+                                        <p className="font-bold">Unit Completed on:</p>
+                                        <p className="font-mono text-[10px]">{formatDate(appointment.statusUpdatedAt)}</p>
+                                      </div>
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
                                 {appointment.service?.includes("Rent A Car") && (
                                   <Button
                                     size="sm"
@@ -4126,20 +4300,32 @@ export default function AdminDashboard() {
                                               <ChevronRight className="w-3 h-3 text-muted-foreground/30 shrink-0" />
 
                                               {/* Completed Step */}
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className={cn(
-                                                  "h-auto flex flex-col gap-1.5 py-2 px-3 border transition-all flex-1 min-w-0",
-                                                  isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className={cn(
+                                                      "h-auto flex flex-col gap-1.5 py-2 px-3 border transition-all flex-1 min-w-0",
+                                                      isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm cursor-help" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
+                                                    )}
+                                                    onClick={() => updateRepairStatus(appointment.id, 'completed_ready')}
+                                                  >
+                                                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isCompleted ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
+                                                      {isCompleted ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                                                    </div>
+                                                    <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Completed</span>
+                                                  </Button>
+                                                </TooltipTrigger>
+                                                {isCompleted && appointment.statusUpdatedAt && (
+                                                  <TooltipContent side="top" className="bg-emerald-600 text-white border-none shadow-xl">
+                                                    <div className="flex flex-col gap-0.5">
+                                                      <p className="font-bold text-[10px]">Repair Finished on:</p>
+                                                      <p className="font-mono text-[9px]">{formatDate(appointment.statusUpdatedAt)}</p>
+                                                    </div>
+                                                  </TooltipContent>
                                                 )}
-                                                onClick={() => updateRepairStatus(appointment.id, 'completed_ready')}
-                                              >
-                                                <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isCompleted ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
-                                                  {isCompleted ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                                                </div>
-                                                <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Completed</span>
-                                              </Button>
+                                              </Tooltip>
                                             </div>
                                           </div>
 
@@ -4431,7 +4617,7 @@ export default function AdminDashboard() {
                                           <div key={item.id}>
                                             {isNewGroup && (
                                               <div className={cn("flex items-center gap-3 py-4 group/header cursor-pointer", index > 0 ? "mt-6" : "mt-2")} onClick={() => {
-                                                const itemsToCopy = appointment.costing!.items.filter(i => 
+                                                const itemsToCopy = appointment.costing!.items.filter(i =>
                                                   (i.type === 'parts' ? 'Parts' : (i.category || "Others")) === currentCategory
                                                 );
                                                 const textBody = itemsToCopy.map(i => `${i.description}`).join('\n');
@@ -5199,12 +5385,27 @@ export default function AdminDashboard() {
                             <span className="font-medium text-foreground">
                               {record.name}
                             </span>
+                            {historySearchQuery.trim() && getHistoryMatchCategories(record, historySearchQuery).map(cat => (
+                              <Badge key={cat} variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4">
+                                {cat}
+                              </Badge>
+                            ))}
                           </div>
 
                           <div className="ml-auto flex items-center gap-2">
-                            <Badge variant="default" className="mr-2">
-                              Completed
-                            </Badge>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="default" className="mr-2 cursor-help">
+                                  Completed
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
+                                <div className="flex flex-col gap-0.5">
+                                  <p className="font-bold">Unit Completed on:</p>
+                                  <p className="font-mono text-[10px]">{formatDate(record.completed_at)}</p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
 
@@ -5352,6 +5553,71 @@ export default function AdminDashboard() {
                                         Additional Details
                                       </div>
                                       <p className="text-sm text-foreground">{record.message}</p>
+                                    </div>
+                                  )}
+
+                                  {/* Damage Images in History */}
+                                  {record.damage_images && record.damage_images.length > 0 && (
+                                    <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg mt-3">
+                                      <div className="flex items-center gap-2 text-xs text-amber-600 mb-2">
+                                        <ImageIcon className="w-3 h-3" />
+                                        Damage Photos ({record.damage_images.length})
+                                      </div>
+                                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                        {record.damage_images.map((image, index) => (
+                                          <div key={index} className="flex flex-col gap-1">
+                                            <div
+                                              role="button"
+                                              tabIndex={0}
+                                              onClick={() => {
+                                                setZoomImages(record.damage_images || [])
+                                                setZoomInitialIndex(index)
+                                                setZoomModalOpen(true)
+                                              }}
+                                              className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-zoom-in group"
+                                            >
+                                              <img
+                                                src={image || "/placeholder.svg"}
+                                                alt={`Damage photo ${index + 1}`}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* ORCR Documents in History */}
+                                  {(record.orcr_image || record.orcr_image_2) && (
+                                    <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg mt-3">
+                                      <div className="flex items-center gap-2 text-xs text-blue-600 mb-2 font-bold uppercase tracking-wider">
+                                        <ImageIcon className="w-3 h-3" />
+                                        Official Documents (OR/CR)
+                                      </div>
+                                      <div className="flex flex-wrap gap-4">
+                                        {[record.orcr_image, record.orcr_image_2].filter(Boolean).map((url, idx) => (
+                                          <div key={idx} className="space-y-1 w-[140px]">
+                                            <div
+                                              role="button"
+                                              tabIndex={0}
+                                              onClick={() => {
+                                                const docs = [record.orcr_image, record.orcr_image_2].filter(Boolean) as string[]
+                                                setZoomImages(docs)
+                                                setZoomInitialIndex(idx)
+                                                setZoomModalOpen(true)
+                                              }}
+                                              className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/20 hover:border-blue-500 transition-all cursor-zoom-in w-full"
+                                            >
+                                              <img
+                                                src={url!}
+                                                alt={`ORCR ${idx + 1}`}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
                                     </div>
                                   )}
 
@@ -5762,11 +6028,11 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Archive Appointment</h3>
-                  <p className="text-sm text-muted-foreground">Move to history without images</p>
+                  <p className="text-sm text-muted-foreground">Move to history records</p>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                This will archive the appointment record to history. Images will be deleted to save storage space. This action cannot be undone.
+                This will archive the appointment record to history. All images and attachments will be preserved for your records.
               </p>
               <div className="space-y-2 mb-4">
                 <label className="text-sm font-medium text-foreground">Reason (optional)</label>
@@ -5963,8 +6229,8 @@ export default function AdminDashboard() {
                     <div key={s} className="flex items-center space-x-2">
                       <Checkbox
                         id={`edit-service-${s}`}
-                        checked={s === "Other" 
-                          ? editingAppointment.service?.split(", ").some(v => v === "Other" || v.startsWith("Other: ")) 
+                        checked={s === "Other"
+                          ? editingAppointment.service?.split(", ").some(v => v === "Other" || v.startsWith("Other: "))
                           : editingAppointment.service?.split(", ").includes(s)}
                         onCheckedChange={(checked) => {
                           const current = editingAppointment.service ? editingAppointment.service.split(", ").filter(Boolean) : [];
@@ -6274,8 +6540,8 @@ export default function AdminDashboard() {
                     <div key={s} className="flex items-center space-x-2">
                       <Checkbox
                         id={`copy-service-${s}`}
-                        checked={s === "Other" 
-                          ? copyFormData.service?.split(", ").some((v: string) => v === "Other" || v.startsWith("Other: ")) 
+                        checked={s === "Other"
+                          ? copyFormData.service?.split(", ").some((v: string) => v === "Other" || v.startsWith("Other: "))
                           : copyFormData.service?.split(", ").includes(s)}
                         onCheckedChange={(checked) => {
                           const current = copyFormData.service ? copyFormData.service.split(", ").filter(Boolean) : [];
@@ -6592,7 +6858,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-2 gap-4 md:col-span-2 border-t border-border pt-4 mt-2">
-<div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="gate-brpad">BRPAD (Body/Paint/Detail)</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₱</span>
@@ -6735,6 +7001,3 @@ export default function AdminDashboard() {
     </div>
   )
 }
-
-
-
