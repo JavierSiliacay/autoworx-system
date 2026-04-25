@@ -192,7 +192,7 @@ export async function POST(request: Request) {
   }
 
   // First, get the appointment data
-  const { data: appointment, error: fetchError } = await supabase
+  const { data: appointment, error: fetchError } = await adminSupabase
     .from("appointments")
     .select("*")
     .eq("id", appointmentId)
@@ -231,18 +231,16 @@ export async function POST(request: Request) {
     insurance: appointment.insurance || null,
     estimate_number: appointment.estimate_number || null,
     paul_notes: appointment.paul_notes || null,
+    service_advisor: appointment.service_advisor || null,
     loa_attachment: appointment.loa_attachment || null,
     loa_attachment_2: appointment.loa_attachment_2 || null,
     loa_attachments: appointment.loa_attachments || null,
     is_backjob: appointment.is_backjob || false,
     is_synced: appointment.is_synced || false,
     synced_at: appointment.synced_at || null,
-    damage_images: appointment.damage_images || [],
-    orcr_image: appointment.orcr_image || null,
-    orcr_image_2: appointment.orcr_image_2 || null,
   }
 
-  let { error: insertError } = await supabase
+  let { error: insertError } = await adminSupabase
     .from("appointment_history")
     .insert(historyDraft)
 
@@ -251,7 +249,7 @@ export async function POST(request: Request) {
     console.warn("synced_at column missing in history, retrying without it")
     const fallbackDraft = { ...historyDraft }
     delete (fallbackDraft as any).synced_at
-    const { error: retryError } = await supabase
+    const { error: retryError } = await adminSupabase
       .from("appointment_history")
       .insert(fallbackDraft)
     insertError = retryError
@@ -264,7 +262,7 @@ export async function POST(request: Request) {
   // Images are no longer deleted to preserve history
 
   // Delete from active appointments
-  const { error: deleteError } = await supabase
+  const { error: deleteError } = await adminSupabase
     .from("appointments")
     .delete()
     .eq("id", appointmentId)
