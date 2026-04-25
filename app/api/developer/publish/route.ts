@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { isDeveloperEmail } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized. Developer access required." }, { status: 401 })
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const body = await request.json()
     const { version, title, summary } = body
 
