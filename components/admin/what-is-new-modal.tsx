@@ -45,8 +45,15 @@ export function WhatIsNewModal() {
           if (latestUpdate) {
             const lastSeenId = localStorage.getItem("last_seen_update_id");
             if (lastSeenId !== latestUpdate.id) {
-              setUpdate(latestUpdate);
-              setIsOpen(true);
+              // If this is a brand new user (no lastSeenId), just set the baseline and don't show the modal
+              if (!lastSeenId) {
+                localStorage.setItem("last_seen_update_id", latestUpdate.id);
+                localStorage.setItem("update_notified_id", latestUpdate.id);
+              } else {
+                // For existing users with a mismatch, show the modal
+                setUpdate(latestUpdate);
+                setIsOpen(true);
+              }
             }
           }
         }

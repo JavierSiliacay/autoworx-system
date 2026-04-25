@@ -509,10 +509,6 @@ export default function AdminDashboard() {
               setTimeout(() => {
                 signOut({ callbackUrl: "/auth/signin" });
               }, 5000);
-            } else if (!lastSeenId) {
-              // Initialize baseline for new users
-              localStorage.setItem("last_seen_update_id", latestUpdate.id);
-              localStorage.setItem("update_notified_id", latestUpdate.id);
             }
           }
         }
