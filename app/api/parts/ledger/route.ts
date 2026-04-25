@@ -25,14 +25,23 @@ export async function GET(request: NextRequest) {
     const rows = transactions || []
 
     // Compute totals from all transactions
-    const totalQty = rows.reduce((s, r) => s + (r.quantity || 0), 0)
-    const stockIn = rows.filter(r => r.transaction_type === "STOCK_IN").reduce((s, r) => s + (r.quantity || 0), 0)
-    const stockOut = rows.filter(r => r.transaction_type === "STOCK_OUT").reduce((s, r) => s + (r.quantity || 0), 0)
-    const leftInStock = stockIn - stockOut
+    // stockInSum now represents the CURRENT remaining stock from all IN entries
+    const stockInRemaining = rows.filter(r => r.transaction_type === "STOCK_IN").reduce((s, r) => s + (r.quantity || 0), 0)
+    // stockOutSum represents the total history of releases
+    const stockOutSum = rows.filter(r => r.transaction_type === "STOCK_OUT").reduce((s, r) => s + (r.quantity || 0), 0)
+    
+    // Historical total = Current remaining + total released
+    const stockInHistorical = stockInRemaining + stockOutSum
+    const leftInStock = stockInRemaining
 
     return NextResponse.json({
       transactions: rows,
-      totals: { totalQty, stockIn, stockOut, leftInStock }
+      totals: { 
+        totalQty: stockInHistorical, 
+        stockIn: stockInHistorical, 
+        stockOut: stockOutSum, 
+        leftInStock 
+      }
     })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
@@ -94,15 +103,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: txError.message }, { status: 500 })
     }
 
-    // Update matching STOCK_IN: Permanently delete to save Supabase rows
+    // Update matching STOCK_IN: Decrement quantity instead of deleting
     if (transaction_type === "STOCK_OUT" && item_name && customer_name) {
-      // Find the oldest matching STOCK_IN record
+      // Find the oldest matching STOCK_IN record that still has quantity
       let query = supabase
         .from("parts_transactions")
-        .select("id")
+        .select("id, quantity")
         .eq("transaction_type", "STOCK_IN")
         .eq("item_name", item_name)
         .eq("customer_name", customer_name)
+        .gt("quantity", 0)
         .order("created_at", { ascending: true })
         .limit(1)
 
@@ -115,9 +125,16 @@ export async function POST(request: NextRequest) {
       const { data: stockInRecord } = await query.single()
 
       if (stockInRecord) {
+        const currentQty = stockInRecord.quantity || 0
+        const decrement = Math.min(currentQty, qtyNumber)
+        const newQty = Math.max(0, currentQty - decrement)
+        
         await supabase
           .from("parts_transactions")
-          .delete()
+          .update({ 
+            quantity: newQty,
+            status: newQty === 0 ? "RELEASED" : "STOCKED_IN"
+          })
           .eq("id", stockInRecord.id)
       }
     }
