@@ -14,24 +14,28 @@ const contactInfo = [
     label: "Phone",
     value: "0936-354-9603",
     href: "tel:0936-354-9603",
+    color: "bg-primary/10 text-primary"
   },
   {
     icon: Mail,
     label: "Email",
     value: "autoworxcagayan2025@gmail.com",
     href: "mailto:autoworxcagayan2025@gmail.com",
+    color: "bg-primary/10 text-primary"
   },
   {
     icon: MapPin,
     label: "Address",
     value: "Zone 7 Sepulvida Street, Kauswagan Highway, Cagayan de Oro City",
     href: "https://www.google.com/maps/place/Autoworx+Repair+%26+General+Merchandise+Co.+ltd./@8.4925727,124.6294772,17z/data=!3m1!4b1!4m6!3m5!1s0x32fff34fb1b32ba5:0x6a8fdfec5942404f!8m2!3d8.4925674!4d124.6320521!16s%2Fg%2F11q_m2z00_?hl=en&entry=ttu&g_ep=EgoyMDI2MDEyOC4wIKXMDSoASAFQAw%3D%3D",
+    color: "bg-primary/10 text-primary"
   },
   {
     icon: Clock,
     label: "Hours",
     value: "Mon-Sat: 8AM-5PM",
     href: null,
+    color: "bg-blue-500/10 text-blue-500"
   },
 ]
 
@@ -83,7 +87,7 @@ export default function ContactPage() {
                 <div className="space-y-4">
                   {contactInfo.map((item) => (
                     <div key={item.label} className="flex items-start gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary shrink-0">
+                      <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${item.color} shrink-0`}>
                         <item.icon className="w-5 h-5" />
                       </div>
                       <div>

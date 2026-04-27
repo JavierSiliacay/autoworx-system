@@ -56,7 +56,7 @@ export function MiniChatbot() {
                     canvas.height = height
                     const ctx = canvas.getContext('2d')
                     ctx?.drawImage(img, 0, 0, width, height)
-                    
+
                     // Compress to JPEG with 70% quality
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
                     resolve(dataUrl)
@@ -124,10 +124,10 @@ export function MiniChatbot() {
 
             const reader = response.body?.getReader()
             if (!reader) throw new Error("No stream available")
-            
+
             const decoder = new TextDecoder()
             let aiText = ""
-            
+
             // Add initial empty assistant message
             setMessages(prev => [...prev, { role: "assistant", content: "" }])
             // Turn off loading animation since stream is actively responding
@@ -136,16 +136,16 @@ export function MiniChatbot() {
             while (true) {
                 const { done, value } = await reader.read()
                 if (done) break
-                
+
                 const chunk = decoder.decode(value, { stream: true })
                 aiText += chunk
-                
+
                 // Update the very last message (which is our assistant message above) with the fast incoming chunks
                 setMessages(prev => {
                     const newMessages = [...prev]
-                    newMessages[newMessages.length - 1] = { 
-                        ...newMessages[newMessages.length - 1], 
-                        content: aiText 
+                    newMessages[newMessages.length - 1] = {
+                        ...newMessages[newMessages.length - 1],
+                        content: aiText
                     }
                     return newMessages
                 })
@@ -162,8 +162,9 @@ export function MiniChatbot() {
                 <Card className="w-[calc(100vw-2rem)] sm:w-[380px] h-[70vh] sm:h-[500px] flex flex-col shadow-2xl border-primary/20 animate-in slide-in-from-bottom-5 duration-300 overflow-hidden bg-background/95 backdrop-blur-md">
                     <CardHeader className="p-4 bg-primary text-primary-foreground flex flex-row items-center justify-between space-y-0">
                         <CardTitle className="text-base flex items-center gap-2 font-bold">
-                            <div className="bg-white/20 p-1.5 rounded-lg text-white">
-                                <Bot className="w-5 h-5" />
+                            <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/20 bg-primary shadow-sm flex items-center justify-center">
+                                <div className="absolute w-[85%] h-[85%] bg-white rounded-full" />
+                                <img src="/chatbot.png" alt="AI" className="relative z-10 w-full h-full object-cover" />
                             </div>
                             Autoworx AI Assistant
                         </CardTitle>
@@ -180,10 +181,15 @@ export function MiniChatbot() {
                                 {messages.map((m, i) => (
                                     <div key={i} className={cn("flex gap-3 max-w-[85%]", m.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto")}>
                                         <div className={cn(
-                                            "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border",
-                                            m.role === "assistant" ? "bg-primary/20 border-primary/30 text-primary shadow-sm" : "bg-muted border-border"
+                                            "relative w-8 h-8 rounded-full flex items-center justify-center shrink-0 border overflow-hidden",
+                                            m.role === "assistant" ? "bg-primary border-primary/30 text-primary shadow-sm" : "bg-muted border-border"
                                         )}>
-                                            {m.role === "assistant" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                                            {m.role === "assistant" ? (
+                                                <>
+                                                    <div className="absolute w-[85%] h-[85%] bg-white rounded-full" />
+                                                    <img src="/chatbot.png" alt="AI" className="relative z-10 w-full h-full object-cover" />
+                                                </>
+                                            ) : <User className="relative z-10 w-4 h-4" />}
                                         </div>
                                         <div className={cn(
                                             "rounded-2xl px-4 py-2 text-sm shadow-sm whitespace-pre-wrap flex flex-col gap-2",
@@ -206,8 +212,9 @@ export function MiniChatbot() {
                                 ))}
                                 {isLoading && (
                                     <div className="flex gap-3 mr-auto max-w-[80%] items-center">
-                                        <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                                            <Bot className="w-4 h-4" />
+                                        <div className="relative w-8 h-8 rounded-full border border-primary/20 flex items-center justify-center overflow-hidden shadow-sm bg-primary">
+                                            <div className="absolute w-[85%] h-[85%] bg-white rounded-full" />
+                                            <img src="/chatbot.png" alt="AI" className="relative z-10 w-full h-full object-cover" />
                                         </div>
                                         <div className="bg-muted rounded-2xl px-4 py-2 text-sm flex gap-1">
                                             <span className="w-1.5 h-1.5 bg-foreground/30 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
@@ -234,21 +241,21 @@ export function MiniChatbot() {
                             </div>
                         )}
                         <form className="flex w-full gap-2" onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
-                            <Button 
-                                type="button" 
-                                variant="outline" 
-                                size="icon" 
-                                className="shrink-0 rounded-full" 
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="shrink-0 rounded-full"
                                 onClick={() => fileInputRef.current?.click()}
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-camera"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-camera"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
                             </Button>
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                ref={fileInputRef} 
-                                className="hidden" 
-                                onChange={handleImageChange} 
+                            <input
+                                type="file"
+                                accept="image/*"
+                                ref={fileInputRef}
+                                className="hidden"
+                                onChange={handleImageChange}
                             />
                             <Input
                                 placeholder="How can we help with your car?"
@@ -267,10 +274,11 @@ export function MiniChatbot() {
                 <Button
                     onClick={() => setIsOpen(true)}
                     size="icon"
-                    className="h-16 w-16 rounded-full shadow-2xl hover:scale-110 transition-transform bg-primary group"
+                    className="h-16 w-16 rounded-full shadow-2xl hover:scale-110 transition-transform bg-primary group overflow-hidden p-0 border-0"
                 >
-                    <div className="relative">
-                        <Bot className="h-7 w-7 text-white" />
+                    <div className="relative w-full h-full bg-primary flex items-center justify-center">
+                        <div className="absolute w-[85%] h-[85%] bg-white rounded-full" />
+                        <img src="/chatbot.png" alt="Chatbot" className="relative z-10 w-full h-full object-cover" />
                     </div>
                 </Button>
             )}

@@ -1,35 +1,33 @@
-import type { Metadata } from "next"
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
 import React from "react"
-import { ArrowRight, Shield, Award, Users, Heart, Wrench, Clock } from "lucide-react"
+import { ArrowRight, ShieldCheck, Heart } from "lucide-react"
+import { MechanicIcon, WrenchPistonIcon, CarFrontIcon, TireIcon, DiagnosticsIcon, ChassisIcon } from "@/components/icons/automotive-icons"
 import { Button } from "@/components/ui/button"
 import { DeveloperForm } from "@/components/developer/developer-form"
 import { DonationQR } from "@/components/developer/donation-qr"
-
-export const metadata: Metadata = {
-  title: "About Us | Autoworx Repairs",
-  description: "Learn about Autoworx Repairs - over 20 years of expert automotive service, certified technicians, and our commitment to quality and customer satisfaction.",
-}
+import { motion } from "framer-motion"
 
 const values = [
   {
-    icon: Shield,
+    icon: MechanicIcon,
     title: "Integrity",
     description: "We believe in honest assessments and fair pricing. No hidden fees, no unnecessary repairs.",
   },
   {
-    icon: Award,
+    icon: WrenchPistonIcon,
     title: "Excellence",
     description: "We hold ourselves to the highest standards in every repair and service we perform.",
   },
   {
-    icon: Users,
+    icon: CarFrontIcon,
     title: "Community",
     description: "We're more than a business - we're neighbors committed to serving our community.",
   },
   {
-    icon: Heart,
+    icon: ChassisIcon,
     title: "Care",
     description: "We treat every vehicle as if it were our own, with attention to detail and genuine care.",
   },
@@ -111,7 +109,12 @@ export default function AboutPage() {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative pt-16 pb-24 overflow-hidden animate-fade-in">
+      <motion.section 
+        className="relative pt-16 pb-24 overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+      >
         {/* Background Image with Overlay */}
         <div
           className="absolute inset-0 z-0 bg-cover bg-no-repeat transition-transform duration-700 hover:scale-105"
@@ -123,7 +126,12 @@ export default function AboutPage() {
         <div className="absolute inset-0 z-10 bg-black/60" />
 
         <div className="relative z-20 mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto animate-slide-up">
+          <motion.div 
+            className="text-center max-w-3xl mx-auto"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
             <span className="inline-block px-4 py-1.5 mb-6 text-xs font-bold uppercase tracking-[0.2em] text-white bg-primary/20 backdrop-blur-sm border border-white/10 rounded-full">
               About Us
             </span>
@@ -135,15 +143,20 @@ export default function AboutPage() {
               Since 2015, Autoworx Repairs has been the go-to destination for vehicle owners
               who demand quality workmanship, honest service, and fair prices.
             </p>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Story Section */}
-      <section className="py-24 animate-fade-in [animation-delay:200ms]">
+      <section className="py-24">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div className="animate-slide-up">
+            <motion.div 
+              initial={{ opacity: 0, x: -40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.7 }}
+            >
               <span className="text-sm font-semibold uppercase tracking-wider text-primary">Our Story</span>
               <h2 className="mt-2 font-serif text-3xl sm:text-4xl font-bold text-foreground text-balance">
                 Built on Trust, Driven by Passion
@@ -168,79 +181,103 @@ export default function AboutPage() {
                   community and look forward to serving you for years to come.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
             {/* Visual Stats */}
-            <div className="grid grid-cols-2 gap-4 animate-slide-up [animation-delay:300ms]">
-              <div className="p-6 bg-card rounded-xl border border-border text-center">
+            <div className="grid grid-cols-2 gap-4">
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }} className="p-6 bg-card rounded-xl border border-border text-center">
                 <div className="text-4xl font-serif font-bold text-primary">10+</div>
                 <div className="mt-1 text-sm text-muted-foreground">Years in Business</div>
-              </div>
-              <div className="p-6 bg-card rounded-xl border border-border text-center">
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }} className="p-6 bg-card rounded-xl border border-border text-center">
                 <div className="text-4xl font-serif font-bold text-primary">5,000+</div>
                 <div className="mt-1 text-sm text-muted-foreground">Happy Customers</div>
-              </div>
-              <div className="p-6 bg-card rounded-xl border border-border text-center">
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.3 }} className="p-6 bg-card rounded-xl border border-border text-center">
                 <div className="text-4xl font-serif font-bold text-primary">15+</div>
                 <div className="mt-1 text-sm text-muted-foreground">Expert Technicians</div>
-              </div>
-              <div className="p-6 bg-card rounded-xl border border-border text-center">
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.4 }} className="p-6 bg-card rounded-xl border border-border text-center">
                 <div className="text-4xl font-serif font-bold text-primary">24/7</div>
                 <div className="mt-1 text-sm text-muted-foreground">Towing Service</div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Values Section */}
-      <section className="py-24 bg-secondary/50 animate-fade-in [animation-delay:400ms]">
+      <section className="py-24 bg-secondary/50">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16 animate-slide-up">
+          <motion.div 
+            className="text-center max-w-2xl mx-auto mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.6 }}
+          >
             <span className="text-sm font-semibold uppercase tracking-wider text-primary">Our Values</span>
             <h2 className="mt-2 font-serif text-3xl sm:text-4xl font-bold text-foreground">
               What We Stand For
             </h2>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {values.map((value, index) => (
-              <div
+              <motion.div
                 key={value.title}
-                className="p-6 bg-card rounded-xl border border-border text-center animate-slide-up"
-                style={{ animationDelay: `${500 + index * 100}ms` }}
+                className="p-6 bg-card rounded-xl border border-border text-center"
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
               >
                 <div className="flex items-center justify-center w-14 h-14 mx-auto rounded-xl bg-primary/10 text-primary">
                   <value.icon className="w-7 h-7" />
                 </div>
                 <h3 className="mt-4 font-semibold text-foreground">{value.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{value.description}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Timeline Section */}
-      <section className="py-24 animate-fade-in [animation-delay:600ms]">
+      <section className="py-24">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16 animate-slide-up">
+          <motion.div 
+            className="text-center max-w-2xl mx-auto mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.6 }}
+          >
             <span className="text-sm font-semibold uppercase tracking-wider text-primary">Our Journey</span>
             <h2 className="mt-2 font-serif text-3xl sm:text-4xl font-bold text-foreground">
               Milestones Along the Way
             </h2>
-          </div>
+          </motion.div>
 
-          <div className="max-w-3xl mx-auto animate-slide-up">
+          <div className="max-w-3xl mx-auto">
             <div className="relative">
               {/* Timeline line */}
-              <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-px bg-border md:-translate-x-1/2" />
+              <motion.div 
+                className="absolute left-4 md:left-1/2 top-0 bottom-0 w-px bg-border md:-translate-x-1/2 origin-top" 
+                initial={{ scaleY: 0 }}
+                whileInView={{ scaleY: 1 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
 
               {milestones.map((milestone, index) => (
-                <div
+                <motion.div
                   key={milestone.year}
-                  className={`relative flex items-start gap-6 mb-8 last:mb-0 ${index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
-                    }`}
+                  initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.5, delay: index * 0.15 }}
+                  className={`relative flex items-start gap-6 mb-8 last:mb-0 ${index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"}`}
                 >
                   <div className={`flex-1 ${index % 2 === 0 ? "md:text-right" : "md:text-left"} hidden md:block`}>
                     <div className="inline-block p-4 bg-card rounded-lg border border-border">
@@ -250,7 +287,13 @@ export default function AboutPage() {
                   </div>
 
                   {/* Dot */}
-                  <div className="absolute left-4 md:left-1/2 w-3 h-3 bg-primary rounded-full -translate-x-1/2 mt-5" />
+                  <motion.div 
+                    className="absolute left-4 md:left-1/2 w-3 h-3 bg-primary rounded-full -translate-x-1/2 mt-5" 
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.3, delay: index * 0.15 + 0.2 }}
+                  />
 
                   {/* Mobile view */}
                   <div className="flex-1 ml-8 md:hidden">
@@ -261,7 +304,7 @@ export default function AboutPage() {
                   </div>
 
                   <div className="flex-1 hidden md:block" />
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -269,9 +312,15 @@ export default function AboutPage() {
       </section>
 
       {/* Team Section */}
-      <section className="py-24 bg-secondary/50 animate-fade-in">
+      <section className="py-24 bg-secondary/50">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16 animate-slide-up">
+          <motion.div 
+            className="text-center max-w-2xl mx-auto mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.6 }}
+          >
             <span className="text-sm font-semibold uppercase tracking-wider text-primary">Our Team</span>
             <h2 className="mt-2 font-serif text-3xl sm:text-4xl font-bold text-foreground">
               Meet the Experts
@@ -279,49 +328,65 @@ export default function AboutPage() {
             <p className="mt-4 text-muted-foreground">
               Our certified technicians bring decades of combined experience to every job.
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {team.map((member) => (
-              <div
+            {team.map((member, index) => (
+              <motion.div
                 key={member.name}
-                className="p-6 bg-card rounded-xl border border-border animate-slide-up"
+                className="p-6 bg-card rounded-xl border border-border"
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: index * 0.05 }}
               >
-                <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-secondary text-muted-foreground">
-                  <Wrench className="w-8 h-8" />
+                <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-secondary text-primary">
+                  <MechanicIcon className="w-8 h-8" />
                 </div>
                 <div className="mt-4 text-center">
                   <h3 className="font-semibold text-foreground">{member.name}</h3>
                   <div className="text-sm text-primary">{member.role}</div>
                   <div className="mt-3 pt-3 border-t border-border">
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
+                      <TireIcon className="w-4 h-4" />
                       <span>{member.experience}</span>
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">{member.specialty}</div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
-          <div className="mt-12 p-6 bg-card rounded-xl border border-border text-center max-w-2xl mx-auto animate-slide-up">
+          <motion.div 
+            className="mt-12 p-6 bg-card rounded-xl border border-border text-center max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
             <p className="text-muted-foreground">
               For more concerns or inquiries, kindly look for <span className="font-semibold text-foreground">Paul Suazo</span> (Service Manager).
             </p>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Developer Support Section */}
-      <section className="py-24 bg-primary/5 border-t border-primary/10 animate-fade-in">
+      <section className="py-24 bg-primary/5 border-t border-primary/10 overflow-hidden">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Recommendation Form */}
-            <div className="bg-card p-8 rounded-2xl border border-border shadow-sm">
+            <motion.div 
+              className="bg-card p-8 rounded-2xl border border-border shadow-sm"
+              initial={{ opacity: 0, x: -40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.7 }}
+            >
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-primary/10 rounded-lg">
-                  <Wrench className="w-6 h-6 text-primary" />
+                  <DiagnosticsIcon className="w-6 h-6 text-primary" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-foreground font-serif">Support the Developer</h2>
@@ -330,11 +395,17 @@ export default function AboutPage() {
               </div>
 
               <DeveloperForm />
-            </div>
+            </motion.div>
 
             {/* Donation QR Section */}
             <div className="space-y-6">
-              <div className="p-8 bg-blue-600 rounded-2xl text-white shadow-lg overflow-hidden relative">
+              <motion.div 
+                className="p-8 bg-blue-600 rounded-2xl text-white shadow-lg overflow-hidden relative"
+                initial={{ opacity: 0, x: 40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.7, delay: 0.2 }}
+              >
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <Heart className="w-32 h-32 rotate-12" />
                 </div>
@@ -362,13 +433,19 @@ export default function AboutPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="p-6 border border-dashed border-primary/30 rounded-xl bg-primary/5">
+              <motion.div 
+                className="p-6 border border-dashed border-primary/30 rounded-xl bg-primary/5"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+              >
                 <p className="text-sm text-center text-muted-foreground italic">
                   Looking for business inquiries or partnerships? <Link href="/contact" className="text-primary font-bold hover:underline">Contact us here</Link>.
                 </p>
-              </div>
+              </motion.div>
             </div>
           </div>
         </div>

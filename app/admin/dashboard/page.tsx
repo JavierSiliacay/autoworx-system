@@ -58,8 +58,12 @@ import {
   Undo2,
   Code2,
   TrendingUp,
-  Database
+  Database,
+  Activity,
+  Zap,
+  Gauge
 } from "lucide-react"
+import { PistonIcon, GearsIcon, SuspensionIcon, BatteryIcon, CarFrontIcon, TowingIcon, DifferentialIcon, DetailingIcon, DiagnosticsIcon, TireIcon, OilIcon, WrenchPistonIcon } from "@/components/icons/automotive-icons"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -400,22 +404,22 @@ const getMatchedMonth = (query: string) => {
 const statusConfig = {
   pending: {
     label: "Pending",
-    icon: AlertCircle,
+    icon: DiagnosticsIcon,
     variant: "secondary" as const,
   },
   contacted: {
     label: "Contacted",
-    icon: Phone,
+    icon: Settings2,
     variant: "outline" as const,
   },
   confirm: {
     label: "Confirm",
-    icon: CheckCircle2,
+    icon: WrenchPistonIcon,
     variant: "default" as const,
   },
   completed: {
     label: "Completed",
-    icon: CheckCircle2,
+    icon: ShieldCheck,
     variant: "default" as const,
   },
 }

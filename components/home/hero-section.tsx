@@ -56,8 +56,8 @@ export function HeroSection() {
 
           {/* Objective paragraph with entrance animation */}
           <div className="mt-12 max-w-3xl mx-auto animate-slide-up [animation-delay:600ms]">
-            <p className="text-white/90 text-base leading-relaxed">
-              We focus on diagnosing problems accurately and performing quality repairs with clear communication and fair recommendations. Our goal is to fix vehicles correctly the first time.
+            <p className="text-white/90 text-base sm:text-lg leading-relaxed">
+              We provide expert, <span className="font-bold text-blue-400">multi-brand vehicle care</span>—from accurate diagnostics to comprehensive repairs. We proudly accept <span className="font-bold text-blue-400">insurance claims</span> and guarantee quality service to get you back on the road safely.
             </p>
           </div>
         </div>

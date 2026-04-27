@@ -5,11 +5,19 @@ import { ArrowRight, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { playORCRReminder } from "@/lib/notifications"
 
+import { motion } from "framer-motion"
+
 export function CTASection() {
   return (
-    <section className="py-24 animate-fade-in relative overflow-hidden">
+    <section className="py-24 relative overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
-        <div className="relative rounded-3xl overflow-hidden animate-slide-up shadow-2xl border border-white/10 group">
+        <motion.div 
+          className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/10 group"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+        >
           {/* Authentic Service Center Background with Robust Overlay */}
           <div 
             className="absolute inset-0 bg-cover bg-[center_top] bg-no-repeat transition-transform duration-1000 group-hover:scale-105" 
@@ -21,7 +29,13 @@ export function CTASection() {
           
           <div className="relative px-6 py-16 sm:px-12 sm:py-20 lg:py-24 text-center z-10">
             {/* Official Partnership Badge */}
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-black/50 border border-white/20 mb-8 backdrop-blur-xl animate-fade-in relative overflow-hidden group/badge transition-all hover:bg-black/60 cursor-default">
+            <motion.div 
+              className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-black/50 border border-white/20 mb-8 backdrop-blur-xl relative overflow-hidden group/badge transition-all hover:bg-black/60 cursor-default"
+              initial={{ opacity: 0, y: -20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
               {/* Caltex Logo Mark */}
               <div className="relative h-5 w-5 flex items-center justify-center">
                 <img src="/caltex.png" alt="Caltex" className="h-full w-full object-contain filter drop-shadow-sm" />
@@ -37,17 +51,35 @@ export function CTASection() {
 
               {/* High-End Metallic Sheen Animation */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/badge:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
-            </div>
+            </motion.div>
 
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-balance tracking-tight leading-[1.1] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+            <motion.h2 
+              className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-balance tracking-tight leading-[1.1] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
               Ready to Get Your Vehicle Serviced?
-            </h2>
-            <p className="mt-5 text-lg text-white max-w-2xl mx-auto leading-relaxed font-bold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+            </motion.h2>
+            <motion.p 
+              className="mt-5 text-lg text-white max-w-2xl mx-auto leading-relaxed font-bold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
               Schedule your appointment today and experience the Autoworx difference.
               Quality repairs using world-class Caltex Havoline and Delo lubricants.
-            </p>
+            </motion.p>
 
-            <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-5">
+            <motion.div 
+              className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-5"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
               <Button size="lg" variant="secondary" asChild onClick={playORCRReminder} className="w-full sm:w-auto text-base font-bold bg-white text-[#0047BA] hover:bg-white/95 transition-all hover:scale-105 active:scale-95 px-10 shadow-xl">
                 <Link href="/contact">
                   Book Appointment
@@ -60,9 +92,9 @@ export function CTASection() {
                   0936-354-9603
                 </a>
               </Button>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   )
