@@ -136,22 +136,25 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                 if (year !== selectedYear) return false
             }
 
-            // Comprehensive Search filter (Normalized)
+            // Comprehensive Search filter (Normalized & Tokenized)
             if (searchQuery.trim()) {
-                const q = normalizeString(searchQuery)
-                const matches = [
-                    r.name,
-                    r.insurance,
-                    r.vehicle_plate,
-                    r.vehicle_make,
-                    r.vehicle_model,
-                    r.vehicle_year?.toString(),
-                    r.estimate_number,
-                    r.paul_notes,
-                    r.current_repair_part
-                ].some(field => normalizeString(field || "").includes(q))
+                const tokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean)
+                const isRecordMatch = tokens.every(token => {
+                    const normToken = normalizeString(token)
+                    return [
+                        r.name,
+                        r.insurance,
+                        r.vehicle_plate,
+                        r.vehicle_make,
+                        r.vehicle_model,
+                        r.vehicle_year?.toString(),
+                        r.estimate_number,
+                        r.paul_notes,
+                        r.current_repair_part
+                    ].some(field => normalizeString(field || "").includes(normToken))
+                })
 
-                if (!matches) return false
+                if (!isRecordMatch) return false
             }
 
             // Claim Type filter (Dropdown)

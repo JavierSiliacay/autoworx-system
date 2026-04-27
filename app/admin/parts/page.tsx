@@ -8,7 +8,7 @@ import {
   ArrowUpCircle, ArrowDownCircle, LayoutDashboard,
   TrendingUp, TrendingDown, Boxes,
   CheckCircle2, Settings2, Check, Save,
-  Folder, ChevronDown, ChevronRight, LogOut
+  Folder, ChevronDown, ChevronRight, LogOut, RotateCcw
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -102,7 +102,8 @@ export default function PartsLedgerPage() {
   const [modalType, setModalType] = useState<TransactionType | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
-  const [hideCompletedJobs, setHideCompletedJobs] = useState(false)
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+  const [viewDeletedHistory, setViewDeletedHistory] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const toggleGroup = (id: string) => {
@@ -397,25 +398,118 @@ export default function PartsLedgerPage() {
     finally { setIsSubmitting(false) }
   }
 
-  /* ── Delete ── */
-  const handleDelete = async (id: string) => {
-    if (!confirm("Remove this entry from the ledger?")) return
-    const res = await fetch(`/api/parts/ledger?id=${id}`, { method: "DELETE" })
-    if (res.ok) { toast({ title: "Entry removed" }); fetchLedger() }
+  /* ── Soft Delete ── */
+  const handleSoftDelete = async (id: string) => {
+    if (!confirm("Move this entry to history? (It can be restored later)")) return
+    const res = await fetch(`/api/parts/ledger`, { 
+      method: "PATCH", 
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "soft_delete", ids: [id] }) 
+    })
+    if (res.ok) { toast({ title: "Entry moved to history" }); fetchLedger() }
     else toast({ title: "Failed to delete", variant: "destructive" })
   }
 
-  /* ── Bulk Delete ── */
-  const handleBulkDelete = async () => {
-    if (!confirm(`Are you sure you want to completely remove ${selectedIds.size} transactions?`)) return
+  /* ── Restore ── */
+  const handleRestore = async (id: string) => {
+    const res = await fetch(`/api/parts/ledger`, { 
+      method: "PATCH", 
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "restore", ids: [id] }) 
+    })
+    if (res.ok) { toast({ title: "Entry restored" }); fetchLedger() }
+    else toast({ title: "Failed to restore", variant: "destructive" })
+  }
+
+  /* ── Permanent Delete ── */
+  const handlePermanentDelete = async (id: string) => {
+    if (!confirm("WARNING: Are you sure you want to PERMANENTLY delete this entry? This cannot be undone.")) return
+    const res = await fetch(`/api/parts/ledger?id=${id}`, { method: "DELETE" })
+    if (res.ok) { toast({ title: "Entry permanently removed" }); fetchLedger() }
+    else toast({ title: "Failed to delete", variant: "destructive" })
+  }
+
+  /* ── Bulk Revert ── */
+  const handleBulkRevert = async () => {
+    if (!confirm(`Are you sure you want to revert ${selectedIds.size} releases? The items will be returned to stock.`)) return
+    setIsSubmitting(true)
+    try {
+      const results = await Promise.all(
+        Array.from(selectedIds).map(id => fetch(`/api/parts/ledger?id=${id}&revert=true`, { method: "DELETE" }))
+      )
+      const failed = results.filter(r => !r.ok).length
+      if (failed > 0) toast({ title: `Failed to revert ${failed} items`, variant: "destructive" })
+      if (failed < selectedIds.size) toast({ title: `Reverted ${selectedIds.size - failed} releases successfully`, className: "bg-emerald-500 text-white" })
+
+      setSelectedIds(new Set())
+      fetchLedger()
+      fetchInventory()
+    } catch {
+      toast({ title: "Network error", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  /* ── Bulk Soft Delete ── */
+  const handleBulkSoftDelete = async () => {
+    if (!confirm(`Are you sure you want to move ${selectedIds.size} transactions to history?`)) return
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/parts/ledger`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "soft_delete", ids: Array.from(selectedIds) })
+      })
+      if (res.ok) {
+        toast({ title: `Moved ${selectedIds.size} entries to history`, className: "bg-emerald-500 text-white" })
+        setSelectedIds(new Set())
+        fetchLedger()
+      } else {
+        toast({ title: "Failed to move items to history", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  /* ── Bulk Restore ── */
+  const handleBulkRestore = async () => {
+    if (!confirm(`Are you sure you want to restore ${selectedIds.size} transactions?`)) return
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/parts/ledger`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore", ids: Array.from(selectedIds) })
+      })
+      if (res.ok) {
+        toast({ title: `Restored ${selectedIds.size} entries`, className: "bg-emerald-500 text-white" })
+        setSelectedIds(new Set())
+        fetchLedger()
+      } else {
+        toast({ title: "Failed to restore items", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  /* ── Bulk Permanent Delete ── */
+  const handleBulkPermanentDelete = async () => {
+    if (!confirm(`WARNING: Are you sure you want to PERMANENTLY remove ${selectedIds.size} transactions? This cannot be undone.`)) return
     setIsSubmitting(true)
     try {
       const results = await Promise.all(
         Array.from(selectedIds).map(id => fetch(`/api/parts/ledger?id=${id}`, { method: "DELETE" }))
       )
       const failed = results.filter(r => !r.ok).length
-      if (failed > 0) toast({ title: `Failed to delete ${failed} items`, variant: "destructive" })
-      if (failed < selectedIds.size) toast({ title: `Deleted ${selectedIds.size - failed} entries`, className: "bg-emerald-500 text-white" })
+      if (failed > 0) toast({ title: `Failed to permanently delete ${failed} items`, variant: "destructive" })
+      if (failed < selectedIds.size) toast({ title: `Permanently deleted ${selectedIds.size - failed} entries`, className: "bg-emerald-500 text-white" })
 
       setSelectedIds(new Set())
       fetchLedger()
@@ -431,6 +525,7 @@ export default function PartsLedgerPage() {
     const stockMap: Record<string, any> = {}
 
     transactions.forEach(tx => {
+      if (tx.status?.startsWith("DELETED_")) return
       if (!tx.customer_name) return
       const key = `${tx.customer_name}_${tx.plate_number || ''}_${tx.item_name}_${tx.kind || ''}_${tx.condition || ''}`
 
@@ -452,31 +547,44 @@ export default function PartsLedgerPage() {
     return Object.values(stockMap).map(item => ({ ...item, available: item.totalIn - item.totalOut }))
   }, [transactions])
 
+  const normalizeString = (str: string | null | undefined) => {
+    if (!str) return ""
+    return str.toLowerCase().replace(/[\s\-\.\/\,]/g, "")
+  }
+
   /* ── Filtered rows ── */
   const filtered = useMemo(() => transactions.filter(tx => {
-    const matchType = filterType === "ALL" || tx.transaction_type === filterType
-    const q = searchQuery.toLowerCase()
-    const matchSearch = !q ||
-      tx.item_name?.toLowerCase().includes(q) ||
-      tx.customer_name?.toLowerCase().includes(q) ||
-      tx.unit_model?.toLowerCase().includes(q) ||
-      tx.plate_number?.toLowerCase().includes(q) ||
-      tx.notes?.toLowerCase().includes(q)
+    const isDeleted = tx.status?.startsWith("DELETED_")
+    if (viewDeletedHistory && !isDeleted) return false
+    if (!viewDeletedHistory && isDeleted) return false
 
-    if (!matchType || !matchSearch) return false
-    
-    // Keep Stock-Out records visible (they define the release), but hide the original redundant Stock-In
-    if (tx.transaction_type === "STOCK_IN" && tx.status === "RELEASED") return false
-    
-    // If hiding completed jobs by owner-part group
-    if (hideCompletedJobs && tx.customer_name) {
-      const key = `${tx.customer_name}_${tx.plate_number || ''}_${tx.item_name}_${tx.kind || ''}_${tx.condition || ''}`
-      const stock = allOwnerStock.find(s => s.key === key)
-      if (stock && stock.available <= 0) return false
+    if (!viewDeletedHistory) {
+      const matchType = filterType === "ALL" || tx.transaction_type === filterType
+      if (!matchType) return false
+      // Keep Stock-Out records visible (they define the release), but hide the original redundant Stock-In
+      if (tx.transaction_type === "STOCK_IN" && tx.status === "RELEASED") return false
+    }
+
+    if (searchQuery.trim()) {
+      const tokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean)
+      const isRecordMatch = tokens.every(token => {
+        const normToken = normalizeString(token)
+        return [
+          tx.item_name,
+          tx.customer_name,
+          tx.unit_model,
+          tx.plate_number,
+          tx.notes,
+          tx.kind,
+          tx.condition,
+          tx.purchaser
+        ].some(field => normalizeString(field).includes(normToken))
+      })
+      if (!isRecordMatch) return false
     }
 
     return true
-  }), [transactions, filterType, searchQuery, hideCompletedJobs, allOwnerStock])
+  }), [transactions, filterType, searchQuery, viewDeletedHistory])
 
   const groupedTransactions = useMemo(() => {
     const groups: any[] = []
@@ -529,6 +637,7 @@ export default function PartsLedgerPage() {
 
   const displayTotals = useMemo(() => {
     const res = transactions.reduce((acc, tx) => {
+      if (tx.status?.startsWith("DELETED_")) return acc
       // Stock-In records that are released are essentially deleted/hidden
       // Stock-Out records (Status: RELEASED) are the active history we want to count
       if (tx.transaction_type === "STOCK_IN" && tx.status !== "RELEASED") {
@@ -558,145 +667,138 @@ export default function PartsLedgerPage() {
     i.brand?.toLowerCase().includes(invSearch.toLowerCase())
   )
 
-  const renderTxRow = (tx: Transaction, isSubRow = false) => (
-    <tr
-      key={tx.id}
-      className={`hover:bg-slate-50/80 transition-colors ${tx.transaction_type === "STOCK_IN" ? "border-l-4 border-l-emerald-400" : "border-l-4 border-l-red-400"
-        } ${isSubRow ? "bg-slate-50/40 relative z-0" : ""}`}
-    >
-      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-        <input
-          type="checkbox"
-          checked={selectedIds.has(tx.id)}
-          onChange={(e) => {
-            const newSet = new Set(selectedIds)
-            if (e.target.checked) newSet.add(tx.id)
-            else newSet.delete(tx.id)
-            setSelectedIds(newSet)
-          }}
-          className="rounded border-slate-300 w-4 h-4 text-red-600 focus:ring-red-600 cursor-pointer"
-        />
-      </td>
-      <td className="px-4 py-3">
-        <div className={`flex items-center ${isSubRow ? "ml-6" : ""}`}>
-          {isSubRow && <div className="w-3 h-px bg-slate-300 absolute left-2 top-1/2 -mt-px hidden md:block" />}
-          <Badge className={`text-[9px] font-black uppercase tracking-tight relative z-10 ${tx.transaction_type === "STOCK_IN"
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              : "bg-red-50 text-red-700 border border-red-200"
-            }`}>
-            {tx.transaction_type === "STOCK_IN" ? "↑ IN" : "↓ OUT"}
-          </Badge>
-        </div>
-      </td>
-      {/* STATUS BADGE */}
-      <td className="px-4 py-3 text-center">
-        {tx.transaction_type === "STOCK_IN" && (
-          tx.status === "RELEASED" ? (
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-bold border border-slate-200">
-              ✓ RELEASED
-            </span>
-          ) : (
-            <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[9px] font-bold border border-green-200 animate-pulse">
-              AVAILABLE
-            </span>
-          )
-        )}
-        {tx.transaction_type === "STOCK_OUT" && (
-          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[9px] font-bold border border-red-200">
-            RELEASED
-          </span>
-        )}
-      </td>
+  const renderTxRow = (tx: Transaction, isSubRow = false) => {
+    const isExpRow = !!expandedRows[tx.id]
+    const kindColor = tx.kind === "GENUINE" ? "bg-blue-50 text-blue-700 border-blue-200"
+      : tx.kind === "SURPLUS" ? "bg-amber-50 text-amber-700 border-amber-200"
+      : tx.kind === "REPLACEMENT" ? "bg-violet-50 text-violet-700 border-violet-200"
+      : "bg-slate-100 text-slate-600 border-slate-200"
 
-      <td className="px-4 py-3 text-[11px] text-slate-500 font-mono whitespace-nowrap">
-          {tx.transaction_type === "STOCK_OUT" ? (
-            <div className="flex flex-col gap-1 py-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[8px] font-black bg-slate-200 text-slate-700 px-1 rounded-sm w-8 text-center uppercase tracking-tighter">IN</span>
-                <span className="text-slate-600 font-bold text-xs uppercase">
-                  {tx.parts_in_date ? formatDate(tx.parts_in_date) : "N/A"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 border-t border-slate-100 pt-1 mt-1">
-                <span className="text-[8px] font-black bg-red-100 text-red-600 px-1 rounded-sm w-8 text-center uppercase tracking-tighter">OUT</span>
-                <span className="text-red-700 font-black text-xs">
-                  {formatDate(tx.created_at)}
-                </span>
-              </div>
+    return (
+      <React.Fragment key={tx.id}>
+        <tr
+          onClick={() => setExpandedRows(prev => ({ ...prev, [tx.id]: !prev[tx.id] }))}
+          className={`cursor-pointer transition-colors ${tx.transaction_type === "STOCK_IN" ? "border-l-4 border-l-emerald-400" : "border-l-4 border-l-red-400"} ${isSubRow ? "bg-blue-50/60 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.12)] hover:bg-blue-100/50" : "hover:bg-slate-50"} ${isExpRow ? "bg-slate-50" : ""}`}
+        >
+          {/* Checkbox */}
+          <td className="px-3 py-3 w-10" onClick={e => e.stopPropagation()}>
+            <input type="checkbox" checked={selectedIds.has(tx.id)}
+              onChange={(e) => { const s = new Set(selectedIds); e.target.checked ? s.add(tx.id) : s.delete(tx.id); setSelectedIds(s) }}
+              className="rounded border-slate-300 w-4 h-4 text-red-600 focus:ring-red-600 cursor-pointer" />
+          </td>
+
+          {/* Type + Status stacked */}
+          <td className="px-3 py-3">
+            <div className="flex flex-col gap-1">
+              <Badge className={`text-[9px] font-black uppercase w-fit ${tx.transaction_type === "STOCK_IN" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                {tx.transaction_type === "STOCK_IN" ? "↑ IN" : "↓ OUT"}
+              </Badge>
+              {tx.transaction_type === "STOCK_IN" && (
+                tx.status === "RELEASED"
+                  ? <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wide">Released</span>
+                  : <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-wide animate-pulse">Available</span>
+              )}
+              {tx.transaction_type === "STOCK_OUT" && (
+                <span className="text-[8px] font-bold text-red-500 uppercase tracking-wide">Released</span>
+              )}
             </div>
-          ) : (
-            <span className="font-bold text-slate-700">{formatDate(tx.created_at)}</span>
-          )}
-      </td>
-      <td className="px-4 py-3 font-bold text-slate-900 text-sm whitespace-nowrap flex items-center gap-2">
-        {isSubRow && <div className="w-1.5 h-1.5 rounded-full bg-emerald-300" />}
-        {tx.item_name}
-      </td>
-      <td className="px-4 py-3">
-        {tx.kind
-          ? <span className={`text-[9px] font-black uppercase tracking-tight px-2 py-0.5 rounded-full border ${tx.kind === "GENUINE" ? "bg-blue-50 text-blue-700 border-blue-200"
-              : tx.kind === "SURPLUS" ? "bg-amber-50 text-amber-700 border-amber-200"
-                : tx.kind === "REPLACEMENT" ? "bg-violet-50 text-violet-700 border-violet-200"
-                  : "bg-slate-100 text-slate-600 border-slate-200"
-            }`}>{tx.kind}</span>
-          : <span className="text-slate-300 text-sm">—</span>
-        }
-      </td>
-      <td className="px-4 py-3">
-        {tx.condition
-          ? <span className={`text-[9px] font-black uppercase tracking-tight px-2 py-0.5 rounded-full border ${tx.condition === "GOOD" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : tx.condition === "BAD" ? "bg-red-50 text-red-700 border-red-200"
-                : "bg-slate-100 text-slate-600 border-slate-200"
-            }`}>{tx.condition}</span>
-          : <span className="text-slate-300 text-sm">—</span>
-        }
-      </td>
-      <td className="px-4 py-3 text-sm text-slate-700">
-        {isSubRow ? <span className="text-slate-300">↳</span> : tx.customer_name || <span className="text-slate-300">—</span>}
-      </td>
-      <td className="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">
-        {isSubRow ? <span className="text-slate-300">↳</span> : tx.unit_model || <span className="text-slate-300">—</span>}
-      </td>
-      <td className="px-4 py-3 text-xs font-mono font-black text-slate-900 tracking-tighter uppercase">
-        {isSubRow ? <span className="text-slate-300">↳</span> : tx.plate_number || "—"}
-      </td>
-      <td className="px-4 py-3 text-xs font-bold text-slate-600">
-        {isSubRow ? <span className="text-slate-300">↳</span> : tx.purchaser || "—"}
-      </td>
-      <td className="px-4 py-3 font-black text-slate-900 font-mono text-sm text-center">{tx.quantity}</td>
-      <td className="px-4 py-3 text-center">
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${tx.transaction_type === "STOCK_IN" ? "text-emerald-700 bg-emerald-50" : "text-red-700 bg-red-50"}`}>
-          {tx.transaction_type === "STOCK_IN" ? `+${tx.quantity}` : `-${tx.quantity}`}
-        </span>
-      </td>
-      <td className="px-4 py-3 text-xs text-slate-500 max-w-[140px]">
-        <span className="line-clamp-2">{tx.notes || <span className="text-slate-300">—</span>}</span>
-      </td>
-      <td className="px-4 py-3 flex items-center justify-center gap-1 relative z-10">
-        <button
-          onClick={(e) => { e.stopPropagation(); openStockOutForOwner(tx.customer_name); }}
-          className="p-1.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
-          title="Release / Stock-Out"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); openEdit(tx); }}
-          className="p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-          title="Edit entry"
-        >
-          <Settings2 className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(tx.id); }}
-          className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-          title="Delete entry"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </td>
-    </tr>
-  )
+          </td>
+
+          {/* Item name */}
+          <td className="px-3 py-3 max-w-[180px]">
+            <div className={`flex items-center gap-2 ${isSubRow ? "ml-4" : ""}`}>
+              {isSubRow && <div className="w-1.5 h-1.5 rounded-full bg-emerald-300 flex-shrink-0" />}
+              <span className="font-bold text-slate-900 text-sm truncate" title={tx.item_name}>{tx.item_name}</span>
+            </div>
+            {/* Kind + Condition inline under item name */}
+            <div className="flex gap-1 mt-1 flex-wrap">
+              {tx.kind && <span className={`text-[8px] font-black uppercase tracking-tight px-1.5 py-0.5 rounded border ${kindColor}`}>{tx.kind}</span>}
+              {tx.condition && <span className={`text-[8px] font-black uppercase tracking-tight px-1.5 py-0.5 rounded border ${tx.condition === "GOOD" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>{tx.condition}</span>}
+            </div>
+          </td>
+
+          {/* Owner + Vehicle stacked */}
+          <td className="px-3 py-3 max-w-[160px]">
+            {isSubRow ? <span className="text-slate-300 text-xs">↳ same</span> : (
+              <div className="space-y-0.5">
+                <div className="text-sm font-bold text-slate-800 truncate" title={tx.customer_name ?? ""}>{tx.customer_name || <span className="text-slate-300">—</span>}</div>
+                <div className="text-xs text-slate-500 truncate" title={tx.unit_model ?? ""}>{tx.unit_model || <span className="text-slate-300">—</span>}</div>
+              </div>
+            )}
+          </td>
+
+          {/* Plate */}
+          <td className="px-3 py-3">
+            {isSubRow ? <span className="text-slate-300 text-xs">↳</span> : (
+              <span className="text-xs font-mono font-black text-slate-900 tracking-widest uppercase bg-slate-100 px-2 py-1 rounded whitespace-nowrap">{tx.plate_number || "—"}</span>
+            )}
+          </td>
+
+          {/* Qty */}
+          <td className="px-3 py-3 text-center">
+            <span className={`text-sm font-black px-2 py-1 rounded-full ${tx.transaction_type === "STOCK_IN" ? "text-emerald-700 bg-emerald-50" : "text-red-700 bg-red-50"}`}>
+              {tx.transaction_type === "STOCK_IN" ? `+${tx.quantity}` : `-${tx.quantity}`}
+            </span>
+          </td>
+
+          {/* Expand indicator */}
+          <td className="px-2 py-3 text-center">
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 mx-auto transition-transform duration-200 ${isExpRow ? "rotate-180" : ""}`} />
+          </td>
+
+          {/* Actions */}
+          <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-center gap-1">
+              {viewDeletedHistory ? (
+                <>
+                  <button onClick={() => handleRestore(tx.id)} className="p-1.5 rounded-lg text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 transition-colors" title="Restore"><RotateCcw className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => handlePermanentDelete(tx.id)} className="p-1.5 rounded-lg text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors" title="Permanently Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => openStockOutForOwner(tx.customer_name)} className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100" title="Release / Stock-Out"><LogOut className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => openEdit(tx)} className="p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="Edit"><Settings2 className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => handleSoftDelete(tx.id)} className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="Move to History"><Trash2 className="w-3.5 h-3.5" /></button>
+                </>
+              )}
+            </div>
+          </td>
+        </tr>
+
+        {/* ── Expandable Detail Row ── */}
+        {isExpRow && (
+          <tr className={`${tx.transaction_type === "STOCK_IN" ? "border-l-4 border-l-emerald-200" : "border-l-4 border-l-red-200"} bg-slate-50/80`}>
+            <td colSpan={8} className="px-6 pb-4 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 text-xs">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Date In</p>
+                  <p className="font-semibold text-slate-700">{tx.parts_in_date ? formatDate(tx.parts_in_date) : tx.transaction_type === "STOCK_IN" ? formatDate(tx.created_at) : "N/A"}</p>
+                </div>
+                {tx.transaction_type === "STOCK_OUT" && (
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Date Released</p>
+                    <p className="font-semibold text-red-600">{formatDate(tx.created_at)}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Purchaser</p>
+                  <p className="font-semibold text-slate-700">{tx.purchaser || "—"}</p>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Notes / Remarks</p>
+                  <p className="text-slate-600 leading-relaxed">{tx.notes || <span className="text-slate-300">—</span>}</p>
+                </div>
+              </div>
+            </td>
+          </tr>
+        )}
+      </React.Fragment>
+    )
+  }
+
+
+
+
 
   if (status === "loading" || isLoading) {
     return (
@@ -778,14 +880,14 @@ export default function PartsLedgerPage() {
             <div className="w-px h-6 bg-slate-300 mx-1 hidden sm:block"></div>
 
             <button
-              onClick={() => setHideCompletedJobs(!hideCompletedJobs)}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5 ${hideCompletedJobs
-                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                  : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
+              onClick={() => setViewDeletedHistory(!viewDeletedHistory)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5 ${viewDeletedHistory
+                  ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
                 }`}
             >
-              {hideCompletedJobs && <CheckCircle2 className="w-3.5 h-3.5" />}
-              Hide Completed
+              {viewDeletedHistory ? <RotateCcw className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+              {viewDeletedHistory ? "Back to Active" : "Delete History"}
             </button>
           </div>
 
@@ -801,9 +903,30 @@ export default function PartsLedgerPage() {
             </div>
             {/* Primary Actions */}
             {selectedIds.size > 0 && (
-              <Button onClick={handleBulkDelete} className="h-10 gap-2 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 border border-red-200 shadow-sm font-bold">
-                <Trash2 className="w-4 h-4" /> Delete {selectedIds.size}
-              </Button>
+              <div className="flex items-center gap-2">
+                {!viewDeletedHistory && Array.from(selectedIds).every(id => {
+                  const tx = transactions.find(t => t.id === id)
+                  return tx && tx.transaction_type === "STOCK_OUT"
+                }) && (
+                  <Button onClick={handleBulkRevert} className="h-10 gap-2 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 border border-blue-200 shadow-sm font-bold">
+                    <RotateCcw className="w-4 h-4" /> Undo Release
+                  </Button>
+                )}
+                {viewDeletedHistory ? (
+                  <>
+                    <Button onClick={handleBulkRestore} className="h-10 gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 hover:text-emerald-800 border border-emerald-200 shadow-sm font-bold">
+                      <RotateCcw className="w-4 h-4" /> Restore {selectedIds.size}
+                    </Button>
+                    <Button onClick={handleBulkPermanentDelete} className="h-10 gap-2 bg-red-600 hover:bg-red-700 text-white border border-red-700 shadow-sm font-bold">
+                      <Trash2 className="w-4 h-4" /> Delete {selectedIds.size}
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={handleBulkSoftDelete} className="h-10 gap-2 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 border border-red-200 shadow-sm font-bold">
+                    <Trash2 className="w-4 h-4" /> Delete {selectedIds.size}
+                  </Button>
+                )}
+              </div>
             )}
             <Button onClick={() => openModal("STOCK_IN")} className="h-10 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm">
               <ArrowUpCircle className="w-4 h-4" /> STOCK IN
@@ -824,30 +947,25 @@ export default function PartsLedgerPage() {
             <span className="text-slate-400 text-xs">{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-3 text-left w-10">
-                    <input
-                      type="checkbox"
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedIds(new Set(filtered.map(tx => tx.id)))
-                        else setSelectedIds(new Set())
-                      }}
+                  <th className="px-3 py-3 w-10">
+                    <input type="checkbox"
+                      onChange={(e) => { if (e.target.checked) setSelectedIds(new Set(filtered.map(tx => tx.id))); else setSelectedIds(new Set()) }}
                       checked={filtered.length > 0 && selectedIds.size === filtered.length}
-                      className="rounded border-slate-300 w-4 h-4 text-red-600 focus:ring-red-600 cursor-pointer"
-                    />
+                      className="rounded border-slate-300 w-4 h-4 text-red-600 focus:ring-red-600 cursor-pointer" />
                   </th>
-                  {["TYPE", "STATUS", "DATE & TIME", "ITEM NAME", "KIND", "CONDITION", "OWNER", "UNIT MODEL", "PLATE NO.", "PURCHASER", "QTY", "STOCK", "NOTES/REMARKS", "ACTIONS"].map(h => (
-                    <th key={h} className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">{h}</th>
+                  {["TYPE / STATUS", "ITEM NAME", "CLIENT / VEHICLE", "PLATE NO.", "QTY", "", "ACTIONS"].map(h => (
+                    <th key={h} className="px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={15} className="text-center py-16 text-slate-400">
+                    <td colSpan={8} className="text-center py-16 text-slate-400">
                       <Package className="w-10 h-10 mx-auto mb-3 text-slate-200" />
                       <p className="font-semibold text-sm">No transactions recorded yet.</p>
                       <p className="text-xs mt-1">Click STOCK IN or STOCK OUT to add an entry.</p>
@@ -863,59 +981,29 @@ export default function PartsLedgerPage() {
                     const totalQty = group.items.reduce((acc: any, item: any) => acc + parseInt(item.quantity || "0"), 0)
                     return (
                       <React.Fragment key={group.id}>
-                        <tr
-                          onClick={() => toggleGroup(group.id)}
-                          className="hover:bg-slate-100 transition-colors border-l-4 border-l-blue-500 bg-slate-50 cursor-pointer shadow-sm relative z-10"
-                        >
-                          <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
+                        <tr onClick={() => toggleGroup(group.id)} className="hover:bg-blue-50/50 transition-colors border-l-4 border-l-blue-500 bg-slate-50 cursor-pointer">
+                          <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox"
                               checked={group.items.length > 0 && group.items.every((tx: any) => selectedIds.has(tx.id))}
-                              ref={element => {
-                                if (element) {
-                                  const all = group.items.every((tx: any) => selectedIds.has(tx.id))
-                                  const some = group.items.some((tx: any) => selectedIds.has(tx.id))
-                                  element.indeterminate = some && !all
-                                }
-                              }}
-                              onChange={(e) => {
-                                const newSet = new Set(selectedIds)
-                                if (e.target.checked) group.items.forEach((tx: any) => newSet.add(tx.id))
-                                else group.items.forEach((tx: any) => newSet.delete(tx.id))
-                                setSelectedIds(newSet)
-                              }}
-                              className="rounded border-slate-300 w-4 h-4 text-red-600 focus:ring-red-600 cursor-pointer"
-                            />
+                              ref={el => { if (el) { const all = group.items.every((t: any) => selectedIds.has(t.id)); const some = group.items.some((t: any) => selectedIds.has(t.id)); el.indeterminate = some && !all } }}
+                              onChange={(e) => { const s = new Set(selectedIds); if (e.target.checked) group.items.forEach((t: any) => s.add(t.id)); else group.items.forEach((t: any) => s.delete(t.id)); setSelectedIds(s) }}
+                              className="rounded border-slate-300 w-4 h-4 text-red-600 focus:ring-red-600 cursor-pointer" />
                           </td>
-                          <td className="px-4 py-3" colSpan={4}>
+                          <td colSpan={5} className="px-3 py-3">
                             <div className="flex items-center gap-2">
                               {isExpanded ? <ChevronDown className="w-4 h-4 text-blue-600" /> : <ChevronRight className="w-4 h-4 text-blue-600" />}
                               <Folder className="w-4 h-4 text-blue-600" fill="currentColor" fillOpacity={0.2} />
                               <span className="font-black text-[10px] text-blue-800 uppercase tracking-widest">{firstTx.transaction_type === "STOCK_IN" ? "BATCH STOCK-IN" : "BATCH RELEASE"} ({group.items.length} ITEMS)</span>
-                               <span className="text-[10px] text-slate-400 ml-2 font-mono whitespace-nowrap">{formatDate(firstTx.created_at)}</span>
+                              <span className="text-[10px] text-slate-500 font-semibold">{firstTx.customer_name}</span>
+                              {firstTx.plate_number && <span className="text-[9px] font-mono font-black bg-slate-200 px-1.5 py-0.5 rounded text-slate-700 uppercase">{firstTx.plate_number}</span>}
+                              <span className={`text-xs font-black px-2 py-0.5 rounded-full ${firstTx.transaction_type === "STOCK_IN" ? "text-blue-700 bg-blue-100" : "text-red-700 bg-red-100"}`}>{firstTx.transaction_type === "STOCK_IN" ? `+${totalQty}` : `-${totalQty}`}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-slate-300">—</td>
-                          <td className="px-4 py-3 text-sm text-slate-300">—</td>
-                          <td className="px-4 py-3 text-sm text-slate-700 font-bold">{firstTx.customer_name}</td>
-                          <td className="px-4 py-3 text-sm text-slate-700">{firstTx.unit_model || <span className="text-slate-300">—</span>}</td>
-                          <td className="px-4 py-3 text-xs font-mono font-black text-slate-900 tracking-tighter uppercase">{firstTx.plate_number || "—"}</td>
-                          <td className="px-4 py-3 text-xs font-bold text-slate-600">{firstTx.purchaser || "—"}</td>
-                          <td className="px-4 py-3 font-black text-blue-700 font-mono text-sm text-center">{totalQty}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${firstTx.transaction_type === "STOCK_IN" 
-                              ? "text-blue-700 bg-blue-100 border-blue-200" 
-                              : "text-red-700 bg-red-100 border-red-200"}`}>
-                              {firstTx.transaction_type === "STOCK_IN" ? `+${totalQty}` : `-${totalQty}`}
-                            </span>
+                          <td className="px-3 py-3 text-center">
+                            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 mx-auto transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
                           </td>
-                          <td className="px-4 py-3 text-sm text-slate-300">—</td>
-                          <td className="px-4 py-3 flex items-center justify-center gap-1 relative z-10">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); openStockOutForOwner(firstTx.customer_name); }}
-                              className="p-1.5 rounded-lg text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                              title="Release Batch Items"
-                            >
+                          <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => openStockOutForOwner(firstTx.customer_name)} className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="Release Batch Items">
                               <LogOut className="w-3.5 h-3.5" />
                             </button>
                           </td>
@@ -928,6 +1016,7 @@ export default function PartsLedgerPage() {
               </tbody>
             </table>
           </div>
+
 
         </div>
       </main>

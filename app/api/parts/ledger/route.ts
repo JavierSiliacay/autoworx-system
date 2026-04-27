@@ -167,12 +167,72 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")
+    const revert = searchParams.get("revert") === "true"
     if (!id) return NextResponse.json({ error: "ID is required" }, { status: 400 })
 
     const supabase = createAdminClient()
-    const { error } = await supabase.from("parts_transactions").delete().eq("id", id)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // 1. Fetch the transaction to be deleted so we can revert its effects
+    const { data: txToDelete, error: fetchError } = await supabase
+      .from("parts_transactions")
+      .select("*")
+      .eq("id", id)
+      .single()
+
+    if (fetchError || !txToDelete) {
+      return NextResponse.json({ error: fetchError?.message || "Transaction not found" }, { status: 404 })
+    }
+
+    // 2. Delete the transaction
+    const { error: deleteError } = await supabase.from("parts_transactions").delete().eq("id", id)
+    if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
+
+    // 3. Revert STOCK_OUT effects on STOCK_IN record
+    if (revert && txToDelete.transaction_type === "STOCK_OUT" && txToDelete.item_name && txToDelete.customer_name) {
+      // Find the most recent STOCK_IN record for this owner/item to give the quantity back to
+      let query = supabase
+        .from("parts_transactions")
+        .select("id, quantity")
+        .eq("transaction_type", "STOCK_IN")
+        .eq("item_name", txToDelete.item_name)
+        .eq("customer_name", txToDelete.customer_name)
+        .order("created_at", { ascending: false })
+        .limit(1)
+
+      if (txToDelete.plate_number) {
+        query = query.eq("plate_number", txToDelete.plate_number)
+      } else {
+        query = query.is("plate_number", null)
+      }
+
+      const { data: stockInRecord } = await query.single()
+
+      if (stockInRecord) {
+        const newQty = (stockInRecord.quantity || 0) + (txToDelete.quantity || 0)
+        await supabase
+          .from("parts_transactions")
+          .update({ 
+            quantity: newQty,
+            status: "STOCKED_IN" // Always reset status to STOCKED_IN since quantity > 0
+          })
+          .eq("id", stockInRecord.id)
+      }
+    }
+
+    // 4. Revert inventory totals if a stock_id is linked
+    if (revert && txToDelete.stock_id) {
+      const { data: inv } = await supabase.from("inventory").select("quantity").eq("id", txToDelete.stock_id).single()
+      if (inv) {
+        // If deleting STOCK_IN, inventory goes down. If deleting STOCK_OUT, inventory goes up.
+        const qtyChange = txToDelete.transaction_type === "STOCK_IN"
+          ? -(txToDelete.quantity || 0)
+          : (txToDelete.quantity || 0)
+
+        const newInvQty = Math.max(0, (inv.quantity || 0) + qtyChange)
+        await supabase.from("inventory").update({ quantity: newInvQty }).eq("id", txToDelete.stock_id)
+      }
+    }
+
     return NextResponse.json({ success: true })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
@@ -188,12 +248,35 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const {
       id, kind, condition, customer_name, unit_model, plate_number,
-      quantity, notes, purchaser
+      quantity, notes, purchaser, action, ids
     } = body
+
+    const supabase = createAdminClient()
+
+    // Bulk actions
+    if (action === "soft_delete" && Array.isArray(ids)) {
+      for (const txId of ids) {
+        const { data } = await supabase.from("parts_transactions").select("status").eq("id", txId).single()
+        if (data && !data.status.startsWith("DELETED_")) {
+          await supabase.from("parts_transactions").update({ status: `DELETED_${data.status}` }).eq("id", txId)
+        }
+      }
+      return NextResponse.json({ success: true })
+    }
+
+    if (action === "restore" && Array.isArray(ids)) {
+      for (const txId of ids) {
+        const { data } = await supabase.from("parts_transactions").select("status").eq("id", txId).single()
+        if (data && data.status.startsWith("DELETED_")) {
+          await supabase.from("parts_transactions").update({ status: data.status.replace("DELETED_", "") }).eq("id", txId)
+        }
+      }
+      return NextResponse.json({ success: true })
+    }
 
     if (!id) return NextResponse.json({ error: "Transaction ID is required." }, { status: 400 })
 
-    const supabase = createAdminClient()
+    // Execute the update query
     const { data, error } = await supabase
       .from("parts_transactions")
       .update({

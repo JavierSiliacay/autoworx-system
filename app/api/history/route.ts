@@ -156,7 +156,13 @@ export async function POST(request: Request) {
   if (manualData) {
     console.log("[API History POST] Manual Data Received:", manualData);
 
-    // Ensure all possible required fields have defaults
+    // Normalise the admin-specified date into a full ISO timestamp
+    const entryDate = manualData.completed_at
+      ? new Date(manualData.completed_at).toISOString()
+      : manualData.created_at
+        ? new Date(manualData.created_at).toISOString()
+        : new Date().toISOString()
+
     const manualRecord = {
       name: manualData.name,
       email: manualData.email || "manual@entry.local",
@@ -169,15 +175,21 @@ export async function POST(request: Request) {
       insurance: manualData.insurance,
       paul_notes: manualData.paul_notes || manualData.remarks,
       costing: manualData.costing,
-      service: manualData.service || "Manual Sales Entry",
+      service: manualData.service || "Manual Entry",
       final_status: "completed",
       repair_status: "completed",
       original_id: manualData.original_id || null, // Database will generate UUID if null
       tracking_code: manualData.tracking_code || `MANUAL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
       archived_reason: "Manual Entry",
       archived_at: new Date().toISOString(),
-      completed_at: manualData.completed_at || new Date().toISOString(),
-      original_created_at: manualData.completed_at || new Date().toISOString()
+      // All three date fields point to the same admin-chosen date so that
+      // BOTH Release Monitoring (uses completed_at / original_created_at)
+      // AND Sales Monitoring (uses synced_at → created_at → original_created_at)
+      // place the record in the correct time-period bucket without any extra input.
+      completed_at: entryDate,
+      original_created_at: entryDate,
+      synced_at: entryDate,
+      created_at: entryDate,
     }
 
     const { error: insertError } = await adminSupabase

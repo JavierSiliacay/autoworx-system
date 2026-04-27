@@ -325,8 +325,8 @@ function TrackingContent() {
     }
   }
 
-  const repairStatusInfo = appointment 
-    ? getRepairStatusInfo(appointment.isArchived ? "completed_ready" : appointment.repairStatus) 
+  const repairStatusInfo = appointment
+    ? getRepairStatusInfo(appointment.isArchived ? "completed_ready" : appointment.repairStatus)
     : null
 
   const handleDownloadPDF = async () => {

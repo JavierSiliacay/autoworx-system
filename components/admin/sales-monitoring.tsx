@@ -141,21 +141,24 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             }
 
             if (searchQuery.trim()) {
-                const q = normalizeString(searchQuery)
-                const matches = [
-                    r.name,
-                    r.insurance,
-                    r.vehicle_plate || r.vehiclePlate,
-                    r.vehicle_color || r.vehicleColor,
-                    r.vehicle_make || r.vehicleMake,
-                    r.vehicle_model || r.vehicleModel,
-                    r.vehicle_year?.toString() || r.vehicleYear?.toString(),
-                    r.estimate_number || r.estimateNumber,
-                    r.paul_notes || r.paulNotes,
-                    r.current_repair_part || r.currentRepairPart,
-                    r.trackingCode || r.tracking_code
-                ].some(field => normalizeString(field || "").includes(q))
-                if (!matches) return false
+                const tokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean)
+                const isRecordMatch = tokens.every(token => {
+                    const normToken = normalizeString(token)
+                    return [
+                        r.name,
+                        r.insurance,
+                        r.vehicle_plate || r.vehiclePlate,
+                        r.vehicle_color || r.vehicleColor,
+                        r.vehicle_make || r.vehicleMake,
+                        r.vehicle_model || r.vehicleModel,
+                        r.vehicle_year?.toString() || r.vehicleYear?.toString(),
+                        r.estimate_number || r.estimateNumber,
+                        r.paul_notes || r.paulNotes,
+                        r.current_repair_part || r.currentRepairPart,
+                        r.trackingCode || r.tracking_code
+                    ].some(field => normalizeString(field || "").includes(normToken))
+                })
+                if (!isRecordMatch) return false
             }
 
             if (claimTypeFilter !== "all") {
@@ -194,12 +197,26 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                 else result.brpad += item.total || 0
             })
         }
-        
+
+        const originalSubtotal = result.brpad + result.aircon + result.electrical + result.mechanical;
+
+        // MANUAL ENTRY FALLBACK: If items produced no numbers (manual entries from Release
+        // Monitoring have no costing.items — only a gatepass_breakdown), read from there.
+        // This does NOT affect normal appointments because their items will always have a total > 0.
+        if (originalSubtotal === 0 && costing.gatepass_breakdown) {
+            const gb = costing.gatepass_breakdown
+            return {
+                brpad: Number(gb.brpad) || 0,
+                aircon: Number(gb.aircon) || 0,
+                electrical: Number(gb.electrical) || 0,
+                mechanical: Number(gb.mechanical) || 0,
+                total: Number(gb.total) || Number(costing.total) || 0
+            }
+        }
+
         // Compute the pristine estimate total using VAT and discounts.
         // We re-calculate instead of trusting costing.total because Gatepass 
         // edits in the DB might permanently overwrite costing.total.
-        const originalSubtotal = result.brpad + result.aircon + result.electrical + result.mechanical;
-        
         let discount = 0;
         if (Number(costing.discount) > 0) {
             discount = costing.discountType === "percentage" 
@@ -639,7 +656,19 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         <td className="p-2 border border-border text-center">{dateStr}</td>
                                         <td className="p-2 border border-border">{r.paul_notes || r.paulNotes || r.remarks}</td>
                                         <td className="p-2 border border-border text-center no-print">
-                                            {r.source === 'history' || r.completed_at ? (
+                                            {r.archived_reason === "Manual Entry" ? (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Badge variant="outline" className="text-[8px] px-1 h-4 cursor-help border-blue-500/40 text-blue-500">
+                                                            MANUAL
+                                                        </Badge>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="bg-blue-600 text-white border-none shadow-lg">
+                                                        <p className="font-bold">Synced from Release Monitoring</p>
+                                                        <p className="text-xs">Manually added by admin</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            ) : r.source === 'history' || r.completed_at ? (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
                                                         <Badge variant="outline" className="text-[8px] px-1 h-4 cursor-help">

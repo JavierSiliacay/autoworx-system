@@ -4893,6 +4893,20 @@ export default function AdminDashboard() {
 
                                       {/* Discount & Total */}
                                       <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg space-y-3">
+                                        {/* Total Parts */}
+                                        <div className="flex items-center justify-between text-sm">
+                                          <span className="text-muted-foreground">Total Parts</span>
+                                          <span className="font-mono text-foreground">
+                                            P{((appointment.costing?.items || []).filter(i => i.type === 'parts').reduce((sum, i) => sum + i.total, 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+                                        {/* Total Labor */}
+                                        <div className="flex items-center justify-between text-sm pb-2 border-b border-green-500/20">
+                                          <span className="text-muted-foreground">Total Labor</span>
+                                          <span className="font-mono text-foreground">
+                                            P{((appointment.costing?.items || []).filter(i => i.type !== 'parts').reduce((sum, i) => sum + i.total, 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
                                         <div className="flex items-center justify-between text-sm">
                                           <span className="text-muted-foreground">Subtotal</span>
                                           <span className="font-mono font-semibold text-foreground">
@@ -5253,7 +5267,10 @@ export default function AdminDashboard() {
         {
           activeTab === "history" && !showDeletedHistory && historyViewMode === "release_monitoring" && isAuthorizedForReportUser && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <ReleaseMonitoring records={historyRecords} onUpdate={loadHistory} />
+              <ReleaseMonitoring records={historyRecords} onUpdate={() => {
+                loadHistory()
+                loadAppointments()
+              }} />
             </div>
           )
         }
