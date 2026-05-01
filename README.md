@@ -63,46 +63,7 @@ Advanced search capabilities designed for accuracy in a workshop environment.
 
 ---
 
-## Installation and Setup
 
-### Prerequisites
-- Node.js 20.x or higher
-- Supabase Project (with Database and Storage)
-- Resend API Key
-- Google Cloud Console Project (for OAuth)
-
-### Setup Instructions
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/JavierSiliacay/autoworx-system.git
-   cd autoworx-system
-   npm install
-   ```
-
-2. **Configure Environment Variables**
-   Create a `.env.local` file in the root directory:
-   ```env
-   # Supabase
-   NEXT_PUBLIC_SUPABASE_URL="your_url"
-   NEXT_PUBLIC_SUPABASE_ANON_KEY="your_key"
-   
-   # NextAuth
-   NEXTAUTH_URL="http://localhost:3000"
-   NEXTAUTH_SECRET="your_secret"
-   GOOGLE_CLIENT_ID="your_google_id"
-   GOOGLE_CLIENT_SECRET="your_google_secret"
-   
-   # Resend
-   RESEND_API_KEY="your_resend_key"
-   ```
-
-3. **Database Realtime Configuration**
-   In the Supabase Dashboard, enable replication for the `appointments` table under Database -> Replication -> supabase_realtime.
-
-4. **Development Server**
-   ```bash
-   npm run dev
-   ```
 
 ---
 
