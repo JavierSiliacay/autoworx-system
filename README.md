@@ -61,7 +61,6 @@ Advanced search capabilities designed for accuracy in a workshop environment.
 - **Authentication**: NextAuth.js with Google OAuth integration
 - **Geospatial**: OpenStreetMap and Leaflet for workshop location accuracy
 
----
 
 
 
