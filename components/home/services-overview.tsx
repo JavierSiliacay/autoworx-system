@@ -70,46 +70,32 @@ export function ServicesOverview() {
       {/* ── Car-brand logos marquee — absolute background behind header text ── */}
       <div
         aria-hidden="true"
-        className="absolute top-0 left-0 right-0 h-[260px] flex items-center overflow-hidden pointer-events-none select-none"
+        className="absolute top-0 left-0 right-0 h-[200px] sm:h-[260px] flex items-center overflow-hidden pointer-events-none select-none"
       >
         {/* Left edge fade-out */}
-        <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-[#0a0c10] to-transparent z-10" />
+        <div className="absolute inset-y-0 left-0 w-20 sm:w-40 bg-gradient-to-r from-[#0a0c10] to-transparent z-10" />
         {/* Right edge fade-out */}
-        <div className="absolute inset-y-0 right-0 w-40 bg-gradient-to-l from-[#0a0c10] to-transparent z-10" />
+        <div className="absolute inset-y-0 right-0 w-20 sm:w-40 bg-gradient-to-l from-[#0a0c10] to-transparent z-10" />
 
         {/*
           Scrolling track:
-          - Original set + exact duplicate = 32 logos total
-          - Animation moves -50% (exactly one full set width) → seamless loop
+          - Original set + exact duplicate = seamless loop
+          - w-max ensures it doesn't wrap or collapse
+          - pause-on-hover for user control (requires removing pointer-events-none on child)
         */}
-        <div className="flex animate-marquee-left">
-          {/* Primary set */}
-          {carBrands.map((brand) => (
+        <div className="flex flex-nowrap w-max animate-marquee-left hover:pause-on-hover pointer-events-auto cursor-default">
+          {/* We render the brands twice for a seamless infinite loop */}
+          {[...carBrands, ...carBrands].map((brand, idx) => (
             <div
-              key={`a-${brand}`}
-              className="flex-shrink-0 w-[100px] h-[56px] mx-10 flex items-center justify-center"
+              key={`${brand}-${idx}`}
+              className="flex-shrink-0 w-[80px] sm:w-[100px] h-[40px] sm:h-[56px] mx-6 sm:mx-10 flex items-center justify-center transition-opacity hover:opacity-100"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`/carbrands/${brand}.png`}
                 alt=""
                 draggable={false}
-                className="w-full h-full object-contain opacity-[0.18]"
-              />
-            </div>
-          ))}
-          {/* Duplicate set — keeps the loop gapless */}
-          {carBrands.map((brand) => (
-            <div
-              key={`b-${brand}`}
-              className="flex-shrink-0 w-[100px] h-[56px] mx-10 flex items-center justify-center"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/carbrands/${brand}.png`}
-                alt=""
-                draggable={false}
-                className="w-full h-full object-contain opacity-[0.18]"
+                className="w-full h-full object-contain opacity-[0.18] transition-opacity duration-300"
               />
             </div>
           ))}

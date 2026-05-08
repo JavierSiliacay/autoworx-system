@@ -207,13 +207,17 @@
 
 /* Car brands marquee */
 @keyframes marquee-scroll-left {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0%   { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
 }
 
 .animate-marquee-left {
   animation: marquee-scroll-left 45s linear infinite;
   will-change: transform;
+}
+
+.pause-on-hover:hover {
+  animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {
