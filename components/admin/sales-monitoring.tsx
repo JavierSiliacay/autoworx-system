@@ -32,6 +32,21 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 
+const MONTHS = [
+    { value: "01", label: "January" },
+    { value: "02", label: "February" },
+    { value: "03", label: "March" },
+    { value: "04", label: "April" },
+    { value: "05", label: "May" },
+    { value: "06", label: "June" },
+    { value: "07", label: "July" },
+    { value: "08", label: "August" },
+    { value: "09", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
+]
+
 export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     const { data: session } = useSession()
     const { toast } = useToast()
@@ -76,25 +91,27 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
     const [reportPeriod, setReportPeriod] = useState<"monthly" | "yearly" | "all">("monthly")
 
     // Default to the latest month or current month if no data
-    const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+    const currentYear = new Date().getFullYear().toString()
+    const currentMonthKey = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+    
+    const [selectedYear, setSelectedYear] = useState<string>(
+        availableYears.length > 0 ? availableYears[0] : currentYear
+    )
+    
     const [selectedMonth, setSelectedMonth] = useState<string>(
         availableMonths.length > 0 ? availableMonths[0][0] : currentMonthKey
     )
 
-    const currentYear = new Date().getFullYear().toString()
-    const [selectedYear, setSelectedYear] = useState<string>(
-        availableYears.length > 0 ? availableYears[0] : currentYear
-    )
-
     React.useEffect(() => {
-        // If the current selected month has no data, but others do, default to the latest month with data
-        if (availableMonths.length > 0 && (!selectedMonth || !monthsMap.has(selectedMonth))) {
+        // Only set initial selection if none exists
+        if (availableMonths.length > 0 && !selectedMonth) {
             setSelectedMonth(availableMonths[0][0])
+            setSelectedYear(availableMonths[0][0].split('-')[0])
         }
-    }, [availableMonths, selectedMonth, monthsMap])
+    }, [availableMonths, selectedMonth])
 
     React.useEffect(() => {
-        if (availableYears.length > 0 && selectedYear !== "all" && !yearsSet.has(selectedYear)) {
+        if (availableYears.length > 0 && selectedYear !== "all" && !yearsSet.has(selectedYear) && !selectedYear) {
             setSelectedYear(availableYears[0])
         }
     }, [availableYears, selectedYear, yearsSet])
@@ -372,20 +389,37 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                         </Select>
 
                         {reportPeriod === "monthly" ? (
-                            <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isEditing || isSaving}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Select Month" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableMonths.length > 0 ? (
-                                        availableMonths.map(([key, label]) => (
-                                            <SelectItem key={key} value={key}>{label}</SelectItem>
-                                        ))
-                                    ) : (
-                                        <SelectItem value={currentMonthKey}>{reportPeriodLabel}</SelectItem>
-                                    )}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-2">
+                                <Select value={selectedYear} onValueChange={(y) => {
+                                    setSelectedYear(y);
+                                    const monthPart = selectedMonth.split('-')[1] || "01";
+                                    setSelectedMonth(`${y}-${monthPart}`);
+                                }} disabled={isEditing || isSaving}>
+                                    <SelectTrigger className="w-[90px]">
+                                        <SelectValue placeholder="Year" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableYears.map(year => (
+                                            <SelectItem key={year} value={year}>{year}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select 
+                                    value={selectedMonth.split('-')[1] || "01"} 
+                                    onValueChange={(m) => setSelectedMonth(`${selectedYear}-${m}`)} 
+                                    disabled={isEditing || isSaving}
+                                >
+                                    <SelectTrigger className="w-[130px]">
+                                        <SelectValue placeholder="Select Month" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {MONTHS.map(m => (
+                                            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         ) : reportPeriod === "yearly" ? (
                             <Select value={selectedYear} onValueChange={setSelectedYear} disabled={isEditing || isSaving}>
                                 <SelectTrigger className="w-[120px]">
@@ -748,7 +782,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                 )
                             })
                         ) : (
-                            <tr><td colSpan={16} className="p-8 text-center text-muted-foreground">No entry logs found for this period.</td></tr>
+                            <tr><td colSpan={16} className="p-12 text-center text-muted-foreground italic">No records found for {reportPeriodLabel}.</td></tr>
                         )}
                     </tbody>
                     {tableRecords.length > 0 && (

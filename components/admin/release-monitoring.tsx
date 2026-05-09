@@ -27,6 +27,21 @@ import { PlusCircle } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { isAuthorizedForReport } from "@/lib/auth"
 
+const MONTHS = [
+    { value: "01", label: "January" },
+    { value: "02", label: "February" },
+    { value: "03", label: "March" },
+    { value: "04", label: "April" },
+    { value: "05", label: "May" },
+    { value: "06", label: "June" },
+    { value: "07", label: "July" },
+    { value: "08", label: "August" },
+    { value: "09", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
+]
+
 export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     const { data: session } = useSession()
 
@@ -69,26 +84,27 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
     const [reportPeriod, setReportPeriod] = useState<"monthly" | "yearly" | "all">("monthly")
 
     // Default to the latest month or current month if no data
-    const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+    const currentYear = new Date().getFullYear().toString()
+    const currentMonthKey = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+    
+    const [selectedYear, setSelectedYear] = useState<string>(
+        availableYears.length > 0 ? availableYears[0] : currentYear
+    )
+    
     const [selectedMonth, setSelectedMonth] = useState<string>(
         availableMonths.length > 0 ? availableMonths[0][0] : currentMonthKey
     )
 
-    // Default to the latest year or current year if no data
-    const currentYear = new Date().getFullYear().toString()
-    const [selectedYear, setSelectedYear] = useState<string>(
-        availableYears.length > 0 ? availableYears[0] : currentYear
-    )
-
     // Sync selectedMonth and selectedYear when data loads
     React.useEffect(() => {
-        if (availableMonths.length > 0 && !monthsMap.has(selectedMonth)) {
+        if (availableMonths.length > 0 && !selectedMonth) {
             setSelectedMonth(availableMonths[0][0])
+            setSelectedYear(availableMonths[0][0].split('-')[0])
         }
-    }, [availableMonths, selectedMonth, monthsMap])
+    }, [availableMonths, selectedMonth])
 
     React.useEffect(() => {
-        if (availableYears.length > 0 && selectedYear !== "all" && !yearsSet.has(selectedYear)) {
+        if (availableYears.length > 0 && selectedYear !== "all" && !yearsSet.has(selectedYear) && !selectedYear) {
             setSelectedYear(availableYears[0])
         }
     }, [availableYears, selectedYear, yearsSet])
@@ -373,20 +389,37 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                         </Select>
  
                         {reportPeriod === "monthly" ? (
-                            <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isEditing || isSaving}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Select Month" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableMonths.length > 0 ? (
-                                        availableMonths.map(([key, label]) => (
-                                            <SelectItem key={key} value={key}>{label}</SelectItem>
-                                        ))
-                                    ) : (
-                                        <SelectItem value={currentMonthKey}>{reportPeriodLabel}</SelectItem>
-                                    )}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-2">
+                                <Select value={selectedYear} onValueChange={(y) => {
+                                    setSelectedYear(y);
+                                    const monthPart = selectedMonth.split('-')[1] || "01";
+                                    setSelectedMonth(`${y}-${monthPart}`);
+                                }} disabled={isEditing || isSaving}>
+                                    <SelectTrigger className="w-[90px]">
+                                        <SelectValue placeholder="Year" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableYears.map(year => (
+                                            <SelectItem key={year} value={year}>{year}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <Select 
+                                    value={selectedMonth.split('-')[1] || "01"} 
+                                    onValueChange={(m) => setSelectedMonth(`${selectedYear}-${m}`)} 
+                                    disabled={isEditing || isSaving}
+                                >
+                                    <SelectTrigger className="w-[130px]">
+                                        <SelectValue placeholder="Select Month" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {MONTHS.map(m => (
+                                            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         ) : reportPeriod === "yearly" ? (
                             <Select value={selectedYear} onValueChange={setSelectedYear} disabled={isEditing || isSaving}>
                                 <SelectTrigger className="w-[120px]">
@@ -934,8 +967,8 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                             })
                         ) : (
                             <tr>
-                                <td colSpan={isSales ? 16 : 17} className="p-8 text-center text-muted-foreground italic border border-border">
-                                    No completed units found for this {reportPeriod === "monthly" ? "month" : "year"}.
+                                <td colSpan={isSales ? 16 : 17} className="p-12 text-center text-muted-foreground italic border border-border">
+                                    No records found for {reportPeriodLabel}.
                                 </td>
                             </tr>
                         )}
