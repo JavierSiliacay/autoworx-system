@@ -520,9 +520,36 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             <PopoverContent className="w-auto p-0" align="start">
                                                 <Calendar
                                                     mode="single"
+                                                    captionLayout="dropdown"
+                                                    fromYear={2000}
+                                                    toYear={new Date().getFullYear() + 5}
                                                     selected={manualEntry.completed_at ? new Date(manualEntry.completed_at) : undefined}
                                                     onSelect={(date) => setManualEntry({ ...manualEntry, completed_at: date ? format(date, "yyyy-MM-dd") : "" })}
                                                     initialFocus
+                                                    footer={
+                                                        <div className="flex items-center justify-between gap-2 p-3 border-t bg-muted/10">
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                className="text-[10px] h-7 px-2 font-bold hover:bg-primary/10 hover:text-primary transition-colors"
+                                                                onClick={() => setManualEntry({ ...manualEntry, completed_at: format(new Date(), "yyyy-MM-dd") })}
+                                                            >
+                                                                TODAY
+                                                            </Button>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                className="text-[10px] h-7 px-2 font-bold hover:bg-primary/10 hover:text-primary transition-colors"
+                                                                onClick={() => {
+                                                                    const yesterday = new Date();
+                                                                    yesterday.setDate(yesterday.getDate() - 1);
+                                                                    setManualEntry({ ...manualEntry, completed_at: format(yesterday, "yyyy-MM-dd") });
+                                                                }}
+                                                            >
+                                                                YESTERDAY
+                                                            </Button>
+                                                        </div>
+                                                    }
                                                 />
                                             </PopoverContent>
                                         </Popover>
