@@ -12,7 +12,7 @@ import { authOptions } from "@/lib/auth"
  */
 
 export async function GET() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from("parts_prices")
     .select("*")
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const supabase = createClient()
+  const supabase = await createClient()
   const body = await req.json()
   
   const { data, error } = await supabase
@@ -47,7 +47,7 @@ export async function PUT(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const supabase = createClient()
+  const supabase = await createClient()
   const { id, ...updates } = await req.json()
   
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
@@ -75,7 +75,7 @@ export async function DELETE(req: Request) {
   
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
 
-  const supabase = createClient()
+  const supabase = await createClient()
   const { error } = await supabase
     .from("parts_prices")
     .delete()
