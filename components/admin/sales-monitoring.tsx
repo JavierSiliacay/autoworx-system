@@ -47,6 +47,18 @@ const MONTHS = [
     { value: "12", label: "December" },
 ]
 
+const formatWithCommas = (value: string | number) => {
+    if (value === undefined || value === null || value === "") return "";
+    const stringValue = value.toString().replace(/,/g, "");
+    const parts = stringValue.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
+};
+
+const parseCommaNumber = (value: string) => {
+    return value.replace(/,/g, "");
+};
+
 export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     const { data: session } = useSession()
     const { toast } = useToast()
@@ -213,7 +225,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
         if (!costing && !edited.brpad && !edited.aircon && !edited.electrical && !edited.mechanical) return result
 
         // If we are editing costs directly, prioritze those
-        if (edited.brpad !== undefined || edited.aircon !== undefined || edited.electrical !== undefined || edited.mechanical !== undefined) {
+        if (edited.brpad !== undefined || edited.aircon !== undefined || edited.electrical !== undefined || edited.mechanical !== undefined || edited.total !== undefined) {
             result.brpad = Number(edited.brpad ?? (costing?.gatepass_breakdown?.brpad ?? 0))
             result.aircon = Number(edited.aircon ?? (costing?.gatepass_breakdown?.aircon ?? 0))
             result.electrical = Number(edited.electrical ?? (costing?.gatepass_breakdown?.electrical ?? 0))
@@ -230,7 +242,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             if (costing?.vatEnabled) {
                 vat = Number(costing.vatAmount) || ((subtotal - discount) * 0.12);
             }
-            result.total = subtotal - discount + vat;
+            result.total = edited.total !== undefined ? Number(edited.total) : (subtotal - discount + vat);
             return result
         }
 
@@ -327,7 +339,10 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
 
     const handlePrint = async () => {
         // Reuse the same generator but we can customize the title if we want
-        const htmlContent = generateReleaseMonitoringDoc(tableRecords, reportPeriodLabel, (costing: any) => getCategorizedCosts({ costing }), "SALES MONITORING", "DATE ENTRY")
+        const htmlContent = generateReleaseMonitoringDoc(tableRecords, reportPeriodLabel, (costing: any, recordId?: string) => {
+            const record = tableRecords.find(r => String(r.id) === String(recordId)) || { costing };
+            return getCategorizedCosts(record);
+        }, "SALES MONITORING", "DATE ENTRY")
 
         const printWindow = window.open("", "_blank")
         if (!printWindow) {
@@ -489,7 +504,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         const updates: any = { ...rawUpdates }
 
                                         // Handle nested costing updates
-                                        if (updates.brpad !== undefined || updates.aircon !== undefined || updates.electrical !== undefined || updates.mechanical !== undefined) {
+                                        if (updates.brpad !== undefined || updates.aircon !== undefined || updates.electrical !== undefined || updates.mechanical !== undefined || updates.total !== undefined) {
                                             const currentCosts = getCategorizedCosts(record)
                                             const newGb = {
                                                 brpad: updates.brpad !== undefined ? Number(updates.brpad) : currentCosts.brpad,
@@ -498,27 +513,30 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 mechanical: updates.mechanical !== undefined ? Number(updates.mechanical) : currentCosts.mechanical,
                                             }
                                             
-                                            const subtotal = newGb.brpad + newGb.aircon + newGb.electrical + newGb.mechanical
+                                            const calculatedSubtotal = newGb.brpad + newGb.aircon + newGb.electrical + newGb.mechanical
                                             
                                             // Maintain VAT and discount from original costing if possible
                                             const oldCosting = record.costing || {}
                                             let discount = 0;
                                             if (Number(oldCosting.discount) > 0) {
                                                 discount = oldCosting.discountType === "percentage"
-                                                    ? (subtotal * Number(oldCosting.discount)) / 100
+                                                    ? (calculatedSubtotal * Number(oldCosting.discount)) / 100
                                                     : Number(oldCosting.discount);
                                             }
                                             let vat = 0;
                                             if (oldCosting.vatEnabled) {
-                                                vat = Number(oldCosting.vatAmount) || ((subtotal - discount) * 0.12);
+                                                vat = Number(oldCosting.vatAmount) || ((calculatedSubtotal - discount) * 0.12);
                                             }
+
+                                            // If total was manually overridden, use that. Otherwise use calculated.
+                                            const finalTotal = updates.total !== undefined ? Number(updates.total) : (calculatedSubtotal - discount + vat)
 
                                             updates.costing = {
                                                 ...oldCosting,
-                                                total: subtotal - discount + vat,
+                                                total: finalTotal,
                                                 gatepass_breakdown: {
                                                     ...newGb,
-                                                    total: subtotal - discount + vat
+                                                    total: finalTotal
                                                 }
                                             }
                                             
@@ -527,6 +545,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             delete updates.aircon
                                             delete updates.electrical
                                             delete updates.mechanical
+                                            delete updates.total
                                         }
 
                                         // Map camelCase to snake_case if needed (though API should handle some)
@@ -665,37 +684,68 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     <div className="col-span-3 grid grid-cols-2 gap-2">
                                         <div className="space-y-1">
                                             <Label className="text-[10px]">BRPAD</Label>
-                                            <Input type="number" value={manualEntry.brpad || 0} onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                setManualEntry({ ...manualEntry, brpad: val, total_amount: val + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                            <Input type="text" value={formatWithCommas(manualEntry.brpad)} onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    const val = parseFloat(rawValue) || 0;
+                                                    setManualEntry({ ...manualEntry, brpad: val, total_amount: val + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                                }
                                             }} className="h-8" />
                                         </div>
                                         <div className="space-y-1">
                                             <Label className="text-[10px]">Aircon</Label>
-                                            <Input type="number" value={manualEntry.aircon || 0} onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                setManualEntry({ ...manualEntry, aircon: val, total_amount: (manualEntry.brpad || 0) + val + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                            <Input type="text" value={formatWithCommas(manualEntry.aircon)} onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    const val = parseFloat(rawValue) || 0;
+                                                    setManualEntry({ ...manualEntry, aircon: val, total_amount: (manualEntry.brpad || 0) + val + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                                }
                                             }} className="h-8" />
                                         </div>
                                         <div className="space-y-1">
                                             <Label className="text-[10px]">Electrical</Label>
-                                            <Input type="number" value={manualEntry.electrical || 0} onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                setManualEntry({ ...manualEntry, electrical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + val + (manualEntry.mechanical || 0) });
+                                            <Input type="text" value={formatWithCommas(manualEntry.electrical)} onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    const val = parseFloat(rawValue) || 0;
+                                                    setManualEntry({ ...manualEntry, electrical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + val + (manualEntry.mechanical || 0) });
+                                                }
                                             }} className="h-8" />
                                         </div>
                                         <div className="space-y-1">
                                             <Label className="text-[10px]">Mechanical</Label>
-                                            <Input type="number" value={manualEntry.mechanical || 0} onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                setManualEntry({ ...manualEntry, mechanical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + val });
+                                            <Input type="text" value={formatWithCommas(manualEntry.mechanical)} onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    const val = parseFloat(rawValue) || 0;
+                                                    setManualEntry({ ...manualEntry, mechanical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + val });
+                                                }
                                             }} className="h-8" />
                                         </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4 pt-2 border-t mt-2">
-                                    <Label className="text-right font-bold">TOTAL</Label>
-                                    <div className="col-span-3 text-lg font-bold text-primary">₱{manualEntry.total_amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</div>
+                                    <Label className="text-right font-bold text-red-600">TOTAL</Label>
+                                    <div className="col-span-3">
+                                        <Input 
+                                            type="text" 
+                                            value={formatWithCommas(manualEntry.total_amount)} 
+                                            onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    setManualEntry({ ...manualEntry, total_amount: parseFloat(rawValue) || 0 });
+                                                }
+                                            }}
+                                            className="font-bold text-red-600 border-red-200 focus:border-red-500 h-9"
+                                            placeholder="Enter final total amount"
+                                        />
+                                        <p className="text-[9px] text-muted-foreground mt-1 italic flex justify-between items-center">
+                                            <span>Calculated sum: ₱{((manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                                            {manualEntry.total_amount !== ((manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0)) && (
+                                                <span className="text-red-600 font-bold bg-red-50 px-1 rounded">Entered Total: ₱{manualEntry.total_amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                                            )}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                             <DialogFooter>
@@ -867,18 +917,83 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} /> : (r.estimate_number || r.estimateNumber || r.trackingCode || "")}
                                         </td>
                                         <td className="p-2 border border-border text-right font-mono">
-                                            {isEditing ? <Input type="number" className="h-6 text-[10px] px-1 text-right w-full" value={currentVal("brpad") || (costs.brpad > 0 ? costs.brpad : "")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), brpad: e.target.value } }))} /> : (costs.brpad > 0 ? costs.brpad.toLocaleString() : "-")}
+                                            {isEditing ? (
+                                                <Input 
+                                                    type="text" 
+                                                    className="h-6 text-[10px] px-1 text-right w-full" 
+                                                    value={formatWithCommas(currentVal("brpad") || (costs.brpad > 0 ? costs.brpad : ""))} 
+                                                    onChange={(e) => {
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), brpad: rawValue } }))
+                                                        }
+                                                    }} 
+                                                />
+                                            ) : (costs.brpad > 0 ? costs.brpad.toLocaleString() : "-")}
                                         </td>
                                         <td className="p-2 border border-border text-right font-mono">
-                                            {isEditing ? <Input type="number" className="h-6 text-[10px] px-1 text-right w-full" value={currentVal("aircon") || (costs.aircon > 0 ? costs.aircon : "")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), aircon: e.target.value } }))} /> : (costs.aircon > 0 ? costs.aircon.toLocaleString() : "-")}
+                                            {isEditing ? (
+                                                <Input 
+                                                    type="text" 
+                                                    className="h-6 text-[10px] px-1 text-right w-full" 
+                                                    value={formatWithCommas(currentVal("aircon") || (costs.aircon > 0 ? costs.aircon : ""))} 
+                                                    onChange={(e) => {
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), aircon: rawValue } }))
+                                                        }
+                                                    }} 
+                                                />
+                                            ) : (costs.aircon > 0 ? costs.aircon.toLocaleString() : "-")}
                                         </td>
                                         <td className="p-2 border border-border text-right font-mono">
-                                            {isEditing ? <Input type="number" className="h-6 text-[10px] px-1 text-right w-full" value={currentVal("electrical") || (costs.electrical > 0 ? costs.electrical : "")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), electrical: e.target.value } }))} /> : (costs.electrical > 0 ? costs.electrical.toLocaleString() : "-")}
+                                            {isEditing ? (
+                                                <Input 
+                                                    type="text" 
+                                                    className="h-6 text-[10px] px-1 text-right w-full" 
+                                                    value={formatWithCommas(currentVal("electrical") || (costs.electrical > 0 ? costs.electrical : ""))} 
+                                                    onChange={(e) => {
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), electrical: rawValue } }))
+                                                        }
+                                                    }} 
+                                                />
+                                            ) : (costs.electrical > 0 ? costs.electrical.toLocaleString() : "-")}
                                         </td>
                                         <td className="p-2 border border-border text-right font-mono">
-                                            {isEditing ? <Input type="number" className="h-6 text-[10px] px-1 text-right w-full" value={currentVal("mechanical") || (costs.mechanical > 0 ? costs.mechanical : "")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), mechanical: e.target.value } }))} /> : (costs.mechanical > 0 ? costs.mechanical.toLocaleString() : "-")}
+                                            {isEditing ? (
+                                                <Input 
+                                                    type="text" 
+                                                    className="h-6 text-[10px] px-1 text-right w-full" 
+                                                    value={formatWithCommas(currentVal("mechanical") || (costs.mechanical > 0 ? costs.mechanical : ""))} 
+                                                    onChange={(e) => {
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), mechanical: rawValue } }))
+                                                        }
+                                                    }} 
+                                                />
+                                            ) : (costs.mechanical > 0 ? costs.mechanical.toLocaleString() : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono font-bold">{costs.total > 0 ? costs.total.toLocaleString() : "-"}</td>
+                                        <td className="p-2 border border-border text-right font-mono font-bold">
+                                            {isEditing ? (
+                                                <Input 
+                                                    type="text" 
+                                                    className="h-6 text-[10px] px-1 text-right w-full font-bold" 
+                                                    value={formatWithCommas(editedData[r.id]?.total ?? (costs.total > 0 ? costs.total : ""))} 
+                                                    onChange={(e) => {
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            setEditedData(prev => ({ 
+                                                                ...prev, 
+                                                                [r.id]: { ...(prev[r.id] || {}), total: parseFloat(rawValue) || 0 } 
+                                                            }))
+                                                        }
+                                                    }} 
+                                                />
+                                            ) : (costs.total > 0 ? costs.total.toLocaleString() : "-")}
+                                        </td>
                                         <td className="p-2 border border-border text-center">
                                             {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} /> : (r.current_repair_part || r.currentRepairPart || "")}
                                         </td>

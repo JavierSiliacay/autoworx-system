@@ -832,7 +832,7 @@ export async function generateGatepassPDF(data: GatepassData): Promise<string> {
   return htmlContent;
 }
 
-export function generateReleaseMonitoringDoc(records: any[], monthLabel: string, getCategorizedCosts: (costing: any) => any, title: string = "RELEASE MONITORING", dateColumnLabel: string = "DATE RELEASED"): string {
+export function generateReleaseMonitoringDoc(records: any[], monthLabel: string, getCategorizedCosts: (costing: any, recordId?: string) => any, title: string = "RELEASE MONITORING", dateColumnLabel: string = "DATE RELEASED"): string {
   let totalBRPAD = 0, totalAircon = 0, totalElectrical = 0, totalMechanical = 0, grandTotal = 0;
 
   const rowsHtml = records.map((r, idx) => {
@@ -842,7 +842,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       ? new Date(r.status_updated_at || r.statusUpdatedAt).toLocaleDateString("en-US") 
       : (r.completed_at || r.completedAt ? new Date(r.completed_at || r.completedAt).toLocaleDateString("en-US") : "-");
     const releaseDateStr = r.completed_at || r.original_created_at || r.createdAt ? new Date(r.completed_at || r.original_created_at || r.createdAt).toLocaleDateString("en-US") : "";
-    const costs = getCategorizedCosts(r.costing);
+    const costs = getCategorizedCosts(r.costing, r.id);
 
     totalBRPAD += costs.brpad;
     totalAircon += costs.aircon;

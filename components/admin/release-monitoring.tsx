@@ -42,6 +42,18 @@ const MONTHS = [
     { value: "12", label: "December" },
 ]
 
+const formatWithCommas = (value: string | number) => {
+    if (value === undefined || value === null || value === "") return "";
+    const stringValue = value.toString().replace(/,/g, "");
+    const parts = stringValue.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
+};
+
+const parseCommaNumber = (value: string) => {
+    return value.replace(/,/g, "");
+};
+
 export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     const { data: session } = useSession()
 
@@ -198,8 +210,35 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
         ? (monthsMap.get(selectedMonth) || new Date(selectedMonth + "-01").toLocaleDateString("en-US", { month: "long", year: "numeric" }))
         : (reportPeriod === "all" || selectedYear === "all" ? "All Years" : `Full Year ${selectedYear}`)
 
-    const getCategorizedCosts = (costing: any) => {
+    const getCategorizedCosts = (costing: any, recordId?: string) => {
         let result = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 }
+        
+        // Priority 0: Use edited data if available (for real-time UI updates)
+        const edited = recordId ? (editedData[recordId] || {}) : {}
+        if (edited.brpad !== undefined || edited.aircon !== undefined || edited.electrical !== undefined || edited.mechanical !== undefined || edited.total !== undefined) {
+            const currentGB = costing?.gatepass_breakdown || {}
+            result.brpad = Number(edited.brpad ?? currentGB.brpad ?? 0)
+            result.aircon = Number(edited.aircon ?? currentGB.aircon ?? 0)
+            result.electrical = Number(edited.electrical ?? currentGB.electrical ?? 0)
+            result.mechanical = Number(edited.mechanical ?? currentGB.mechanical ?? 0)
+            
+            const subtotal = result.brpad + result.aircon + result.electrical + result.mechanical
+            
+            // Handle VAT/Discount if needed (Release monitoring usually uses the final total directly)
+            const oldCosting = costing || {}
+            let discount = 0;
+            if (Number(oldCosting.discount) > 0) {
+                discount = oldCosting.discountType === "percentage" ? (subtotal * Number(oldCosting.discount)) / 100 : Number(oldCosting.discount);
+            }
+            let vat = 0;
+            if (oldCosting.vatEnabled) {
+                vat = Number(oldCosting.vatAmount) || ((subtotal - discount) * 0.12);
+            }
+            
+            result.total = edited.total !== undefined ? Number(edited.total) : (subtotal - discount + vat)
+            return result
+        }
+
         if (!costing) return result
 
         // Priority 1: Use Gatepass Override if Sir Paul entered specific values in the Gatepass modal
@@ -242,7 +281,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                 if (!dateStr) return
                 const d = new Date(dateStr)
                 const year = d.getFullYear().toString()
-                const costs = getCategorizedCosts(r.costing)
+                const costs = getCategorizedCosts(r.costing, r.id)
                 dataMap.set(year, (dataMap.get(year) || 0) + costs.total)
             })
 
@@ -261,7 +300,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                 if (!dateStr) return
                 const d = new Date(dateStr)
                 const m = d.getMonth()
-                const costs = getCategorizedCosts(r.costing)
+                const costs = getCategorizedCosts(r.costing, r.id)
                 data[m].total += costs.total
             })
 
@@ -271,7 +310,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
 
     const totalYearlySales = useMemo(() => {
         return tableRecords.reduce((sum, r) => {
-            const costs = getCategorizedCosts(r.costing)
+            const costs = getCategorizedCosts(r.costing, r.id)
             return sum + costs.total
         }, 0)
     }, [tableRecords])
@@ -338,8 +377,8 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                 const rawUpdates = editedData[id]
                 const updates: any = { ...rawUpdates }
 
-                // Recalculate costing if any amount was changed
-                if (updates.brpad !== undefined || updates.aircon !== undefined || updates.electrical !== undefined || updates.mechanical !== undefined) {
+                // Recalculate costing if any amount or total was changed
+                if (updates.brpad !== undefined || updates.aircon !== undefined || updates.electrical !== undefined || updates.mechanical !== undefined || updates.total !== undefined) {
                     const currentCosts = getCategorizedCosts(record.costing)
                     const newGb = {
                         brpad: updates.brpad !== undefined ? Number(updates.brpad) : currentCosts.brpad,
@@ -348,27 +387,30 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                         mechanical: updates.mechanical !== undefined ? Number(updates.mechanical) : currentCosts.mechanical,
                     }
                     
-                    const subtotal = newGb.brpad + newGb.aircon + newGb.electrical + newGb.mechanical
+                    const calculatedSubtotal = newGb.brpad + newGb.aircon + newGb.electrical + newGb.mechanical
                     
                     const oldCosting = record.costing || {}
                     let discount = 0;
                     if (Number(oldCosting.discount) > 0) {
                         discount = oldCosting.discountType === "percentage"
-                            ? (subtotal * Number(oldCosting.discount)) / 100
+                            ? (calculatedSubtotal * Number(oldCosting.discount)) / 100
                             : Number(oldCosting.discount);
                     }
                     let vat = 0;
                     if (oldCosting.vatEnabled) {
-                        vat = Number(oldCosting.vatAmount) || ((subtotal - discount) * 0.12);
+                        vat = Number(oldCosting.vatAmount) || ((calculatedSubtotal - discount) * 0.12);
                     }
+
+                    // If total was manually overridden, use that. Otherwise use calculated.
+                    const finalTotal = updates.total !== undefined ? Number(updates.total) : (calculatedSubtotal - discount + vat)
 
                     updates.costing = {
                         ...oldCosting,
-                        total: subtotal - discount + vat,
+                        total: finalTotal,
                         gatepass_breakdown: {
                             ...(oldCosting.gatepass_breakdown || {}),
                             ...newGb,
-                            total: subtotal - discount + vat
+                            total: finalTotal
                         }
                     }
                     
@@ -376,6 +418,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                     delete updates.aircon
                     delete updates.electrical
                     delete updates.mechanical
+                    delete updates.total
                 }
 
                 // Map camelCase to snake_case if needed
@@ -611,37 +654,68 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                     <div className="col-span-3 grid grid-cols-2 gap-2">
                                         <div className="space-y-1">
                                             <Label className="text-[10px]">BRPAD</Label>
-                                            <Input type="number" value={manualEntry.brpad || 0} onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                setManualEntry({ ...manualEntry, brpad: val, total_amount: val + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                            <Input type="text" value={formatWithCommas(manualEntry.brpad)} onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    const val = parseFloat(rawValue) || 0;
+                                                    setManualEntry({ ...manualEntry, brpad: val, total_amount: val + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                                }
                                             }} className="h-8" />
                                         </div>
                                         <div className="space-y-1">
                                             <Label className="text-[10px]">Aircon</Label>
-                                            <Input type="number" value={manualEntry.aircon || 0} onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                setManualEntry({ ...manualEntry, aircon: val, total_amount: (manualEntry.brpad || 0) + val + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                            <Input type="text" value={formatWithCommas(manualEntry.aircon)} onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    const val = parseFloat(rawValue) || 0;
+                                                    setManualEntry({ ...manualEntry, aircon: val, total_amount: (manualEntry.brpad || 0) + val + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                                }
                                             }} className="h-8" />
                                         </div>
                                         <div className="space-y-1">
                                             <Label className="text-[10px]">Electrical</Label>
-                                            <Input type="number" value={manualEntry.electrical || 0} onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                setManualEntry({ ...manualEntry, electrical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + val + (manualEntry.mechanical || 0) });
+                                            <Input type="text" value={formatWithCommas(manualEntry.electrical)} onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    const val = parseFloat(rawValue) || 0;
+                                                    setManualEntry({ ...manualEntry, electrical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + val + (manualEntry.mechanical || 0) });
+                                                }
                                             }} className="h-8" />
                                         </div>
                                         <div className="space-y-1">
                                             <Label className="text-[10px]">Mechanical</Label>
-                                            <Input type="number" value={manualEntry.mechanical || 0} onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                setManualEntry({ ...manualEntry, mechanical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + val });
+                                            <Input type="text" value={formatWithCommas(manualEntry.mechanical)} onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    const val = parseFloat(rawValue) || 0;
+                                                    setManualEntry({ ...manualEntry, mechanical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + val });
+                                                }
                                             }} className="h-8" />
                                         </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4 pt-2 border-t mt-2">
-                                    <Label className="text-right font-bold">TOTAL</Label>
-                                    <div className="col-span-3 text-lg font-bold text-primary">₱{manualEntry.total_amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</div>
+                                    <Label className="text-right font-bold text-red-600">TOTAL</Label>
+                                    <div className="col-span-3">
+                                        <Input 
+                                            type="text" 
+                                            value={formatWithCommas(manualEntry.total_amount)} 
+                                            onChange={(e) => {
+                                                const rawValue = parseCommaNumber(e.target.value);
+                                                if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                    setManualEntry({ ...manualEntry, total_amount: parseFloat(rawValue) || 0 });
+                                                }
+                                            }}
+                                            className="font-bold text-red-600 border-red-200 focus:border-red-500 h-9"
+                                            placeholder="Enter final total amount"
+                                        />
+                                        <p className="text-[9px] text-muted-foreground mt-1 italic flex justify-between items-center">
+                                            <span>Calculated sum: ₱{((manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                                            {manualEntry.total_amount !== ((manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0)) && (
+                                                <span className="text-red-600 font-bold bg-red-50 px-1 rounded">Entered Total: ₱{manualEntry.total_amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                                            )}
+                                        </p>
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4 pt-2">
                                     <Label htmlFor="remarks" className="text-right">Remarks</Label>
@@ -858,7 +932,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                     : (r.completed_at ? new Date(r.completed_at).toLocaleDateString("en-US") : "-")
                                 const releaseDateStr = r.completed_at || r.original_created_at ? new Date(r.completed_at || r.original_created_at).toLocaleDateString("en-US") : ""
                                 const modVal = r.current_repair_part || ""
-                                const costs = getCategorizedCosts(r.costing)
+                                const costs = getCategorizedCosts(r.costing, r.id)
 
                                 const currentVal = (field: string) => editedData[r.id]?.[field] !== undefined ? editedData[r.id][field] : (r[field] || "")
 
@@ -905,18 +979,21 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             {isEditing ? (
                                                 <Input
                                                     className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
-                                                    type="number"
-                                                    value={editedData[r.id]?.costing?.gatepass_breakdown?.brpad ?? costs.brpad}
+                                                    type="text"
+                                                    value={formatWithCommas(editedData[r.id]?.costing?.gatepass_breakdown?.brpad ?? costs.brpad)}
                                                     onChange={(e) => {
-                                                        const val = Number(e.target.value) || 0
-                                                        const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
-                                                        const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
-                                                        const newGB = { ...currentGB, brpad: val }
-                                                        newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
-                                                        setEditedData(prev => ({
-                                                            ...prev,
-                                                            [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
-                                                        }))
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            const val = parseFloat(rawValue) || 0;
+                                                            const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
+                                                            const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
+                                                            const newGB = { ...currentGB, brpad: val }
+                                                            newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
+                                                            setEditedData(prev => ({
+                                                                ...prev,
+                                                                [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                            }))
+                                                        }
                                                     }}
                                                 />
                                             ) : (costs.brpad > 0 ? costs.brpad.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
@@ -925,18 +1002,21 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             {isEditing ? (
                                                 <Input
                                                     className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
-                                                    type="number"
-                                                    value={editedData[r.id]?.costing?.gatepass_breakdown?.aircon ?? costs.aircon}
+                                                    type="text"
+                                                    value={formatWithCommas(editedData[r.id]?.costing?.gatepass_breakdown?.aircon ?? costs.aircon)}
                                                     onChange={(e) => {
-                                                        const val = Number(e.target.value) || 0
-                                                        const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
-                                                        const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
-                                                        const newGB = { ...currentGB, aircon: val }
-                                                        newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
-                                                        setEditedData(prev => ({
-                                                            ...prev,
-                                                            [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
-                                                        }))
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            const val = parseFloat(rawValue) || 0;
+                                                            const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
+                                                            const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
+                                                            const newGB = { ...currentGB, aircon: val }
+                                                            newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
+                                                            setEditedData(prev => ({
+                                                                ...prev,
+                                                                [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                            }))
+                                                        }
                                                     }}
                                                 />
                                             ) : (costs.aircon > 0 ? costs.aircon.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
@@ -945,18 +1025,21 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             {isEditing ? (
                                                 <Input
                                                     className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
-                                                    type="number"
-                                                    value={editedData[r.id]?.costing?.gatepass_breakdown?.electrical ?? costs.electrical}
+                                                    type="text"
+                                                    value={formatWithCommas(editedData[r.id]?.costing?.gatepass_breakdown?.electrical ?? costs.electrical)}
                                                     onChange={(e) => {
-                                                        const val = Number(e.target.value) || 0
-                                                        const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
-                                                        const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
-                                                        const newGB = { ...currentGB, electrical: val }
-                                                        newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
-                                                        setEditedData(prev => ({
-                                                            ...prev,
-                                                            [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
-                                                        }))
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            const val = parseFloat(rawValue) || 0;
+                                                            const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
+                                                            const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
+                                                            const newGB = { ...currentGB, electrical: val }
+                                                            newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
+                                                            setEditedData(prev => ({
+                                                                ...prev,
+                                                                [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                            }))
+                                                        }
                                                     }}
                                                 />
                                             ) : (costs.electrical > 0 ? costs.electrical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
@@ -965,25 +1048,41 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             {isEditing ? (
                                                 <Input
                                                     className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
-                                                    type="number"
-                                                    value={editedData[r.id]?.costing?.gatepass_breakdown?.mechanical ?? costs.mechanical}
+                                                    type="text"
+                                                    value={formatWithCommas(editedData[r.id]?.costing?.gatepass_breakdown?.mechanical ?? costs.mechanical)}
                                                     onChange={(e) => {
-                                                        const val = Number(e.target.value) || 0
-                                                        const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
-                                                        const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
-                                                        const newGB = { ...currentGB, mechanical: val }
-                                                        newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
-                                                        setEditedData(prev => ({
-                                                            ...prev,
-                                                            [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
-                                                        }))
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            const val = parseFloat(rawValue) || 0;
+                                                            const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
+                                                            const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
+                                                            const newGB = { ...currentGB, mechanical: val }
+                                                            newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
+                                                            setEditedData(prev => ({
+                                                                ...prev,
+                                                                [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                            }))
+                                                        }
                                                     }}
                                                 />
                                             ) : (costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
                                         </td>
                                         <td className="p-2 border border-border text-right font-mono font-bold text-red-600">
                                             {isEditing ? (
-                                                (editedData[r.id]?.costing?.total ?? costs.total).toLocaleString("en-PH", { minimumFractionDigits: 2 })
+                                                <Input
+                                                    className="h-7 px-2 text-xs text-right w-full min-w-[80px] font-bold text-red-600"
+                                                    type="text"
+                                                    value={formatWithCommas(editedData[r.id]?.total ?? costs.total)}
+                                                    onChange={(e) => {
+                                                        const rawValue = parseCommaNumber(e.target.value);
+                                                        if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
+                                                            setEditedData(prev => ({ 
+                                                                ...prev, 
+                                                                [r.id]: { ...(prev[r.id] || {}), total: parseFloat(rawValue) || 0 } 
+                                                            }))
+                                                        }
+                                                    }}
+                                                />
                                             ) : (costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
                                         </td>
                                         <td className="p-2 border border-border text-center">
@@ -1062,19 +1161,19 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                             <tr className="bg-muted/30 font-bold border border-border text-foreground">
                                 <td colSpan={7} className="p-2 border border-border text-right">GRAND TOTAL</td>
                                 <td className="p-2 border border-border text-right">
-                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing).brpad, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing, r.id).brpad, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-2 border border-border text-right">
-                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing).aircon, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing, r.id).aircon, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-2 border border-border text-right">
-                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing).electrical, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing, r.id).electrical, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-2 border border-border text-right">
-                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing).mechanical, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing, r.id).mechanical, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-2 border border-border text-right font-bold">
-                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing).total, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                    {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing, r.id).total, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                 </td>
                                 <td colSpan={3} className="border border-border"></td>
                             </tr>
