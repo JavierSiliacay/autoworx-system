@@ -401,10 +401,10 @@ export default function PartsLedgerPage() {
   /* ── Soft Delete ── */
   const handleSoftDelete = async (id: string) => {
     if (!confirm("Move this entry to history? (It can be restored later)")) return
-    const res = await fetch(`/api/parts/ledger`, { 
-      method: "PATCH", 
+    const res = await fetch(`/api/parts/ledger`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "soft_delete", ids: [id] }) 
+      body: JSON.stringify({ action: "soft_delete", ids: [id] })
     })
     if (res.ok) { toast({ title: "Entry moved to history" }); fetchLedger() }
     else toast({ title: "Failed to delete", variant: "destructive" })
@@ -412,10 +412,10 @@ export default function PartsLedgerPage() {
 
   /* ── Restore ── */
   const handleRestore = async (id: string) => {
-    const res = await fetch(`/api/parts/ledger`, { 
-      method: "PATCH", 
+    const res = await fetch(`/api/parts/ledger`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "restore", ids: [id] }) 
+      body: JSON.stringify({ action: "restore", ids: [id] })
     })
     if (res.ok) { toast({ title: "Entry restored" }); fetchLedger() }
     else toast({ title: "Failed to restore", variant: "destructive" })
@@ -648,11 +648,11 @@ export default function PartsLedgerPage() {
       }
       return acc
     }, { stockIn: 0, stockOut: 0 })
-    return { 
+    return {
       totalQty: res.stockIn - res.stockOut,
       stockIn: res.stockIn,
       stockOut: res.stockOut,
-      leftInStock: res.stockIn - res.stockOut 
+      leftInStock: res.stockIn - res.stockOut
     }
   }, [transactions])
 
@@ -671,8 +671,8 @@ export default function PartsLedgerPage() {
     const isExpRow = !!expandedRows[tx.id]
     const kindColor = tx.kind === "GENUINE" ? "bg-blue-50 text-blue-700 border-blue-200"
       : tx.kind === "SURPLUS" ? "bg-amber-50 text-amber-700 border-amber-200"
-      : tx.kind === "REPLACEMENT" ? "bg-violet-50 text-violet-700 border-violet-200"
-      : "bg-slate-100 text-slate-600 border-slate-200"
+        : tx.kind === "REPLACEMENT" ? "bg-violet-50 text-violet-700 border-violet-200"
+          : "bg-slate-100 text-slate-600 border-slate-200"
 
     return (
       <React.Fragment key={tx.id}>
@@ -865,12 +865,12 @@ export default function PartsLedgerPage() {
                 key={f}
                 onClick={() => setFilterType(f)}
                 className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${filterType === f
-                    ? f === "STOCK_IN"
-                      ? "bg-emerald-600 text-white border-emerald-600"
-                      : f === "STOCK_OUT"
-                        ? "bg-red-600 text-white border-red-600"
-                        : "bg-slate-900 text-white border-slate-900"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
+                  ? f === "STOCK_IN"
+                    ? "bg-emerald-600 text-white border-emerald-600"
+                    : f === "STOCK_OUT"
+                      ? "bg-red-600 text-white border-red-600"
+                      : "bg-slate-900 text-white border-slate-900"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
                   }`}
               >
                 {f === "ALL" ? "All Transactions" : f === "STOCK_IN" ? "↑ Stock In" : "↓ Stock Out"}
@@ -882,8 +882,8 @@ export default function PartsLedgerPage() {
             <button
               onClick={() => setViewDeletedHistory(!viewDeletedHistory)}
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5 ${viewDeletedHistory
-                  ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
+                ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
                 }`}
             >
               {viewDeletedHistory ? <RotateCcw className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
@@ -908,10 +908,10 @@ export default function PartsLedgerPage() {
                   const tx = transactions.find(t => t.id === id)
                   return tx && tx.transaction_type === "STOCK_OUT"
                 }) && (
-                  <Button onClick={handleBulkRevert} className="h-10 gap-2 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 border border-blue-200 shadow-sm font-bold">
-                    <RotateCcw className="w-4 h-4" /> Undo Release
-                  </Button>
-                )}
+                    <Button onClick={handleBulkRevert} className="h-10 gap-2 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 border border-blue-200 shadow-sm font-bold">
+                      <RotateCcw className="w-4 h-4" /> Undo Release
+                    </Button>
+                  )}
                 {viewDeletedHistory ? (
                   <>
                     <Button onClick={handleBulkRestore} className="h-10 gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 hover:text-emerald-800 border border-emerald-200 shadow-sm font-bold">
@@ -1106,8 +1106,8 @@ export default function PartsLedgerPage() {
                       </SelectContent>
                     </Select>
                     {batchKind === "CUSTOM" && (
-                      <Input 
-                        value={batchKindCustom} 
+                      <Input
+                        value={batchKindCustom}
                         onChange={e => setBatchKindCustom(e.target.value)}
                         placeholder="Type custom kind..."
                         className="h-8 text-xs mt-1 text-slate-900 bg-white border-emerald-200"
@@ -1159,89 +1159,89 @@ export default function PartsLedgerPage() {
                         </td>
                       </tr>
                     ) : (
-                     batchItems.map(item => (
-                      <tr key={item.tempId} className="hover:bg-emerald-50/10 transition-colors group">
-                        <td className="px-3 py-2">
-                          <Input
-                            value={item.item_name}
-                            onChange={e => updateBatchItem(item.tempId, { item_name: e.target.value })}
-                            className="h-8 text-[11px] font-black uppercase bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white focus:border-emerald-300 transition-all px-2 shadow-none"
-                          />
-                        </td>
-                        <td className="px-3 py-2">
-                          {!KIND_OPTIONS.includes(item.kind as any) || item.kind === "CUSTOM" ? (
-                            <div className="relative w-full min-w-[120px]">
-                              <Input
-                                autoFocus
-                                value={item.kind === "CUSTOM" ? "" : item.kind}
-                                onChange={e => updateBatchItem(item.tempId, { kind: e.target.value })}
-                                placeholder="Kind..."
-                                className="h-8 text-[10px] font-black uppercase bg-white border-emerald-400 text-slate-900 px-2 pr-7 shadow-sm focus:ring-1 focus:ring-emerald-500 w-full"
-                              />
-                              <button 
-                                onClick={() => updateBatchItem(item.tempId, { kind: "GENUINE" })}
-                                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-0.5 rounded-md hover:bg-red-50"
-                                title="Reset to standard options"
+                      batchItems.map(item => (
+                        <tr key={item.tempId} className="hover:bg-emerald-50/10 transition-colors group">
+                          <td className="px-3 py-2">
+                            <Input
+                              value={item.item_name}
+                              onChange={e => updateBatchItem(item.tempId, { item_name: e.target.value })}
+                              className="h-8 text-[11px] font-black uppercase bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white focus:border-emerald-300 transition-all px-2 shadow-none"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            {!KIND_OPTIONS.includes(item.kind as any) || item.kind === "CUSTOM" ? (
+                              <div className="relative w-full min-w-[120px]">
+                                <Input
+                                  autoFocus
+                                  value={item.kind === "CUSTOM" ? "" : item.kind}
+                                  onChange={e => updateBatchItem(item.tempId, { kind: e.target.value })}
+                                  placeholder="Kind..."
+                                  className="h-8 text-[10px] font-black uppercase bg-white border-emerald-400 text-slate-900 px-2 pr-7 shadow-sm focus:ring-1 focus:ring-emerald-500 w-full"
+                                />
+                                <button
+                                  onClick={() => updateBatchItem(item.tempId, { kind: "GENUINE" })}
+                                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-0.5 rounded-md hover:bg-red-50"
+                                  title="Reset to standard options"
+                                >
+                                  <Plus className="w-3.5 h-3.5 rotate-45" />
+                                </button>
+                              </div>
+                            ) : (
+                              <Select
+                                value={item.kind}
+                                onValueChange={val => updateBatchItem(item.tempId, { kind: val })}
                               >
-                                <Plus className="w-3.5 h-3.5 rotate-45" />
-                              </button>
-                            </div>
-                          ) : (
+                                <SelectTrigger className="h-8 text-[10px] font-black uppercase bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white px-2 shadow-none w-full min-w-[100px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {KIND_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                  <SelectItem value="CUSTOM">CUSTOM...</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
                             <Select
-                              value={item.kind}
-                              onValueChange={val => updateBatchItem(item.tempId, { kind: val })}
+                              value={item.condition}
+                              onValueChange={val => updateBatchItem(item.tempId, { condition: val })}
                             >
-                              <SelectTrigger className="h-8 text-[10px] font-black uppercase bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white px-2 shadow-none w-full min-w-[100px]">
+                              <SelectTrigger className="h-8 text-[10px] font-black uppercase bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white px-2 shadow-none w-fit min-w-[80px]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {KIND_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                <SelectItem value="CUSTOM">CUSTOM...</SelectItem>
+                                {COND_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                               </SelectContent>
                             </Select>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          <Select
-                            value={item.condition}
-                            onValueChange={val => updateBatchItem(item.tempId, { condition: val })}
-                          >
-                            <SelectTrigger className="h-8 text-[10px] font-black uppercase bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white px-2 shadow-none w-fit min-w-[80px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {COND_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={e => updateBatchItem(item.tempId, { quantity: parseInt(e.target.value) || 1 })}
-                            className="h-8 w-16 text-center font-mono font-black text-xs bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white focus:border-emerald-300 transition-all px-1 shadow-none"
-                          />
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input
-                            value={item.notes || ""}
-                            onChange={e => updateBatchItem(item.tempId, { notes: e.target.value })}
-                            placeholder="Add remarks..."
-                            className="h-8 text-[11px] font-medium bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white focus:border-emerald-300 transition-all px-2 shadow-none"
-                          />
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <button
-                            onClick={() => removeFromBatch(item.tempId)}
-                            className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
-                            title="Remove from list"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td className="px-3 py-2">
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={e => updateBatchItem(item.tempId, { quantity: parseInt(e.target.value) || 1 })}
+                              className="h-8 w-16 text-center font-mono font-black text-xs bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white focus:border-emerald-300 transition-all px-1 shadow-none"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <Input
+                              value={item.notes || ""}
+                              onChange={e => updateBatchItem(item.tempId, { notes: e.target.value })}
+                              placeholder="Add remarks..."
+                              className="h-8 text-[11px] font-medium bg-transparent border-transparent text-slate-900 hover:border-slate-200 focus:bg-white focus:border-emerald-300 transition-all px-2 shadow-none"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              onClick={() => removeFromBatch(item.tempId)}
+                              className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                              title="Remove from list"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -1348,8 +1348,8 @@ export default function PartsLedgerPage() {
                                 }))
                               }}
                               className={`h-10 px-6 rounded-xl text-xs font-black uppercase tracking-widest transition-all border ${isSelected
-                                  ? "bg-red-100 hover:bg-red-200 text-red-700 border-red-200 shadow-sm"
-                                  : "bg-white hover:bg-slate-50 text-slate-500 border-slate-200"
+                                ? "bg-red-100 hover:bg-red-200 text-red-700 border-red-200 shadow-sm"
+                                : "bg-white hover:bg-slate-50 text-slate-500 border-slate-200"
                                 }`}
                             >
                               {isSelected ? (
@@ -1364,12 +1364,12 @@ export default function PartsLedgerPage() {
                 </div>
               </div>
             )}
-            
+
             {/* Global Release Notes */}
             <div className="p-6 pt-0 border-t border-slate-100 mt-auto">
               <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5 px-1 truncate">Release Notes / Internal Remarks (Optional)</Label>
-              <Input 
-                value={releaseNotes} 
+              <Input
+                value={releaseNotes}
                 onChange={e => setReleaseNotes(e.target.value)}
                 placeholder="e.g. Parts released for pickup, completed job..."
                 className="h-11 bg-white border-slate-200 text-slate-900 focus:ring-red-500 shadow-sm"

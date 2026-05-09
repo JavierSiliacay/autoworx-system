@@ -203,13 +203,40 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
         ? (monthsMap.get(selectedMonth) || new Date(selectedMonth + "-01").toLocaleDateString("en-US", { month: "long", year: "numeric" }))
         : (reportPeriod === "all" || selectedYear === "all" ? "All Years" : `Full Year ${selectedYear}`)
 
-    const getCategorizedCosts = (costing: any) => {
+    const getCategorizedCosts = (r: any) => {
+        const costing = r.costing
         let result = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 }
-        if (!costing) return result
+        
+        // Use edited data if available
+        const edited = editedData[r.id] || {}
+        
+        if (!costing && !edited.brpad && !edited.aircon && !edited.electrical && !edited.mechanical) return result
+
+        // If we are editing costs directly, prioritze those
+        if (edited.brpad !== undefined || edited.aircon !== undefined || edited.electrical !== undefined || edited.mechanical !== undefined) {
+            result.brpad = Number(edited.brpad ?? (costing?.gatepass_breakdown?.brpad ?? 0))
+            result.aircon = Number(edited.aircon ?? (costing?.gatepass_breakdown?.aircon ?? 0))
+            result.electrical = Number(edited.electrical ?? (costing?.gatepass_breakdown?.electrical ?? 0))
+            result.mechanical = Number(edited.mechanical ?? (costing?.gatepass_breakdown?.mechanical ?? 0))
+            
+            const subtotal = result.brpad + result.aircon + result.electrical + result.mechanical
+            let discount = 0;
+            if (Number(costing?.discount) > 0) {
+                discount = costing.discountType === "percentage"
+                    ? (subtotal * Number(costing.discount)) / 100
+                    : Number(costing.discount);
+            }
+            let vat = 0;
+            if (costing?.vatEnabled) {
+                vat = Number(costing.vatAmount) || ((subtotal - discount) * 0.12);
+            }
+            result.total = subtotal - discount + vat;
+            return result
+        }
 
         // Sales Monitoring only: exclusively sum up the original Repair Estimate items
         // and intentionally ignore any Gatepass breakdown to reflect true projected sales
-        if (costing.items) {
+        if (costing?.items && costing.items.length > 0) {
             costing.items.forEach((item: any) => {
                 const cat = item.category || ""
                 if (cat === "Aircon") result.aircon += item.total || 0
@@ -217,14 +244,24 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                 else if (cat === "Mechanical Works") result.mechanical += item.total || 0
                 else result.brpad += item.total || 0
             })
+
+            const originalSubtotal = result.brpad + result.aircon + result.electrical + result.mechanical;
+            let discount = 0;
+            if (Number(costing.discount) > 0) {
+                discount = costing.discountType === "percentage"
+                    ? (originalSubtotal * Number(costing.discount)) / 100
+                    : Number(costing.discount);
+            }
+            let vat = 0;
+            if (costing.vatEnabled) {
+                vat = Number(costing.vatAmount) || ((originalSubtotal - discount) * 0.12);
+            }
+            result.total = originalSubtotal - discount + vat;
+            return result
         }
 
-        const originalSubtotal = result.brpad + result.aircon + result.electrical + result.mechanical;
-
-        // MANUAL ENTRY FALLBACK: If items produced no numbers (manual entries from Release
-        // Monitoring have no costing.items — only a gatepass_breakdown), read from there.
-        // This does NOT affect normal appointments because their items will always have a total > 0.
-        if (originalSubtotal === 0 && costing.gatepass_breakdown) {
+        // MANUAL ENTRY FALLBACK: If items produced no numbers
+        if (costing?.gatepass_breakdown) {
             const gb = costing.gatepass_breakdown
             return {
                 brpad: Number(gb.brpad) || 0,
@@ -235,22 +272,6 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             }
         }
 
-        // Compute the pristine estimate total using VAT and discounts.
-        // We re-calculate instead of trusting costing.total because Gatepass 
-        // edits in the DB might permanently overwrite costing.total.
-        let discount = 0;
-        if (Number(costing.discount) > 0) {
-            discount = costing.discountType === "percentage"
-                ? (originalSubtotal * Number(costing.discount)) / 100
-                : Number(costing.discount);
-        }
-
-        let vat = 0;
-        if (costing.vatEnabled) {
-            vat = Number(costing.vatAmount) || ((originalSubtotal - discount) * 0.12);
-        }
-
-        result.total = originalSubtotal - discount + vat;
         return result
     }
 
@@ -266,7 +287,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                 if (!dateStr) return
                 const d = new Date(dateStr)
                 const year = d.getFullYear().toString()
-                const costs = getCategorizedCosts(r.costing)
+                const costs = getCategorizedCosts(r)
                 dataMap.set(year, (dataMap.get(year) || 0) + costs.total)
             })
 
@@ -284,7 +305,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                 if (!dateStr) return
                 const d = new Date(dateStr)
                 const m = d.getMonth()
-                const costs = getCategorizedCosts(r.costing)
+                const costs = getCategorizedCosts(r)
                 data[m].total += costs.total
             })
             return data
@@ -293,7 +314,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
 
     const tableTotals = useMemo(() => {
         return tableRecords.reduce((acc, r) => {
-            const costs = getCategorizedCosts(r.costing)
+            const costs = getCategorizedCosts(r)
             return {
                 brpad: acc.brpad + costs.brpad,
                 aircon: acc.aircon + costs.aircon,
@@ -302,11 +323,11 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                 total: acc.total + costs.total
             }
         }, { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 })
-    }, [tableRecords])
+    }, [tableRecords, editedData])
 
     const handlePrint = async () => {
         // Reuse the same generator but we can customize the title if we want
-        const htmlContent = generateReleaseMonitoringDoc(tableRecords, reportPeriodLabel, getCategorizedCosts, "SALES MONITORING", "DATE ENTRY")
+        const htmlContent = generateReleaseMonitoringDoc(tableRecords, reportPeriodLabel, (costing: any) => getCategorizedCosts({ costing }), "SALES MONITORING", "DATE ENTRY")
 
         const printWindow = window.open("", "_blank")
         if (!printWindow) {
@@ -458,15 +479,75 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                             <Button onClick={async () => {
                                 setIsSaving(true)
                                 try {
-                                    for (const [id, updates] of Object.entries(editedData)) {
-                                        // Update logic depends on if it's history or active
-                                        const endpoint = id.includes("-") && id.length > 30 ? "/api/appointments" : "/api/history"
+                                    for (const [id, rawUpdates] of Object.entries(editedData)) {
+                                        const record = records.find(r => String(r.id) === String(id))
+                                        if (!record) continue
 
-                                        await fetch(endpoint, {
+                                        const isHistory = record.archived_at || record.source === 'history' || record.completed_at;
+                                        const endpoint = isHistory ? "/api/history" : "/api/appointments";
+
+                                        const updates: any = { ...rawUpdates }
+
+                                        // Handle nested costing updates
+                                        if (updates.brpad !== undefined || updates.aircon !== undefined || updates.electrical !== undefined || updates.mechanical !== undefined) {
+                                            const currentCosts = getCategorizedCosts(record)
+                                            const newGb = {
+                                                brpad: updates.brpad !== undefined ? Number(updates.brpad) : currentCosts.brpad,
+                                                aircon: updates.aircon !== undefined ? Number(updates.aircon) : currentCosts.aircon,
+                                                electrical: updates.electrical !== undefined ? Number(updates.electrical) : currentCosts.electrical,
+                                                mechanical: updates.mechanical !== undefined ? Number(updates.mechanical) : currentCosts.mechanical,
+                                            }
+                                            
+                                            const subtotal = newGb.brpad + newGb.aircon + newGb.electrical + newGb.mechanical
+                                            
+                                            // Maintain VAT and discount from original costing if possible
+                                            const oldCosting = record.costing || {}
+                                            let discount = 0;
+                                            if (Number(oldCosting.discount) > 0) {
+                                                discount = oldCosting.discountType === "percentage"
+                                                    ? (subtotal * Number(oldCosting.discount)) / 100
+                                                    : Number(oldCosting.discount);
+                                            }
+                                            let vat = 0;
+                                            if (oldCosting.vatEnabled) {
+                                                vat = Number(oldCosting.vatAmount) || ((subtotal - discount) * 0.12);
+                                            }
+
+                                            updates.costing = {
+                                                ...oldCosting,
+                                                total: subtotal - discount + vat,
+                                                gatepass_breakdown: {
+                                                    ...newGb,
+                                                    total: subtotal - discount + vat
+                                                }
+                                            }
+                                            
+                                            // Clean up individual cost fields from updates as they are now in updates.costing
+                                            delete updates.brpad
+                                            delete updates.aircon
+                                            delete updates.electrical
+                                            delete updates.mechanical
+                                        }
+
+                                        // Map camelCase to snake_case if needed (though API should handle some)
+                                        if (updates.vehicleMake !== undefined) { updates.vehicle_make = updates.vehicleMake; delete updates.vehicleMake; }
+                                        if (updates.vehicleModel !== undefined) { updates.vehicle_model = updates.vehicleModel; delete updates.vehicleModel; }
+                                        if (updates.vehicleYear !== undefined) { updates.vehicle_year = updates.vehicleYear; delete updates.vehicleYear; }
+                                        if (updates.vehiclePlate !== undefined) { updates.vehicle_plate = updates.vehiclePlate; delete updates.vehiclePlate; }
+                                        if (updates.vehicleColor !== undefined) { updates.vehicle_color = updates.vehicleColor; delete updates.vehicleColor; }
+                                        if (updates.paulNotes !== undefined) { updates.paul_notes = updates.paulNotes; delete updates.paulNotes; }
+
+                                        const res = await fetch(endpoint, {
                                             method: "PUT",
                                             headers: { "Content-Type": "application/json" },
                                             body: JSON.stringify(endpoint === "/api/appointments" ? { id, ...updates } : { id, updates })
                                         })
+
+                                        if (!res.ok) {
+                                            const errText = await res.text();
+                                            console.error(`[SalesMonitoring] Update failed for ${id}:`, errText);
+                                            throw new Error(`Failed to update ${record.name || id}`);
+                                        }
                                     }
                                     toast({ title: "Saved successfully", description: "The records have been updated." })
                                     setIsEditing(false)
@@ -628,7 +709,12 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 manualData: {
                                                     ...manualEntry,
                                                     vehicle_year: manualEntry.vehicle_year || "",
-                                                    original_created_at: new Date(manualEntry.created_at).toISOString(),
+                                                    original_created_at: (() => {
+                                                        const now = new Date();
+                                                        const [y, m, d] = manualEntry.created_at.split('-').map(Number);
+                                                        const dateWithTime = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds());
+                                                        return dateWithTime.toISOString();
+                                                    })(),
                                                     costing: {
                                                         total: manualEntry.total_amount,
                                                         gatepass_breakdown: {
@@ -746,7 +832,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     minute: "2-digit",
                                     hour12: true
                                 }) : ""
-                                const costs = getCategorizedCosts(r.costing)
+                                const costs = getCategorizedCosts(r)
                                 const currentVal = (field: string) => editedData[r.id]?.[field] !== undefined ? editedData[r.id][field] : (r[field] || "")
 
                                 return (
@@ -756,22 +842,65 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 <button onClick={() => handleDeleteRecord(r.id, r.name)} className="text-red-500"><Trash2 className="w-3 h-3" /></button>
                                             ) : (idx + 1)}
                                         </td>
-                                        <td className="p-2 border border-border">{unitStr}</td>
-                                        <td className="p-2 border border-border text-center">
-                                            {isEditing ? <Input className="h-6 text-[10px]" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_plate: e.target.value } }))} /> : (r.vehicle_plate || r.vehiclePlate)}
+                                        <td className="p-2 border border-border">
+                                            {isEditing ? (
+                                                <div className="flex gap-1">
+                                                    <Input className="h-6 text-[9px] w-12 px-1" placeholder="Year" value={currentVal("vehicle_year")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_year: e.target.value } }))} />
+                                                    <Input className="h-6 text-[9px] flex-1 px-1" placeholder="Make" value={currentVal("vehicle_make")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_make: e.target.value } }))} />
+                                                    <Input className="h-6 text-[9px] flex-1 px-1" placeholder="Model" value={currentVal("vehicle_model")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_model: e.target.value } }))} />
+                                                </div>
+                                            ) : unitStr}
                                         </td>
-                                        <td className="p-2 border border-border text-center">{r.vehicle_color || r.vehicleColor}</td>
-                                        <td className="p-2 border border-border">{r.name}</td>
-                                        <td className="p-2 border border-border text-center uppercase text-[9px]">{r.insurance}</td>
-                                        <td className="p-2 border border-border text-center">{r.estimate_number || r.estimateNumber || r.trackingCode || ""}</td>
-                                        <td className="p-2 border border-border text-right font-mono">{costs.brpad > 0 ? costs.brpad.toLocaleString() : "-"}</td>
-                                        <td className="p-2 border border-border text-right font-mono">{costs.aircon > 0 ? costs.aircon.toLocaleString() : "-"}</td>
-                                        <td className="p-2 border border-border text-right font-mono">{costs.electrical > 0 ? costs.electrical.toLocaleString() : "-"}</td>
-                                        <td className="p-2 border border-border text-right font-mono">{costs.mechanical > 0 ? costs.mechanical.toLocaleString() : "-"}</td>
+                                        <td className="p-2 border border-border text-center">
+                                            {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_plate: e.target.value } }))} /> : (r.vehicle_plate || r.vehiclePlate)}
+                                        </td>
+                                        <td className="p-2 border border-border text-center">
+                                            {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("vehicle_color")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_color: e.target.value } }))} /> : (r.vehicle_color || r.vehicleColor)}
+                                        </td>
+                                        <td className="p-2 border border-border">
+                                            {isEditing ? <Input className="h-6 text-[10px] px-1" value={currentVal("name")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), name: e.target.value } }))} /> : r.name}
+                                        </td>
+                                        <td className="p-2 border border-border text-center uppercase text-[9px]">
+                                            {isEditing ? <Input className="h-6 text-[9px] px-1 text-center" value={currentVal("insurance")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), insurance: e.target.value } }))} /> : (r.insurance)}
+                                        </td>
+                                        <td className="p-2 border border-border text-center">
+                                            {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} /> : (r.estimate_number || r.estimateNumber || r.trackingCode || "")}
+                                        </td>
+                                        <td className="p-2 border border-border text-right font-mono">
+                                            {isEditing ? <Input type="number" className="h-6 text-[10px] px-1 text-right w-full" value={currentVal("brpad") || (costs.brpad > 0 ? costs.brpad : "")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), brpad: e.target.value } }))} /> : (costs.brpad > 0 ? costs.brpad.toLocaleString() : "-")}
+                                        </td>
+                                        <td className="p-2 border border-border text-right font-mono">
+                                            {isEditing ? <Input type="number" className="h-6 text-[10px] px-1 text-right w-full" value={currentVal("aircon") || (costs.aircon > 0 ? costs.aircon : "")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), aircon: e.target.value } }))} /> : (costs.aircon > 0 ? costs.aircon.toLocaleString() : "-")}
+                                        </td>
+                                        <td className="p-2 border border-border text-right font-mono">
+                                            {isEditing ? <Input type="number" className="h-6 text-[10px] px-1 text-right w-full" value={currentVal("electrical") || (costs.electrical > 0 ? costs.electrical : "")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), electrical: e.target.value } }))} /> : (costs.electrical > 0 ? costs.electrical.toLocaleString() : "-")}
+                                        </td>
+                                        <td className="p-2 border border-border text-right font-mono">
+                                            {isEditing ? <Input type="number" className="h-6 text-[10px] px-1 text-right w-full" value={currentVal("mechanical") || (costs.mechanical > 0 ? costs.mechanical : "")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), mechanical: e.target.value } }))} /> : (costs.mechanical > 0 ? costs.mechanical.toLocaleString() : "-")}
+                                        </td>
                                         <td className="p-2 border border-border text-right font-mono font-bold">{costs.total > 0 ? costs.total.toLocaleString() : "-"}</td>
-                                        <td className="p-2 border border-border text-center">{r.current_repair_part || r.currentRepairPart || ""}</td>
-                                        <td className="p-2 border border-border text-center">{dateStr}</td>
-                                        <td className="p-2 border border-border">{r.paul_notes || r.paulNotes || r.remarks}</td>
+                                        <td className="p-2 border border-border text-center">
+                                            {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} /> : (r.current_repair_part || r.currentRepairPart || "")}
+                                        </td>
+                                        <td className="p-2 border border-border text-center">
+                                            {isEditing ? (
+                                                <Input 
+                                                    type="date" 
+                                                    className="h-6 text-[9px] px-1 text-center w-full" 
+                                                    value={currentVal("synced_at") ? new Date(currentVal("synced_at")).toISOString().split('T')[0] : (syncDateStr ? new Date(syncDateStr).toISOString().split('T')[0] : "")} 
+                                                    onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), synced_at: e.target.value } }))} 
+                                                />
+                                            ) : dateStr}
+                                        </td>
+                                        <td className="p-2 border border-border">
+                                            {isEditing ? (
+                                                <Input 
+                                                    className="h-6 text-[10px] px-1" 
+                                                    value={currentVal("paul_notes")} 
+                                                    onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), paul_notes: e.target.value } }))} 
+                                                />
+                                            ) : (r.paul_notes || r.paulNotes || r.remarks)}
+                                        </td>
                                         <td className="p-2 border border-border text-center no-print">
                                             {r.archived_reason === "Manual Entry" ? (
                                                 <Tooltip>

@@ -73,6 +73,12 @@ export async function PUT(request: Request) {
     if (updates.estimate_number !== undefined) dbUpdates.estimate_number = updates.estimate_number
     if (updates.vehicle_plate !== undefined) dbUpdates.vehicle_plate = updates.vehicle_plate
     if (updates.vehicle_color !== undefined) dbUpdates.vehicle_color = updates.vehicle_color
+    if (updates.vehicle_make !== undefined) dbUpdates.vehicle_make = updates.vehicle_make
+    if (updates.vehicleMake !== undefined) dbUpdates.vehicle_make = updates.vehicleMake
+    if (updates.vehicle_model !== undefined) dbUpdates.vehicle_model = updates.vehicle_model
+    if (updates.vehicleModel !== undefined) dbUpdates.vehicle_model = updates.vehicleModel
+    if (updates.vehicle_year !== undefined) dbUpdates.vehicle_year = updates.vehicle_year
+    if (updates.vehicleYear !== undefined) dbUpdates.vehicle_year = updates.vehicleYear
     if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
     if (updates.is_backjob !== undefined) dbUpdates.is_backjob = updates.is_backjob
     if (updates.isBackJob !== undefined) dbUpdates.is_backjob = updates.isBackJob
@@ -156,12 +162,12 @@ export async function POST(request: Request) {
   if (manualData) {
     console.log("[API History POST] Manual Data Received:", manualData);
 
-    // Normalise the admin-specified date into a full ISO timestamp
-    const entryDate = manualData.completed_at
+    // Prioritize specific timestamps provided by the frontend (which now include time)
+    const entryDate = manualData.original_created_at || (manualData.completed_at
       ? new Date(manualData.completed_at).toISOString()
       : manualData.created_at
         ? new Date(manualData.created_at).toISOString()
-        : new Date().toISOString()
+        : new Date().toISOString())
 
     const manualRecord = {
       name: manualData.name,

@@ -328,28 +328,79 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
         }
 
         setIsSaving(true)
+        console.log("[ReleaseMonitoring] Starting batch update...", { count: entryIds.length });
+        
         try {
-            const updates = entryIds.map(id => ({
-                id,
-                ...editedData[id]
-            }))
+            for (const id of entryIds) {
+                const record = records.find(r => String(r.id) === String(id))
+                if (!record) continue
 
-            const response = await fetch("/api/history", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ updates })
-            })
+                const rawUpdates = editedData[id]
+                const updates: any = { ...rawUpdates }
 
-            if (response.ok) {
-                toast({ title: "Success", description: "Records updated successfully." })
-                setIsEditing(false)
-                setEditedData({})
-                onUpdate?.()
-            } else {
-                throw new Error("Update failed")
+                // Recalculate costing if any amount was changed
+                if (updates.brpad !== undefined || updates.aircon !== undefined || updates.electrical !== undefined || updates.mechanical !== undefined) {
+                    const currentCosts = getCategorizedCosts(record.costing)
+                    const newGb = {
+                        brpad: updates.brpad !== undefined ? Number(updates.brpad) : currentCosts.brpad,
+                        aircon: updates.aircon !== undefined ? Number(updates.aircon) : currentCosts.aircon,
+                        electrical: updates.electrical !== undefined ? Number(updates.electrical) : currentCosts.electrical,
+                        mechanical: updates.mechanical !== undefined ? Number(updates.mechanical) : currentCosts.mechanical,
+                    }
+                    
+                    const subtotal = newGb.brpad + newGb.aircon + newGb.electrical + newGb.mechanical
+                    
+                    const oldCosting = record.costing || {}
+                    let discount = 0;
+                    if (Number(oldCosting.discount) > 0) {
+                        discount = oldCosting.discountType === "percentage"
+                            ? (subtotal * Number(oldCosting.discount)) / 100
+                            : Number(oldCosting.discount);
+                    }
+                    let vat = 0;
+                    if (oldCosting.vatEnabled) {
+                        vat = Number(oldCosting.vatAmount) || ((subtotal - discount) * 0.12);
+                    }
+
+                    updates.costing = {
+                        ...oldCosting,
+                        total: subtotal - discount + vat,
+                        gatepass_breakdown: {
+                            ...(oldCosting.gatepass_breakdown || {}),
+                            ...newGb,
+                            total: subtotal - discount + vat
+                        }
+                    }
+                    
+                    delete updates.brpad
+                    delete updates.aircon
+                    delete updates.electrical
+                    delete updates.mechanical
+                }
+
+                // Map camelCase to snake_case if needed
+                if (updates.paulNotes !== undefined) { updates.paul_notes = updates.paulNotes; delete updates.paulNotes; }
+
+                const res = await fetch("/api/history", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id, updates })
+                })
+
+                if (!res.ok) {
+                    const err = await res.text();
+                    console.error(`[ReleaseMonitoring] Update failed for ${id}:`, err);
+                    throw new Error(`Failed to update ${record.name || id}`);
+                }
             }
-        } catch (e) {
-            toast({ title: "Error", description: "Could not save changes.", variant: "destructive" })
+
+            toast({ title: "Success", description: "Records updated successfully." })
+            setIsEditing(false)
+            setEditedData({})
+            onUpdate?.()
+        } catch (e: any) {
+            console.error("[ReleaseMonitoring] Batch Update Error:", e);
+            toast({ title: "Error", description: e.message || "Could not save changes.", variant: "destructive" })
         } finally {
             setIsSaving(false)
         }
@@ -608,6 +659,12 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 manualData: {
                                                     ...manualEntry,
                                                     vehicle_year: manualEntry.vehicle_year || "",
+                                                    completed_at: (() => {
+                                                        const now = new Date();
+                                                        const [y, m, d] = manualEntry.completed_at.split('-').map(Number);
+                                                        const dateWithTime = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds());
+                                                        return dateWithTime.toISOString();
+                                                    })(),
                                                     costing: { 
                                                         total: manualEntry.total_amount, 
                                                         gatepass_breakdown: { 
