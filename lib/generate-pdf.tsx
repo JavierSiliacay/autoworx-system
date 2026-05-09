@@ -838,10 +838,24 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
   const rowsHtml = records.map((r, idx) => {
     const claimType = r.insurance ? r.insurance.toUpperCase() : "";
     const unitStr = `${r.vehicle_year || r.vehicleYear || ""} ${r.vehicle_make || r.vehicleMake || ""} ${r.vehicle_model || r.vehicleModel || ""}`.trim();
+    const isSales = title.includes("SALES");
+    const showCompleteDate = !isSales;
+
+    // Harmonize date logic with SalesMonitoring UI priority
+    const entryDateStr = (r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at)
+      ? new Date(r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at).toLocaleDateString("en-US")
+      : "-";
+
+    const releaseDateStr = (r.completed_at || r.completedAt || r.original_created_at || r.createdAt)
+      ? new Date(r.completed_at || r.completedAt || r.original_created_at || r.createdAt).toLocaleDateString("en-US")
+      : "";
+
     const completeDateStr = (r.status_updated_at || r.statusUpdatedAt) 
       ? new Date(r.status_updated_at || r.statusUpdatedAt).toLocaleDateString("en-US") 
       : (r.completed_at || r.completedAt ? new Date(r.completed_at || r.completedAt).toLocaleDateString("en-US") : "-");
-    const releaseDateStr = r.completed_at || r.original_created_at || r.createdAt ? new Date(r.completed_at || r.original_created_at || r.createdAt).toLocaleDateString("en-US") : "";
+
+    const effectiveDateColumnValue = isSales ? entryDateStr : releaseDateStr;
+
     const costs = getCategorizedCosts(r.costing, r.id);
 
     totalBRPAD += costs.brpad;
@@ -850,8 +864,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
     totalMechanical += costs.mechanical;
     grandTotal += costs.total;
 
-    const isSales = title.includes("SALES");
-    const showCompleteDate = !isSales;
+
 
     return `
       <tr>
@@ -874,7 +887,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         </td>
         ` : ""}
         ${showCompleteDate ? `<td>${completeDateStr}</td>` : ""}
-        <td>${releaseDateStr}</td>
+        <td>${effectiveDateColumnValue}</td>
         <td class="text-left">${r.paul_notes || r.paulNotes || r.remarks || ""}</td>
       </tr>
     `;
