@@ -238,6 +238,14 @@ export function BookingForm() {
       setIsSubmitting(false)
       setSubmittedData(formData)
       setTrackingCode(trackingCodeGenerated)
+      
+      // Play submission sound with volume boost
+      import("@/lib/audio-utils").then(({ playAmplifiedAudio }) => {
+        playAmplifiedAudio("/appointment.mp3", 2.5);
+      }).catch(err => {
+        console.warn("Could not load audio utility:", err);
+      });
+      
       setIsSubmitted(true)
     } catch (error) {
       console.error("Error submitting appointment:", error)

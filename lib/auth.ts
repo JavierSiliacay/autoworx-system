@@ -23,6 +23,7 @@ const AUTHORIZED_REPORT_EMAILS = [
   "paulsuazo64@gmail.com",
   "alfred_autoworks@yahoo.com",
   "siliacay.javier@gmail.com",
+  "ryan.quintos0459@gmail.com",
   "javiersiliacaysiliacay1234@gmail.com"
 ]
 
@@ -31,6 +32,7 @@ const AUTHORIZED_SALES_EMAILS = [
   "paulsuazo64@gmail.com",
   "autoworxcagayan2025@gmail.com",
   "alfred_autoworks@yahoo.com",
+  "ryan.quintos0459@gmail.com",
   "siliacay.javier@gmail.com",
   "javiersiliacaysiliacay1234@gmail.com"
 ]
