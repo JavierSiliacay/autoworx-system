@@ -497,19 +497,19 @@ export default function AdminDashboard() {
           if (latestUpdate) {
             const lastSeenId = localStorage.getItem("last_seen_update_id");
             const notifiedId = localStorage.getItem("update_notified_id");
-            
+
             // If a new update is detected, we haven't notified for it yet, and we have a previous baseline
             if (lastSeenId && lastSeenId !== latestUpdate.id && notifiedId !== latestUpdate.id) {
               // Mark as notified immediately to prevent loops
               localStorage.setItem("update_notified_id", latestUpdate.id);
-              
+
               toast({
                 title: "🚀 Major Update Detected",
                 description: "The system has been updated to v" + latestUpdate.version + ". You will be logged out in 5 seconds to apply changes.",
                 variant: "destructive",
                 duration: 5000,
               });
-              
+
               setTimeout(() => {
                 signOut({ callbackUrl: "/auth/signin" });
               }, 5000);

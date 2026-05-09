@@ -169,7 +169,7 @@ export async function POST(request: Request) {
       phone: manualData.phone || "N/A",
       vehicle_make: manualData.vehicle_make,
       vehicle_model: manualData.vehicle_model,
-      vehicle_year: manualData.vehicle_year,
+      vehicle_year: manualData.vehicle_year || "",
       vehicle_plate: manualData.vehicle_plate,
       vehicle_color: manualData.vehicle_color || "",
       insurance: manualData.insurance,
@@ -189,7 +189,6 @@ export async function POST(request: Request) {
       completed_at: entryDate,
       original_created_at: entryDate,
       synced_at: entryDate,
-      created_at: entryDate,
     }
 
     const { error: insertError } = await adminSupabase

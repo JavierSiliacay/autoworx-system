@@ -43,9 +43,9 @@ export async function POST(request: Request) {
             const dateStr = item.completed_at || item.original_created_at
             if (!dateStr) return false
             const d = new Date(dateStr)
-            
+
             if (isNaN(d.getTime())) return false
-            
+
             // Adjust to Philippine Time (GMT+8) which the browser UI uses to render the Release Monitoring table
             d.setHours(d.getHours() + 8)
             const y = d.getUTCFullYear()
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
                     else brpad += i.total || 0
                 })
             }
-            
+
             let rawInsurance = (item.insurance || "").trim()
 
             // If it's literally empty string or the word 'blank', mark as UNKNOWN INSURANCE
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
             return {
                 claimType: claimType,
-                insuranceCompany: claimType, 
+                insuranceCompany: claimType,
                 total: total,
                 brpad,
                 aircon,

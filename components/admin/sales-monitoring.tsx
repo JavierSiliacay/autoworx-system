@@ -4,6 +4,10 @@ import React, { useState, useMemo } from "react"
 import { Printer, Calendar as CalendarIcon, FileDown, Eye, Edit, Save, Loader2, X, FileCheck, FileX, Trash2, RefreshCw, BarChart3, TrendingUp, Search } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Button } from "@/components/ui/button"
+import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { generateReleaseMonitoringDoc } from "@/lib/generate-pdf"
@@ -55,7 +59,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                 const year = d.getFullYear().toString()
                 const monthKey = `${year}-${String(d.getMonth() + 1).padStart(2, '0')}`
                 const monthLabel = d.toLocaleDateString("en-US", { month: "long", year: "numeric" })
-                
+
                 if (!monthsMap.has(monthKey)) {
                     monthsMap.set(monthKey, monthLabel)
                 }
@@ -69,7 +73,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
     // Sort years descending
     const availableYears = Array.from(yearsSet).sort((a, b) => b.localeCompare(a))
 
-    const [reportPeriod, setReportPeriod] = useState<"monthly" | "yearly">("monthly")
+    const [reportPeriod, setReportPeriod] = useState<"monthly" | "yearly" | "all">("monthly")
 
     // Default to the latest month or current month if no data
     const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
@@ -90,7 +94,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
     }, [availableMonths, selectedMonth, monthsMap])
 
     React.useEffect(() => {
-        if (availableYears.length > 0 && !yearsSet.has(selectedYear)) {
+        if (availableYears.length > 0 && selectedYear !== "all" && !yearsSet.has(selectedYear)) {
             setSelectedYear(availableYears[0])
         }
     }, [availableYears, selectedYear, yearsSet])
@@ -135,9 +139,9 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             if (reportPeriod === "monthly") {
                 const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
                 if (key !== selectedMonth) return false
-            } else {
+            } else if (reportPeriod === "yearly") {
                 const year = d.getFullYear().toString()
-                if (year !== selectedYear) return false
+                if (selectedYear !== "all" && year !== selectedYear) return false
             }
 
             if (searchQuery.trim()) {
@@ -174,13 +178,13 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             const dbStr = b.syncedAt || b.synced_at || b.createdAt || b.original_created_at || b.created_at
             const da = new Date(daStr || 0).getTime()
             const db = new Date(dbStr || 0).getTime()
-            return da - db 
+            return da - db
         })
     }, [records, selectedMonth, selectedYear, reportPeriod, searchQuery, claimTypeFilter])
 
     const reportPeriodLabel = reportPeriod === "monthly"
         ? (monthsMap.get(selectedMonth) || new Date(selectedMonth + "-01").toLocaleDateString("en-US", { month: "long", year: "numeric" }))
-        : `Full Year ${selectedYear}`
+        : (reportPeriod === "all" || selectedYear === "all" ? "All Years" : `Full Year ${selectedYear}`)
 
     const getCategorizedCosts = (costing: any) => {
         let result = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 }
@@ -219,8 +223,8 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
         // edits in the DB might permanently overwrite costing.total.
         let discount = 0;
         if (Number(costing.discount) > 0) {
-            discount = costing.discountType === "percentage" 
-                ? (originalSubtotal * Number(costing.discount)) / 100 
+            discount = costing.discountType === "percentage"
+                ? (originalSubtotal * Number(costing.discount)) / 100
                 : Number(costing.discount);
         }
 
@@ -234,21 +238,41 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
     }
 
     const yearlyChartData = useMemo(() => {
-        if (reportPeriod !== "yearly") return []
-        const data = Array.from({ length: 12 }, (_, i) => ({
-            name: new Date(2000, i).toLocaleDateString("en-US", { month: "short" }),
-            monthNum: i + 1,
-            total: 0
-        }))
-        tableRecords.forEach(r => {
-            const dateStr = r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at
-            const d = new Date(dateStr)
-            const m = d.getMonth()
-            const costs = getCategorizedCosts(r.costing)
-            data[m].total += costs.total
-        })
-        return data
-    }, [tableRecords, reportPeriod])
+        if (reportPeriod === "monthly") return []
+
+        if (reportPeriod === "all" || selectedYear === "all") {
+            const dataMap = new Map<string, number>()
+            availableYears.forEach(y => dataMap.set(y, 0))
+
+            tableRecords.forEach(r => {
+                const dateStr = r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at
+                if (!dateStr) return
+                const d = new Date(dateStr)
+                const year = d.getFullYear().toString()
+                const costs = getCategorizedCosts(r.costing)
+                dataMap.set(year, (dataMap.get(year) || 0) + costs.total)
+            })
+
+            return Array.from(dataMap.entries())
+                .map(([name, total]) => ({ name, total }))
+                .sort((a, b) => a.name.localeCompare(b.name))
+        } else {
+            const data = Array.from({ length: 12 }, (_, i) => ({
+                name: new Date(2000, i).toLocaleDateString("en-US", { month: "short" }),
+                monthNum: i + 1,
+                total: 0
+            }))
+            tableRecords.forEach(r => {
+                const dateStr = r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at
+                if (!dateStr) return
+                const d = new Date(dateStr)
+                const m = d.getMonth()
+                const costs = getCategorizedCosts(r.costing)
+                data[m].total += costs.total
+            })
+            return data
+        }
+    }, [tableRecords, reportPeriod, selectedYear, availableYears])
 
     const tableTotals = useMemo(() => {
         return tableRecords.reduce((acc, r) => {
@@ -286,8 +310,8 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
         // In Sales Monitoring, "Delete" might mean un-syncing if it's active, 
         // or removing from history. For now, let's keep it simple and handle history cases.
         if (id.length > 36) { // Likely a client-side ID or composite
-             toast({ title: "Note", description: "Currently only history records can be permanently deleted from here." })
-             return
+            toast({ title: "Note", description: "Currently only history records can be permanently deleted from here." })
+            return
         }
 
         if (!window.confirm(`Are you sure you want to PERMANENTLY remove "${name}" from the history/report?`)) {
@@ -343,6 +367,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                             <SelectContent>
                                 <SelectItem value="monthly">Monthly</SelectItem>
                                 <SelectItem value="yearly">Yearly</SelectItem>
+                                <SelectItem value="all">All Years</SelectItem>
                             </SelectContent>
                         </Select>
 
@@ -361,7 +386,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     )}
                                 </SelectContent>
                             </Select>
-                        ) : (
+                        ) : reportPeriod === "yearly" ? (
                             <Select value={selectedYear} onValueChange={setSelectedYear} disabled={isEditing || isSaving}>
                                 <SelectTrigger className="w-[120px]">
                                     <SelectValue placeholder="Select Year" />
@@ -376,7 +401,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     )}
                                 </SelectContent>
                             </Select>
-                        )}
+                        ) : null}
                     </div>
 
                     {!isEditing ? (
@@ -402,7 +427,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     for (const [id, updates] of Object.entries(editedData)) {
                                         // Update logic depends on if it's history or active
                                         const endpoint = id.includes("-") && id.length > 30 ? "/api/appointments" : "/api/history"
-                                        
+
                                         await fetch(endpoint, {
                                             method: "PUT",
                                             headers: { "Content-Type": "application/json" },
@@ -463,7 +488,34 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="s_date" className="text-right">Entry Date</Label>
-                                    <Input id="s_date" type="date" value={manualEntry.created_at} onChange={(e) => setManualEntry({ ...manualEntry, created_at: e.target.value })} className="col-span-3" />
+                                    <div className="col-span-3">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "w-full justify-start text-left font-normal h-10",
+                                                        !manualEntry.created_at && "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {manualEntry.created_at ? (
+                                                        format(new Date(manualEntry.created_at), "PPP")
+                                                    ) : (
+                                                        <span>Pick a date</span>
+                                                    )}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={manualEntry.created_at ? new Date(manualEntry.created_at) : undefined}
+                                                    onSelect={(date) => setManualEntry({ ...manualEntry, created_at: date ? format(date, "yyyy-MM-dd") : "" })}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
                                 </div>
                                 {/* Breakdown section same as ReleaseMonitoring */}
                                 <div className="grid grid-cols-4 items-center gap-4">
@@ -514,16 +566,17 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             body: JSON.stringify({
                                                 manualData: {
                                                     ...manualEntry,
+                                                    vehicle_year: manualEntry.vehicle_year || "",
                                                     original_created_at: new Date(manualEntry.created_at).toISOString(),
-                                                    costing: { 
-                                                        total: manualEntry.total_amount, 
-                                                        gatepass_breakdown: { 
-                                                            brpad: manualEntry.brpad || 0, 
-                                                            aircon: manualEntry.aircon || 0, 
-                                                            electrical: manualEntry.electrical || 0, 
-                                                            mechanical: manualEntry.mechanical || 0, 
-                                                            total: manualEntry.total_amount 
-                                                        } 
+                                                    costing: {
+                                                        total: manualEntry.total_amount,
+                                                        gatepass_breakdown: {
+                                                            brpad: manualEntry.brpad || 0,
+                                                            aircon: manualEntry.aircon || 0,
+                                                            electrical: manualEntry.electrical || 0,
+                                                            mechanical: manualEntry.mechanical || 0,
+                                                            total: manualEntry.total_amount
+                                                        }
                                                     }
                                                 }
                                             })
@@ -532,9 +585,12 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             toast({ title: "Success", description: "Manual entry added." })
                                             setIsManualModalOpen(false)
                                             onUpdate?.()
+                                        } else {
+                                            const errorData = await response.json().catch(() => ({}));
+                                            throw new Error(errorData.error || "Failed to add record")
                                         }
-                                    } catch (e) {
-                                        toast({ title: "Error", description: "Could not add record." })
+                                    } catch (e: any) {
+                                        toast({ title: "Error", description: e.message || "Could not add record.", variant: "destructive" })
                                     } finally {
                                         setIsSaving(false)
                                     }
@@ -551,7 +607,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             {tableRecords.length > 0 && (
                 <div className="p-6 bg-muted/5 border-b border-border">
                     <div className="flex flex-col md:flex-row gap-6 items-start">
-                         <div className="w-full md:w-1/3 p-6 bg-primary/5 rounded-2xl border border-primary/10 flex flex-col justify-center">
+                        <div className="w-full md:w-1/3 p-6 bg-primary/5 rounded-2xl border border-primary/10 flex flex-col justify-center">
                             <div className="flex items-center gap-2 text-primary mb-2">
                                 <TrendingUp className="w-4 h-4" />
                                 <span className="text-xs font-bold uppercase tracking-wider">Entry Performance</span>
@@ -561,7 +617,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                 ₱{tableTotals.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                             </p>
                         </div>
-                        {reportPeriod === "yearly" && (
+                        {reportPeriod !== "monthly" && (
                             <div className="w-full md:w-2/3 h-[200px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={yearlyChartData}>
@@ -593,7 +649,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                             </th>
                             <th colSpan={6} className="text-right pb-4 border-none align-bottom">
                                 <div className="flex items-center justify-end gap-3 mb-2">
-                                     <Input placeholder="Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-64 h-10" />
+                                    <Input placeholder="Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-64 h-10" />
                                 </div>
                             </th>
                         </tr>
@@ -609,7 +665,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                             <th className="p-2 border border-border text-center font-bold text-[10px]">AIRCON</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px]">ELECTRICAL</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px]">MECHANICAL</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">TOTAL<br/><span className="text-[7px] font-normal leading-tight opacity-80">(w/ VAT/DISCOUNT)</span></th>
+                            <th className="p-2 border border-border text-center font-bold text-[10px]">TOTAL<br /><span className="text-[7px] font-normal leading-tight opacity-80">(w/ VAT/DISCOUNT)</span></th>
                             <th className="p-2 border border-border text-center font-bold text-[10px] w-12">MOD</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px]">DATE ENTERED</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px] w-32">REMARKS</th>
@@ -636,12 +692,12 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     <tr key={r.id} className={`border-b border-border ${isEditing ? 'bg-muted/30' : 'hover:bg-muted/10'}`}>
                                         <td className="p-2 border border-border text-center">
                                             {isEditing ? (
-                                                <button onClick={() => handleDeleteRecord(r.id, r.name)} className="text-red-500"><Trash2 className="w-3 h-3"/></button>
+                                                <button onClick={() => handleDeleteRecord(r.id, r.name)} className="text-red-500"><Trash2 className="w-3 h-3" /></button>
                                             ) : (idx + 1)}
                                         </td>
                                         <td className="p-2 border border-border">{unitStr}</td>
                                         <td className="p-2 border border-border text-center">
-                                            {isEditing ? <Input className="h-6 text-[10px]" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({...prev, [r.id]: {...(prev[r.id]||{}), vehicle_plate: e.target.value}}))} /> : (r.vehicle_plate || r.vehiclePlate)}
+                                            {isEditing ? <Input className="h-6 text-[10px]" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_plate: e.target.value } }))} /> : (r.vehicle_plate || r.vehiclePlate)}
                                         </td>
                                         <td className="p-2 border border-border text-center">{r.vehicle_color || r.vehicleColor}</td>
                                         <td className="p-2 border border-border">{r.name}</td>

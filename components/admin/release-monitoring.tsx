@@ -4,6 +4,10 @@ import React, { useState, useMemo } from "react"
 import { Printer, Calendar as CalendarIcon, FileDown, Eye, Edit, Save, Loader2, X, FileCheck, FileX, Trash2, RefreshCw, BarChart3, TrendingUp, Search } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Button } from "@/components/ui/button"
+import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -62,7 +66,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
     // Sort years descending
     const availableYears = Array.from(yearsSet).sort((a, b) => b.localeCompare(a))
 
-    const [reportPeriod, setReportPeriod] = useState<"monthly" | "yearly">("monthly")
+    const [reportPeriod, setReportPeriod] = useState<"monthly" | "yearly" | "all">("monthly")
 
     // Default to the latest month or current month if no data
     const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
@@ -84,7 +88,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
     }, [availableMonths, selectedMonth, monthsMap])
 
     React.useEffect(() => {
-        if (availableYears.length > 0 && !yearsSet.has(selectedYear)) {
+        if (availableYears.length > 0 && selectedYear !== "all" && !yearsSet.has(selectedYear)) {
             setSelectedYear(availableYears[0])
         }
     }, [availableYears, selectedYear, yearsSet])
@@ -131,9 +135,9 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
             if (reportPeriod === "monthly") {
                 const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
                 if (key !== selectedMonth) return false
-            } else {
+            } else if (reportPeriod === "yearly") {
                 const year = d.getFullYear().toString()
-                if (year !== selectedYear) return false
+                if (selectedYear !== "all" && year !== selectedYear) return false
             }
 
             // Comprehensive Search filter (Normalized & Tokenized)
@@ -176,7 +180,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
     // Get display text for the period
     const reportPeriodLabel = reportPeriod === "monthly"
         ? (monthsMap.get(selectedMonth) || new Date(selectedMonth + "-01").toLocaleDateString("en-US", { month: "long", year: "numeric" }))
-        : `Full Year ${selectedYear}`
+        : (reportPeriod === "all" || selectedYear === "all" ? "All Years" : `Full Year ${selectedYear}`)
 
     const getCategorizedCosts = (costing: any) => {
         let result = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 }
@@ -211,24 +215,43 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
 
     // Calculate chart data for Yearly View
     const yearlyChartData = useMemo(() => {
-        if (reportPeriod !== "yearly") return []
+        if (reportPeriod === "monthly") return []
 
-        const data = Array.from({ length: 12 }, (_, i) => ({
-            name: new Date(2000, i).toLocaleDateString("en-US", { month: "short" }),
-            monthNum: i + 1,
-            total: 0
-        }))
+        if (reportPeriod === "all" || selectedYear === "all") {
+            const dataMap = new Map<string, number>()
+            availableYears.forEach(y => dataMap.set(y, 0))
 
-        tableRecords.forEach(r => {
-            const dateStr = r.completed_at || r.original_created_at
-            const d = new Date(dateStr)
-            const m = d.getMonth()
-            const costs = getCategorizedCosts(r.costing)
-            data[m].total += costs.total
-        })
+            tableRecords.forEach(r => {
+                const dateStr = r.completed_at || r.original_created_at
+                if (!dateStr) return
+                const d = new Date(dateStr)
+                const year = d.getFullYear().toString()
+                const costs = getCategorizedCosts(r.costing)
+                dataMap.set(year, (dataMap.get(year) || 0) + costs.total)
+            })
 
-        return data
-    }, [tableRecords, reportPeriod])
+            return Array.from(dataMap.entries())
+                .map(([name, total]) => ({ name, total }))
+                .sort((a, b) => a.name.localeCompare(b.name))
+        } else {
+            const data = Array.from({ length: 12 }, (_, i) => ({
+                name: new Date(2000, i).toLocaleDateString("en-US", { month: "short" }),
+                monthNum: i + 1,
+                total: 0
+            }))
+
+            tableRecords.forEach(r => {
+                const dateStr = r.completed_at || r.original_created_at
+                if (!dateStr) return
+                const d = new Date(dateStr)
+                const m = d.getMonth()
+                const costs = getCategorizedCosts(r.costing)
+                data[m].total += costs.total
+            })
+
+            return data
+        }
+    }, [tableRecords, reportPeriod, selectedYear, availableYears])
 
     const totalYearlySales = useMemo(() => {
         return tableRecords.reduce((sum, r) => {
@@ -345,9 +368,10 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                             <SelectContent>
                                 <SelectItem value="monthly">Monthly</SelectItem>
                                 <SelectItem value="yearly">Yearly</SelectItem>
+                                <SelectItem value="all">All Years</SelectItem>
                             </SelectContent>
                         </Select>
-
+ 
                         {reportPeriod === "monthly" ? (
                             <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isEditing || isSaving}>
                                 <SelectTrigger className="w-[180px]">
@@ -363,7 +387,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                     )}
                                 </SelectContent>
                             </Select>
-                        ) : (
+                        ) : reportPeriod === "yearly" ? (
                             <Select value={selectedYear} onValueChange={setSelectedYear} disabled={isEditing || isSaving}>
                                 <SelectTrigger className="w-[120px]">
                                     <SelectValue placeholder="Select Year" />
@@ -378,7 +402,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                     )}
                                 </SelectContent>
                             </Select>
-                        )}
+                        ) : null}
                     </div>
 
                     {!isEditing ? (
@@ -441,8 +465,35 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                     <Input id="m_insurance" value={manualEntry.insurance} onChange={(e) => setManualEntry({ ...manualEntry, insurance: e.target.value })} className="col-span-3" />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="m_date" className="text-right">Release Date</Label>
-                                    <Input id="m_date" type="date" value={manualEntry.completed_at} onChange={(e) => setManualEntry({ ...manualEntry, completed_at: e.target.value })} className="col-span-3" />
+                                    <Label htmlFor="r_date" className="text-right">Release Date</Label>
+                                    <div className="col-span-3">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "w-full justify-start text-left font-normal h-10",
+                                                        !manualEntry.completed_at && "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {manualEntry.completed_at ? (
+                                                        format(new Date(manualEntry.completed_at), "PPP")
+                                                    ) : (
+                                                        <span>Pick a date</span>
+                                                    )}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={manualEntry.completed_at ? new Date(manualEntry.completed_at) : undefined}
+                                                    onSelect={(date) => setManualEntry({ ...manualEntry, completed_at: date ? format(date, "yyyy-MM-dd") : "" })}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label className="text-right">Breakdown</Label>
@@ -496,6 +547,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             body: JSON.stringify({
                                                 manualData: {
                                                     ...manualEntry,
+                                                    vehicle_year: manualEntry.vehicle_year || "",
                                                     costing: { 
                                                         total: manualEntry.total_amount, 
                                                         gatepass_breakdown: { 
@@ -529,10 +581,11 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             })
                                             onUpdate?.()
                                         } else {
-                                            throw new Error("Failed to add record")
+                                            const errorData = await response.json().catch(() => ({}));
+                                            throw new Error(errorData.error || "Failed to add record")
                                         }
-                                    } catch (e) {
-                                        toast({ title: "Error", description: "Could not add manual record.", variant: "destructive" })
+                                    } catch (e: any) {
+                                        toast({ title: "Error", description: e.message || "Could not add manual record.", variant: "destructive" })
                                     } finally {
                                         setIsSaving(false)
                                     }
@@ -546,7 +599,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                 </div>
             </div>
 
-            {reportPeriod === "yearly" && tableRecords.length > 0 && (
+            {reportPeriod !== "monthly" && tableRecords.length > 0 && (
                 <div className="p-6 bg-muted/5 border-b border-border">
                     <div className="flex flex-col md:flex-row gap-6 items-start">
                         <div className="w-full md:w-1/3 p-6 bg-primary/5 rounded-2xl border border-primary/10 flex flex-col justify-center">
@@ -554,7 +607,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                 <TrendingUp className="w-4 h-4" />
                                 <span className="text-xs font-bold uppercase tracking-wider">Annual Performance</span>
                             </div>
-                            <h4 className="text-sm text-muted-foreground">Total Sales for {selectedYear}</h4>
+                            <h4 className="text-sm text-muted-foreground">Total Sales for {reportPeriod === "all" || selectedYear === "all" ? "All Years" : selectedYear}</h4>
                             <p className="text-4xl font-black text-primary mt-2">
                                 ₱{totalYearlySales.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                             </p>

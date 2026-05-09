@@ -868,6 +868,11 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         <td class="text-right">${costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right" style="font-weight: bold;">${costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td>${r.current_repair_part || r.currentRepairPart || ""}</td>
+        ${isSales ? `
+        <td style="font-weight: bold;">
+          ${(r.source === 'history' || r.completed_at || r.isArchived) ? "RELEASED" : "IN-PROGRESS"}
+        </td>
+        ` : ""}
         ${showCompleteDate ? `<td>${completeDateStr}</td>` : ""}
         <td>${releaseDateStr}</td>
         <td class="text-left">${r.paul_notes || r.paulNotes || r.remarks || ""}</td>
@@ -883,7 +888,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       <td class="text-right" style="border-top: 2px solid #000;">${totalElectrical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000;">${totalMechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000; color: #c00;">${grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-      <td colspan="${title.includes("SALES") ? "3" : "4"}" style="border-top: 2px solid #000;"></td>
+      <td colspan="4" style="border-top: 2px solid #000;"></td>
     </tr>
   ` : "";
 
@@ -945,7 +950,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
   <table>
     <thead>
       <tr>
-        <th colspan="${title.includes("SALES") ? "15" : "16"}" style="text-align: left; border: none; padding-bottom: 10px;">
+        <th colspan="16" style="text-align: left; border: none; padding-bottom: 10px;">
           <h1>
             <span style="color: #FF0000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc; padding-right: 5px;">${title.split(' ')[0]}</span>
             <span style="color: #000000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;">${title.split(' ').slice(1).join(' ')}</span>
@@ -970,6 +975,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         <th style="font-size: 8px; width: 6%;">MECHANICAL</th>
         <th style="font-size: 8px; width: 7%;">TOTAL<br/><span style="font-size: 5px; font-weight: normal; letter-spacing: -0.5px;">(w/ VAT/DISCOUNT)</span></th>
         <th style="font-size: 8px; width: 4%;">MOD</th>
+        ${title.includes("SALES") ? `<th style="font-size: 8px; width: 6%;">STATUS</th>` : ""}
         ${!title.includes("SALES") ? `<th style="font-size: 8px; width: 7%;">DATE COMPLETE</th>` : ""}
         <th style="font-size: 8px; width: 7%;">${dateColumnLabel}</th>
         <th style="font-size: 8px; width: 10%;">REMARKS</th>
