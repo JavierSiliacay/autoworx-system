@@ -1,6 +1,7 @@
 import React from "react"
 import type { Metadata } from "next"
 import { WhatIsNewModal } from "@/components/admin/what-is-new-modal"
+import { AppointmentNotificationListener } from "@/components/admin/appointment-notification-listener"
 
 export const metadata: Metadata = {
   title: "Admin Panel | Autoworx Repairs",
@@ -15,6 +16,7 @@ export default function AdminLayout({
   return (
     <>
       <WhatIsNewModal />
+      <AppointmentNotificationListener />
       {children}
     </>
   )
