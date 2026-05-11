@@ -71,8 +71,11 @@ export async function PUT(request: Request) {
     if (updates.email !== undefined) dbUpdates.email = updates.email
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone
     if (updates.estimate_number !== undefined) dbUpdates.estimate_number = updates.estimate_number
+    if (updates.estimateNumber !== undefined) dbUpdates.estimate_number = updates.estimateNumber
     if (updates.vehicle_plate !== undefined) dbUpdates.vehicle_plate = updates.vehicle_plate
+    if (updates.vehiclePlate !== undefined) dbUpdates.vehicle_plate = updates.vehiclePlate
     if (updates.vehicle_color !== undefined) dbUpdates.vehicle_color = updates.vehicle_color
+    if (updates.vehicleColor !== undefined) dbUpdates.vehicle_color = updates.vehicleColor
     if (updates.vehicle_make !== undefined) dbUpdates.vehicle_make = updates.vehicle_make
     if (updates.vehicleMake !== undefined) dbUpdates.vehicle_make = updates.vehicleMake
     if (updates.vehicle_model !== undefined) dbUpdates.vehicle_model = updates.vehicle_model

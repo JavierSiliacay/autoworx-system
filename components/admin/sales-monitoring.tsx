@@ -146,11 +146,11 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
         vehicle_plate: "",
         insurance: "Personal Claim",
         created_at: new Date().toISOString().split('T')[0],
-        total_amount: 0,
-        brpad: 0,
-        aircon: 0,
-        electrical: 0,
-        mechanical: 0,
+        total_amount: "",
+        brpad: "",
+        aircon: "",
+        electrical: "",
+        mechanical: "",
         remarks: ""
     })
 
@@ -228,7 +228,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
         
         if (!costing && !edited.brpad && !edited.aircon && !edited.electrical && !edited.mechanical) return result
 
-        // If we are editing costs directly, prioritze those
+        // If we are currently editing costs, prioritize those live values
         if (edited.brpad !== undefined || edited.aircon !== undefined || edited.electrical !== undefined || edited.mechanical !== undefined || edited.total !== undefined) {
             result.brpad = Number(edited.brpad ?? (costing?.gatepass_breakdown?.brpad ?? 0))
             result.aircon = Number(edited.aircon ?? (costing?.gatepass_breakdown?.aircon ?? 0))
@@ -248,6 +248,19 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             }
             result.total = edited.total !== undefined ? Number(edited.total) : (subtotal - discount + vat);
             return result
+        }
+
+        // PRIORITIZE SAVED OVERRIDES: If a manual adjustment (gatepass_breakdown) exists, use it.
+        // This allows admins to override the original estimate numbers in Sales Monitoring.
+        if (costing?.gatepass_breakdown) {
+            const gb = costing.gatepass_breakdown
+            return {
+                brpad: Number(gb.brpad) || 0,
+                aircon: Number(gb.aircon) || 0,
+                electrical: Number(gb.electrical) || 0,
+                mechanical: Number(gb.mechanical) || 0,
+                total: Number(gb.total) || Number(costing.total) || 0
+            }
         }
 
         // Sales Monitoring only: exclusively sum up the original Repair Estimate items
@@ -276,17 +289,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             return result
         }
 
-        // MANUAL ENTRY FALLBACK: If items produced no numbers
-        if (costing?.gatepass_breakdown) {
-            const gb = costing.gatepass_breakdown
-            return {
-                brpad: Number(gb.brpad) || 0,
-                aircon: Number(gb.aircon) || 0,
-                electrical: Number(gb.electrical) || 0,
-                mechanical: Number(gb.mechanical) || 0,
-                total: Number(gb.total) || Number(costing.total) || 0
-            }
-        }
+
 
         return result
     }
@@ -382,33 +385,49 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
     }
 
     const handleDeleteRecord = async (id: string, name: string) => {
-        // In Sales Monitoring, "Delete" might mean un-syncing if it's active, 
-        // or removing from history. For now, let's keep it simple and handle history cases.
-        if (id.length > 36) { // Likely a client-side ID or composite
-            toast({ title: "Note", description: "Currently only history records can be permanently deleted from here." })
-            return
+        const record = records.find(r => String(r.id) === String(id));
+        if (!record) {
+            toast({ title: "Error", description: "Record not found in current view.", variant: "destructive" });
+            return;
         }
 
-        if (!window.confirm(`Are you sure you want to PERMANENTLY remove "${name}" from the history/report?`)) {
+        if (!window.confirm(`Are you sure you want to PERMANENTLY remove "${name}" from the system? This action cannot be undone.`)) {
             return
         }
 
         setIsSaving(true)
         try {
-            const response = await fetch("/api/history?permanent=true", {
+            // Determine if the record is from history/archived or still in active appointments
+            const isHistory = record.source === 'history' || !!record.archived_at;
+            const endpoint = isHistory ? "/api/history?permanent=true" : "/api/appointments?permanent=true";
+
+            const response = await fetch(endpoint, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id })
             })
 
+            const data = await response.json().catch(() => ({}));
+
             if (response.ok) {
-                toast({ title: "Removed", description: "Record has been permanently deleted." })
-                onUpdate?.()
+                toast({ 
+                    title: "Record Deleted", 
+                    description: `"${name}" has been permanently removed from the database.`,
+                })
+                // Trigger refresh in parent component
+                if (onUpdate) {
+                    onUpdate();
+                }
             } else {
-                throw new Error("Delete failed")
+                throw new Error(data.error || "Delete request failed");
             }
-        } catch (e) {
-            toast({ title: "Error", description: "Could not remove record.", variant: "destructive" })
+        } catch (e: any) {
+            console.error("[SalesMonitoring] Delete error:", e);
+            toast({ 
+                title: "Deletion Failed", 
+                description: e.message || "Could not remove record. Please check your connection and try again.", 
+                variant: "destructive" 
+            })
         } finally {
             setIsSaving(false)
         }
@@ -520,7 +539,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         const record = records.find(r => String(r.id) === String(id))
                                         if (!record) continue
 
-                                        const isHistory = record.archived_at || record.source === 'history' || record.completed_at;
+                                        const isHistory = record.source === 'history' || !!record.archived_at;
                                         const endpoint = isHistory ? "/api/history" : "/api/appointments";
 
                                         const updates: any = { ...rawUpdates }
@@ -709,8 +728,12 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             <Input type="text" value={formatWithCommas(manualEntry.brpad)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    const val = parseFloat(rawValue) || 0;
-                                                    setManualEntry({ ...manualEntry, brpad: val, total_amount: val + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                                    const newTotal = (Number(rawValue) || 0) + (Number(manualEntry.aircon) || 0) + (Number(manualEntry.electrical) || 0) + (Number(manualEntry.mechanical) || 0);
+                                                    setManualEntry({ 
+                                                        ...manualEntry, 
+                                                        brpad: rawValue, 
+                                                        total_amount: String(newTotal) 
+                                                    });
                                                 }
                                             }} className="h-8" />
                                         </div>
@@ -719,8 +742,12 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             <Input type="text" value={formatWithCommas(manualEntry.aircon)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    const val = parseFloat(rawValue) || 0;
-                                                    setManualEntry({ ...manualEntry, aircon: val, total_amount: (manualEntry.brpad || 0) + val + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                                    const newTotal = (Number(manualEntry.brpad) || 0) + (Number(rawValue) || 0) + (Number(manualEntry.electrical) || 0) + (Number(manualEntry.mechanical) || 0);
+                                                    setManualEntry({ 
+                                                        ...manualEntry, 
+                                                        aircon: rawValue, 
+                                                        total_amount: String(newTotal) 
+                                                    });
                                                 }
                                             }} className="h-8" />
                                         </div>
@@ -729,8 +756,12 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             <Input type="text" value={formatWithCommas(manualEntry.electrical)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    const val = parseFloat(rawValue) || 0;
-                                                    setManualEntry({ ...manualEntry, electrical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + val + (manualEntry.mechanical || 0) });
+                                                    const newTotal = (Number(manualEntry.brpad) || 0) + (Number(manualEntry.aircon) || 0) + (Number(rawValue) || 0) + (Number(manualEntry.mechanical) || 0);
+                                                    setManualEntry({ 
+                                                        ...manualEntry, 
+                                                        electrical: rawValue, 
+                                                        total_amount: String(newTotal) 
+                                                    });
                                                 }
                                             }} className="h-8" />
                                         </div>
@@ -739,8 +770,12 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             <Input type="text" value={formatWithCommas(manualEntry.mechanical)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    const val = parseFloat(rawValue) || 0;
-                                                    setManualEntry({ ...manualEntry, mechanical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + val });
+                                                    const newTotal = (Number(manualEntry.brpad) || 0) + (Number(manualEntry.aircon) || 0) + (Number(manualEntry.electrical) || 0) + (Number(rawValue) || 0);
+                                                    setManualEntry({ 
+                                                        ...manualEntry, 
+                                                        mechanical: rawValue, 
+                                                        total_amount: String(newTotal) 
+                                                    });
                                                 }
                                             }} className="h-8" />
                                         </div>
@@ -755,16 +790,16 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    setManualEntry({ ...manualEntry, total_amount: parseFloat(rawValue) || 0 });
+                                                    setManualEntry({ ...manualEntry, total_amount: rawValue });
                                                 }
                                             }}
                                             className="font-bold text-red-600 border-red-200 focus:border-red-500 h-9"
                                             placeholder="Enter final total amount"
                                         />
                                         <p className="text-[9px] text-muted-foreground mt-1 italic flex justify-between items-center">
-                                            <span>Calculated sum: ₱{((manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                                            {manualEntry.total_amount !== ((manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0)) && (
-                                                <span className="text-red-600 font-bold bg-red-50 px-1 rounded">Entered Total: ₱{manualEntry.total_amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                                            <span>Calculated sum: ₱{((Number(manualEntry.brpad) || 0) + (Number(manualEntry.aircon) || 0) + (Number(manualEntry.electrical) || 0) + (Number(manualEntry.mechanical) || 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                                            {Number(manualEntry.total_amount) !== ((Number(manualEntry.brpad) || 0) + (Number(manualEntry.aircon) || 0) + (Number(manualEntry.electrical) || 0) + (Number(manualEntry.mechanical) || 0)) && (
+                                                <span className="text-red-600 font-bold bg-red-50 px-1 rounded">Entered Total: ₱{Number(manualEntry.total_amount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
                                             )}
                                         </p>
                                     </div>
@@ -792,13 +827,13 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                         return dateWithTime.toISOString();
                                                     })(),
                                                     costing: {
-                                                        total: manualEntry.total_amount,
+                                                        total: Number(manualEntry.total_amount) || 0,
                                                         gatepass_breakdown: {
-                                                            brpad: manualEntry.brpad || 0,
-                                                            aircon: manualEntry.aircon || 0,
-                                                            electrical: manualEntry.electrical || 0,
-                                                            mechanical: manualEntry.mechanical || 0,
-                                                            total: manualEntry.total_amount
+                                                            brpad: Number(manualEntry.brpad) || 0,
+                                                            aircon: Number(manualEntry.aircon) || 0,
+                                                            electrical: Number(manualEntry.electrical) || 0,
+                                                            mechanical: Number(manualEntry.mechanical) || 0,
+                                                            total: Number(manualEntry.total_amount) || 0
                                                         }
                                                     }
                                                 }
@@ -815,11 +850,11 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 vehicle_plate: "",
                                                 insurance: "Personal Claim",
                                                 created_at: new Date().toISOString().split('T')[0],
-                                                total_amount: 0,
-                                                brpad: 0,
-                                                aircon: 0,
-                                                electrical: 0,
-                                                mechanical: 0,
+                                                total_amount: "",
+                                                brpad: "",
+                                                aircon: "",
+                                                electrical: "",
+                                                mechanical: "",
                                                 remarks: ""
                                             })
                                             onUpdate?.()
@@ -1005,7 +1040,13 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     hour12: true
                                 }) : ""
                                 const costs = getCategorizedCosts(r)
-                                const currentVal = (field: string) => editedData[r.id]?.[field] !== undefined ? editedData[r.id][field] : (r[field] || "")
+                                const currentVal = (field: string) => {
+                                    if (editedData[r.id]?.[field] !== undefined) return editedData[r.id][field];
+                                    
+                                    // Try snake_case then camelCase
+                                    const camelField = field.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+                                    return r[field] ?? r[camelField] ?? "";
+                                }
 
                                 return (
                                     <tr key={r.id} className={`border-b border-border ${isEditing ? 'bg-muted/30' : 'hover:bg-muted/10'}`}>
@@ -1109,7 +1150,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                         if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
                                                             setEditedData(prev => ({ 
                                                                 ...prev, 
-                                                                [r.id]: { ...(prev[r.id] || {}), total: parseFloat(rawValue) || 0 } 
+                                                                [r.id]: { ...(prev[r.id] || {}), total: rawValue } 
                                                             }))
                                                         }
                                                     }} 
@@ -1186,7 +1227,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                 <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.aircon > 0 ? tableTotals.aircon.toLocaleString() : "-"}</td>
                                 <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.electrical > 0 ? tableTotals.electrical.toLocaleString() : "-"}</td>
                                 <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.mechanical > 0 ? tableTotals.mechanical.toLocaleString() : "-"}</td>
-                                <td className="p-2 border border-border text-right font-mono text-primary text-[11px] font-black">₱{tableTotals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                <td className="p-2 border border-border text-right font-mono text-blue-600 dark:text-blue-400 text-[12px] font-black">₱{tableTotals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                 <td colSpan={4} className="p-2 border border-border"></td>
                             </tr>
                         </tfoot>

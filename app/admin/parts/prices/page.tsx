@@ -38,6 +38,15 @@ interface PartPrice {
 }
 
 const CATEGORIES = ["PMS", "Brakes", "Suspension", "Engine", "Electrical", "Body Parts", "General"]
+ 
+const formatNumberWithCommas = (val: string) => {
+  const numeric = val.replace(/[^0-9.]/g, "");
+  const parts = numeric.split(".");
+  // Only allow one decimal point
+  if (parts.length > 2) return parts[0] + "." + parts[1];
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.join(".");
+};
 
 export default function PartsPricesPage() {
   const router = useRouter()
@@ -95,14 +104,28 @@ export default function PartsPricesPage() {
     const brands = new Set(prices.map(p => p.brand))
     return Array.from(brands)
   }, [prices])
+ 
+  const brandCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    prices.forEach(p => {
+      counts[p.brand] = (counts[p.brand] || 0) + 1
+    })
+    return counts
+  }, [prices])
 
   const filteredPrices = useMemo(() => {
+    const searchTokens = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean)
+
     return prices.filter(p => {
-      const matchesBrand = !selectedBrand || p.brand === selectedBrand
-      const matchesSearch = !searchQuery || 
-        p.part_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.category.toLowerCase().includes(searchQuery.toLowerCase())
+      // 1. Brand Filter
+      const matchesBrand = !selectedBrand || selectedBrand === "All Brands" || p.brand === selectedBrand
+
+      // 2. Tokenized Search Filter
+      if (searchTokens.length === 0) return matchesBrand
+
+      const searchableText = `${p.part_name} ${p.brand} ${p.category} ${p.specifications || ""}`.toLowerCase()
+      const matchesSearch = searchTokens.every(token => searchableText.includes(token))
+
       return matchesBrand && matchesSearch
     })
   }, [prices, selectedBrand, searchQuery])
@@ -117,7 +140,8 @@ export default function PartsPricesPage() {
     setIsSaving(true)
     try {
       const method = editingPart ? "PUT" : "POST"
-      const payload = editingPart ? { ...formData, id: editingPart.id, price: Number(formData.price) } : { ...formData, price: Number(formData.price) }
+      const cleanPrice = Number(formData.price.replace(/,/g, ""))
+      const payload = editingPart ? { ...formData, id: editingPart.id, price: cleanPrice } : { ...formData, price: cleanPrice }
       
       const res = await fetch("/api/parts/prices", {
         method,
@@ -130,10 +154,12 @@ export default function PartsPricesPage() {
         setIsModalOpen(false)
         fetchPrices()
       } else {
-        throw new Error("Failed to save")
+        const errorData = await res.json().catch(() => ({ error: "Unknown database error" }))
+        throw new Error(errorData.error || "Failed to save")
       }
-    } catch (err) {
-      toast({ title: "Error", description: "Failed to save data.", variant: "destructive" })
+    } catch (err: any) {
+      console.error("Save error:", err)
+      toast({ title: "Error", description: err.message || "Failed to save data.", variant: "destructive" })
     } finally {
       setIsSaving(false)
     }
@@ -171,7 +197,7 @@ export default function PartsPricesPage() {
       brand: part.brand,
       part_name: part.part_name,
       category: part.category,
-      price: String(part.price),
+      price: formatNumberWithCommas(String(part.price)),
       specifications: part.specifications || ""
     })
     setIsModalOpen(true)
@@ -192,7 +218,7 @@ export default function PartsPricesPage() {
       <header className="bg-white border-b sticky top-0 z-30 px-4 py-4 md:px-8 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.push("/admin/dashboard")}>
+            <Button variant="ghost" size="icon" onClick={() => router.push("/admin/dashboard")} className="text-slate-900 hover:bg-slate-200 hover:text-black transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
@@ -209,7 +235,7 @@ export default function PartsPricesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input 
                 placeholder="Search parts or brands..." 
-                className="pl-9 bg-slate-100/50 border-slate-200 focus:bg-white transition-all"
+                className="pl-9 bg-slate-100/50 border-slate-200 focus:bg-white transition-all text-black font-medium"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -235,7 +261,7 @@ export default function PartsPricesPage() {
                 <CarFront className="w-5 h-5 text-primary" />
                 Select a Brand
               </h2>
-              <Badge variant="outline" className="bg-white">{VEHICLE_BRANDS.length} Brands Available</Badge>
+              <Badge variant="outline" className="bg-white text-slate-900 border-slate-300 font-bold">{VEHICLE_BRANDS.length - 1} Brands Available</Badge>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -250,6 +276,17 @@ export default function PartsPricesPage() {
                   <Globe className="w-8 h-8 text-slate-400 group-hover:text-primary transition-colors" />
                 </div>
                 <span className="font-black text-xs uppercase tracking-widest text-slate-600 group-hover:text-primary">All Brands</span>
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  {prices.length > 0 ? (
+                    <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[9px] font-bold border-none px-2 py-0.5">
+                      {prices.length} Items
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="bg-slate-50 text-slate-400 text-[9px] font-medium border-none px-2 py-0.5">
+                      No items
+                    </Badge>
+                  )}
+                </div>
               </motion.button>
 
               {VEHICLE_BRANDS.filter(b => b !== "Other").map((brand) => {
@@ -281,7 +318,17 @@ export default function PartsPricesPage() {
                       </div>
                     </div>
                     <span className="font-black text-[10px] uppercase tracking-widest text-slate-500 group-hover:text-primary transition-colors">{brand}</span>
-                    {hasPrices && <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/10" />}
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      {hasPrices ? (
+                        <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 text-[9px] font-black border-emerald-100 px-2 py-0.5 shadow-sm">
+                          {brandCounts[brand] || 0} Items
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-slate-50 text-slate-400 text-[9px] font-medium border-slate-100 px-2 py-0.5">
+                          No items listed
+                        </Badge>
+                      )}
+                    </div>
                   </motion.button>
                 )
               })}
@@ -296,9 +343,9 @@ export default function PartsPricesPage() {
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <Button variant="outline" size="sm" onClick={() => setSelectedBrand(null)} className="rounded-full">
+                <Button variant="outline" size="sm" onClick={() => setSelectedBrand(null)} className="rounded-full bg-white text-slate-900 border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all shadow-sm">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
+                  <span className="font-bold">Back</span>
                 </Button>
                 <div className="flex items-center gap-3">
                   {selectedBrand !== "All Brands" && (
@@ -315,7 +362,7 @@ export default function PartsPricesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">{filteredPrices.length} Items</Badge>
+                <Badge className="bg-slate-900 text-white hover:bg-slate-800 border-none px-3 py-1 font-bold">{filteredPrices.length} Items</Badge>
                 <Button size="sm" onClick={() => openAddModal(selectedBrand === "All Brands" ? "" : selectedBrand)} className="gap-2">
                   <Plus className="w-4 h-4" />
                   Add New
@@ -420,7 +467,7 @@ export default function PartsPricesPage() {
                   value={formData.brand} 
                   onValueChange={(val) => setFormData({...formData, brand: val})}
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200">
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 font-medium">
                     <SelectValue placeholder="Select Brand" />
                   </SelectTrigger>
                   <SelectContent>
@@ -436,7 +483,7 @@ export default function PartsPricesPage() {
                   value={formData.category} 
                   onValueChange={(val) => setFormData({...formData, category: val})}
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200">
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 font-medium">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -455,7 +502,7 @@ export default function PartsPricesPage() {
                 placeholder="e.g. Oil Filter, Brake Pads"
                 value={formData.part_name}
                 onChange={(e) => setFormData({...formData, part_name: e.target.value})}
-                className="bg-slate-50 border-slate-200"
+                className="bg-slate-50 border-slate-200 text-black font-medium"
               />
             </div>
 
@@ -465,12 +512,11 @@ export default function PartsPricesPage() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</span>
                 <Input 
                   id="price" 
-                  type="number"
-                  step="0.01"
+                  type="text"
                   placeholder="0.00"
                   value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: e.target.value})}
-                  className="pl-8 bg-slate-50 border-slate-200 font-bold text-primary text-lg"
+                  onChange={(e) => setFormData({...formData, price: formatNumberWithCommas(e.target.value)})}
+                  className="pl-8 bg-slate-50 border-slate-200 font-bold text-black text-lg"
                 />
               </div>
             </div>
@@ -482,7 +528,7 @@ export default function PartsPricesPage() {
                 placeholder="e.g. 1pc, 4L, or specific dimensions"
                 value={formData.specifications}
                 onChange={(e) => setFormData({...formData, specifications: e.target.value})}
-                className="bg-slate-50 border-slate-200"
+                className="bg-slate-50 border-slate-200 text-black"
               />
             </div>
 

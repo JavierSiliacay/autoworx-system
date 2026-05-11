@@ -316,37 +316,37 @@ export async function PUT(request: Request) {
       dbUpdates.status_updated_at = new Date().toISOString()
     }
   }
-  if (updates.repairStatus !== undefined) dbUpdates.repair_status = updates.repairStatus
-  if (updates.estimateNumber !== undefined) dbUpdates.estimate_number = updates.estimateNumber
-  if (updates.currentRepairPart !== undefined) dbUpdates.current_repair_part = updates.currentRepairPart
-  if (updates.statusUpdatedAt !== undefined) dbUpdates.status_updated_at = updates.statusUpdatedAt
+  if (updates.repairStatus !== undefined || updates.repair_status !== undefined) dbUpdates.repair_status = updates.repairStatus ?? updates.repair_status
+  if (updates.estimateNumber !== undefined || updates.estimate_number !== undefined) dbUpdates.estimate_number = updates.estimateNumber ?? updates.estimate_number
+  if (updates.currentRepairPart !== undefined || updates.current_repair_part !== undefined) dbUpdates.current_repair_part = updates.currentRepairPart ?? updates.current_repair_part
+  if (updates.statusUpdatedAt !== undefined || updates.status_updated_at !== undefined) dbUpdates.status_updated_at = updates.statusUpdatedAt ?? updates.status_updated_at
   if (updates.costing !== undefined) dbUpdates.costing = updates.costing
   if (updates.damageImages !== undefined) dbUpdates.damage_images = updates.damageImages
   if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
-  if (updates.paulNotes !== undefined) dbUpdates.paul_notes = updates.paulNotes
-  if (updates.orcrImage !== undefined) dbUpdates.orcr_image = updates.orcrImage
-  if (updates.orcrImage2 !== undefined) dbUpdates.orcr_image_2 = updates.orcrImage2
+  if (updates.paulNotes !== undefined || updates.paul_notes !== undefined) dbUpdates.paul_notes = updates.paulNotes ?? updates.paul_notes
+  if (updates.orcrImage !== undefined || updates.orcr_image !== undefined) dbUpdates.orcr_image = updates.orcrImage ?? updates.orcr_image
+  if (updates.orcrImage2 !== undefined || updates.orcr_image_2 !== undefined) dbUpdates.orcr_image_2 = updates.orcrImage2 ?? updates.orcr_image_2
   if (updates.serviceAdvisor !== undefined) dbUpdates.service_advisor = updates.serviceAdvisor
   if (updates.loaAttachment !== undefined) dbUpdates.loa_attachment = updates.loaAttachment
   if (updates.loaAttachment2 !== undefined) dbUpdates.loa_attachment_2 = updates.loaAttachment2
   if (updates.loaAttachments !== undefined) dbUpdates.loa_attachments = updates.loaAttachments
   if (updates.isBackJob !== undefined) dbUpdates.is_backjob = updates.isBackJob
   if (updates.isSynced !== undefined) dbUpdates.is_synced = updates.isSynced
-  if (updates.syncedAt !== undefined) dbUpdates.synced_at = updates.syncedAt
-  if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt
+  if (updates.syncedAt !== undefined || updates.synced_at !== undefined) dbUpdates.synced_at = updates.syncedAt ?? updates.synced_at
+  if (updates.completedAt !== undefined || updates.completed_at !== undefined) dbUpdates.completed_at = updates.completedAt ?? updates.completed_at
 
   // New editable fields
   if (updates.name !== undefined) dbUpdates.name = updates.name
   if (updates.email !== undefined) dbUpdates.email = updates.email
   if (updates.phone !== undefined) dbUpdates.phone = updates.phone
-  if (updates.vehicleMake !== undefined) dbUpdates.vehicle_make = updates.vehicleMake
-  if (updates.vehicleModel !== undefined) dbUpdates.vehicle_model = updates.vehicleModel
-  if (updates.vehicleYear !== undefined) dbUpdates.vehicle_year = updates.vehicleYear
-  if (updates.vehiclePlate !== undefined) dbUpdates.vehicle_plate = updates.vehiclePlate
-  if (updates.vehicleColor !== undefined) dbUpdates.vehicle_color = updates.vehicleColor
-  if (updates.chassisNumber !== undefined) dbUpdates.chassis_number = updates.chassisNumber
-  if (updates.engineNumber !== undefined) dbUpdates.engine_number = updates.engineNumber
-  if (updates.assigneeDriver !== undefined) dbUpdates.assignee_driver = updates.assigneeDriver
+  if (updates.vehicleMake !== undefined || updates.vehicle_make !== undefined) dbUpdates.vehicle_make = updates.vehicleMake ?? updates.vehicle_make
+  if (updates.vehicleModel !== undefined || updates.vehicle_model !== undefined) dbUpdates.vehicle_model = updates.vehicleModel ?? updates.vehicle_model
+  if (updates.vehicleYear !== undefined || updates.vehicle_year !== undefined) dbUpdates.vehicle_year = updates.vehicleYear ?? updates.vehicle_year
+  if (updates.vehiclePlate !== undefined || updates.vehicle_plate !== undefined) dbUpdates.vehicle_plate = updates.vehiclePlate ?? updates.vehicle_plate
+  if (updates.vehicleColor !== undefined || updates.vehicle_color !== undefined) dbUpdates.vehicle_color = updates.vehicleColor ?? updates.vehicle_color
+  if (updates.chassisNumber !== undefined || updates.chassis_number !== undefined) dbUpdates.chassis_number = updates.chassisNumber ?? updates.chassis_number
+  if (updates.engineNumber !== undefined || updates.engine_number !== undefined) dbUpdates.engine_number = updates.engineNumber ?? updates.engine_number
+  if (updates.assigneeDriver !== undefined || updates.assignee_driver !== undefined) dbUpdates.assignee_driver = updates.assigneeDriver ?? updates.assignee_driver
   if (updates.service !== undefined) dbUpdates.service = updates.service
   if (updates.message !== undefined) dbUpdates.message = updates.message
 
@@ -462,7 +462,10 @@ export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url)
   const isPermanent = searchParams.get("permanent") === "true"
 
+  const adminSupabase = await createAdminClient().catch(() => supabase)
+
   if (isPermanent) {
+    console.log(`[API Appointments DELETE] Permanent delete for ID: ${id}`);
     // Get the appointment to find image URLs for cleanup
     const { data: appointment } = await supabase
       .from("appointments")
@@ -480,7 +483,7 @@ export async function DELETE(request: Request) {
         .filter(Boolean)
 
       if (imagePaths.length > 0) {
-        await supabase.storage.from("damage-images").remove(imagePaths)
+        await adminSupabase.storage.from("damage-images").remove(imagePaths)
       }
     }
 
@@ -488,28 +491,28 @@ export async function DELETE(request: Request) {
     if (appointment?.orcr_image) {
       const orcrMatch = appointment.orcr_image.match(/damage-images\/(.+)$/)
       if (orcrMatch) {
-        await supabase.storage.from("damage-images").remove([orcrMatch[1]])
+        await adminSupabase.storage.from("damage-images").remove([orcrMatch[1]])
       }
     }
 
     if (appointment?.orcr_image_2) {
       const orcrMatch2 = appointment.orcr_image_2.match(/damage-images\/(.+)$/)
       if (orcrMatch2) {
-        await supabase.storage.from("damage-images").remove([orcrMatch2[1]])
+        await adminSupabase.storage.from("damage-images").remove([orcrMatch2[1]])
       }
     }
 
     if (appointment?.loa_attachment) {
       const loaMatch = appointment.loa_attachment.match(/damage-images\/(.+)$/)
       if (loaMatch) {
-        await supabase.storage.from("damage-images").remove([loaMatch[1]])
+        await adminSupabase.storage.from("damage-images").remove([loaMatch[1]])
       }
     }
 
     if (appointment?.loa_attachment_2) {
       const loaMatch2 = appointment.loa_attachment_2.match(/damage-images\/(.+)$/)
       if (loaMatch2) {
-        await supabase.storage.from("damage-images").remove([loaMatch2[1]])
+        await adminSupabase.storage.from("damage-images").remove([loaMatch2[1]])
       }
     }
 
@@ -517,27 +520,30 @@ export async function DELETE(request: Request) {
       for (const url of appointment.loa_attachments) {
         const match = url.match(/damage-images\/(.+)$/)
         if (match) {
-          await supabase.storage.from("damage-images").remove([match[1]])
+          await adminSupabase.storage.from("damage-images").remove([match[1]])
         }
       }
     }
 
-    const { error } = await supabase
+    const { error } = await adminSupabase
       .from("appointments")
       .delete()
       .eq("id", id)
 
     if (error) {
+      console.error(`[API Appointments DELETE] Error:`, error);
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
   } else {
     // Soft Delete
-    const { error } = await supabase
+    console.log(`[API Appointments DELETE] Soft delete for ID: ${id}`);
+    const { error } = await adminSupabase
       .from("appointments")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", id)
 
     if (error) {
+      console.error(`[API Appointments DELETE] Error:`, error);
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
   }

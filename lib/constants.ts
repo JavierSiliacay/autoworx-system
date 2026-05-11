@@ -1,4 +1,4 @@
-export const VEHICLE_BRANDS = ["Toyota", "Mitsubishi", "Honda", "Nissan", "Isuzu", "Ford", "Chevrolet", "Hyundai", "Kia", "Mazda", "Chery", "Foton", "GAC", "Geely", "MG", "Other"]
+export const VEHICLE_BRANDS = ["Toyota", "Mitsubishi", "Honda", "Nissan", "Isuzu", "Ford", "Chevrolet", "Hyundai", "Kia", "Mazda", "Chery", "Foton", "GAC", "Geely", "MG", "Suzuki", "Rusi", "Other"]
 
 export const SERVICES = [
   "Mechanical Services",
