@@ -38,31 +38,8 @@ export function AppointmentNotificationListener() {
             )
             .subscribe()
 
-        // 2. Listen for new manual entries or archived records (history table)
-        const historyChannel = supabase
-            .channel('realtime_history_notification')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'appointment_history'
-                },
-                (payload) => {
-                    console.log('New manual/history record added:', payload)
-                    playSound()
-                    toast({
-                        title: "📝 New Manual Entry Added",
-                        description: `${payload.new.name} has been added to the monitoring logs.`,
-                        duration: 10000,
-                    })
-                }
-            )
-            .subscribe()
-
         return () => {
             supabase.removeChannel(appointmentsChannel)
-            supabase.removeChannel(historyChannel)
         }
     }, [supabase, toast])
 

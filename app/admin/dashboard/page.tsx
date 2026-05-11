@@ -3620,10 +3620,42 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredAppointments.map((appointment) => {
-                  const status = statusConfig[appointment.status]
-                  const repairStatusInfo = getRepairStatusInfo(appointment.repairStatus)
-                  const isExpanded = expandedCards.has(appointment.id)
+                {(() => {
+                  // Pre-calculate plate counts for duplicate highlighting
+                  const plateCounts: Record<string, number> = {}
+                  filteredAppointments.forEach(apt => {
+                    const plate = apt.vehiclePlate?.trim().toUpperCase() || 'N/A'
+                    if (plate !== 'N/A') {
+                      plateCounts[plate] = (plateCounts[plate] || 0) + 1
+                    }
+                  })
+
+                  const plateRunningIndex: Record<string, number> = {}
+
+                  return filteredAppointments.map((appointment) => {
+                    const status = statusConfig[appointment.status]
+                    const repairStatusInfo = getRepairStatusInfo(appointment.repairStatus)
+                    const isExpanded = expandedCards.has(appointment.id)
+
+                    // Determine if this is a duplicate in the active list
+                    const plate = appointment.vehiclePlate?.trim().toUpperCase() || 'N/A'
+                    let duplicateLabel = ""
+                    let duplicateColor = ""
+
+                    if (plate !== 'N/A' && plateCounts[plate] > 1) {
+                      const encountered = plateRunningIndex[plate] || 0
+                      const currentIndex = plateCounts[plate] - encountered
+                      plateRunningIndex[plate] = encountered + 1
+
+                      if (currentIndex > 1) {
+                        duplicateLabel = `${currentIndex}${currentIndex === 2 ? 'nd' : currentIndex === 3 ? 'rd' : 'th'} Copy`
+                        duplicateColor = currentIndex === 2
+                          ? "text-blue-600 border-blue-500/50 bg-blue-500/10"
+                          : currentIndex === 3
+                            ? "text-indigo-600 border-indigo-500/50 bg-indigo-500/10"
+                            : "text-purple-600 border-purple-500/50 bg-purple-500/10"
+                      }
+                    }
 
                   return (
                     <div
@@ -3662,6 +3694,11 @@ export default function AdminDashboard() {
                           {appointment.isBackJob && (
                             <Badge variant="outline" className="text-amber-600 border-amber-500/50 bg-amber-500/10 rounded-full text-[10px] font-bold py-0 h-5">
                               BACK-JOB
+                            </Badge>
+                          )}
+                          {duplicateLabel && (
+                            <Badge variant="outline" className={cn("rounded-full text-[10px] font-bold py-0 h-5 animate-pulse", duplicateColor)}>
+                              {duplicateLabel}
                             </Badge>
                           )}
                         </div>
@@ -5165,7 +5202,7 @@ export default function AdminDashboard() {
                       )}
                     </div>
                   )
-                })}
+                })})()}
               </div>
             )}
           </div>
@@ -5485,11 +5522,6 @@ export default function AdminDashboard() {
                             <span className="font-medium text-foreground">
                               {record.name}
                             </span>
-                            {historySearchQuery.trim() && getHistoryMatchCategories(record, historySearchQuery).map(cat => (
-                              <Badge key={cat} variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4">
-                                {cat}
-                              </Badge>
-                            ))}
                           </div>
 
                           <div className="ml-auto flex items-center gap-2">

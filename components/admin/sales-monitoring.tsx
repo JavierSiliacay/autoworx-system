@@ -31,6 +31,8 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Check } from "lucide-react"
 
 const MONTHS = [
     { value: "01", label: "January" },
@@ -134,6 +136,8 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
     const [searchQuery, setSearchQuery] = useState("")
     const [claimTypeFilter, setClaimTypeFilter] = useState("all")
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
+    const [printFilter, setPrintFilter] = useState<"all" | "in-progress" | "released">("all")
     const [manualEntry, setManualEntry] = useState({
         name: "",
         vehicle_make: "",
@@ -337,10 +341,26 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
         }, { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 })
     }, [tableRecords, editedData])
 
-    const handlePrint = async () => {
+    const handlePrint = () => {
+        setIsPrintModalOpen(true)
+    }
+
+    const executePrint = async () => {
+        let filteredRecords = [...tableRecords]
+        if (printFilter === "in-progress") {
+            filteredRecords = tableRecords.filter(r => !(r.source === 'history' || r.completed_at || r.isArchived))
+        } else if (printFilter === "released") {
+            filteredRecords = tableRecords.filter(r => (r.source === 'history' || r.completed_at || r.isArchived))
+        }
+
+        if (filteredRecords.length === 0) {
+            toast({ title: "No data", description: `No ${printFilter} records found for this period.`, variant: "destructive" })
+            return
+        }
+
         // Reuse the same generator but we can customize the title if we want
-        const htmlContent = generateReleaseMonitoringDoc(tableRecords, reportPeriodLabel, (costing: any, recordId?: string) => {
-            const record = tableRecords.find(r => String(r.id) === String(recordId)) || { costing };
+        const htmlContent = generateReleaseMonitoringDoc(filteredRecords, reportPeriodLabel, (costing: any, recordId?: string) => {
+            const record = filteredRecords.find(r => String(r.id) === String(recordId)) || { costing };
             return getCategorizedCosts(record);
         }, "SALES MONITORING", "DATE ENTRY")
 
@@ -357,6 +377,8 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             printWindow.focus()
             printWindow.print()
         }, 800)
+        
+        setIsPrintModalOpen(false)
     }
 
     const handleDeleteRecord = async (id: string, name: string) => {
@@ -747,6 +769,10 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         </p>
                                     </div>
                                 </div>
+                                <div className="grid grid-cols-4 items-center gap-4 pt-2">
+                                    <Label htmlFor="s_remarks" className="text-right">Remarks</Label>
+                                    <Input id="s_remarks" value={manualEntry.remarks} onChange={(e) => setManualEntry({ ...manualEntry, remarks: e.target.value })} className="col-span-3" />
+                                </div>
                             </div>
                             <DialogFooter>
                                 <Button onClick={async () => {
@@ -781,6 +807,21 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         if (response.ok) {
                                             toast({ title: "Success", description: "Manual entry added." })
                                             setIsManualModalOpen(false)
+                                            setManualEntry({
+                                                name: "",
+                                                vehicle_make: "",
+                                                vehicle_model: "",
+                                                vehicle_year: "",
+                                                vehicle_plate: "",
+                                                insurance: "Personal Claim",
+                                                created_at: new Date().toISOString().split('T')[0],
+                                                total_amount: 0,
+                                                brpad: 0,
+                                                aircon: 0,
+                                                electrical: 0,
+                                                mechanical: 0,
+                                                remarks: ""
+                                            })
                                             onUpdate?.()
                                         } else {
                                             const errorData = await response.json().catch(() => ({}));
@@ -793,6 +834,87 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     }
                                 }} disabled={isSaving || !manualEntry.name}>
                                     Add Entry
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
+                        <DialogContent className="sm:max-w-[400px]">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Printer className="w-5 h-5 text-primary" />
+                                    Print Configuration
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Select which records to include in the <strong>{reportPeriodLabel}</strong> report.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="py-4">
+                                <RadioGroup value={printFilter} onValueChange={(v: any) => setPrintFilter(v)} className="grid gap-3">
+                                    <Label
+                                        htmlFor="print-all"
+                                        className={cn(
+                                            "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all hover:bg-muted/50",
+                                            printFilter === "all" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <RadioGroupItem value="all" id="print-all" className="sr-only" />
+                                            <div className="space-y-1">
+                                                <p className="font-medium leading-none">All Records</p>
+                                                <p className="text-xs text-muted-foreground">Print everything currently visible</p>
+                                            </div>
+                                        </div>
+                                        <Badge variant="outline" className="ml-auto font-mono">{tableRecords.length}</Badge>
+                                    </Label>
+
+                                    <Label
+                                        htmlFor="print-released"
+                                        className={cn(
+                                            "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all hover:bg-muted/50",
+                                            printFilter === "released" ? "border-green-600 bg-green-600/10 ring-1 ring-green-600" : "border-border"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <RadioGroupItem value="released" id="print-released" className="sr-only" />
+                                            <div className="space-y-1">
+                                                <p className="font-medium leading-none">Released Only</p>
+                                                <p className="text-xs text-muted-foreground">Only units already finished</p>
+                                            </div>
+                                        </div>
+                                        <Badge variant="outline" className="ml-auto font-mono text-green-600 border-green-200">
+                                            {tableRecords.filter(r => (r.source === 'history' || r.completed_at || r.isArchived)).length}
+                                        </Badge>
+                                    </Label>
+
+                                    <Label
+                                        htmlFor="print-inprogress"
+                                        className={cn(
+                                            "flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all hover:bg-muted/50",
+                                            printFilter === "in-progress" ? "border-orange-500 bg-orange-500/10 ring-1 ring-orange-500" : "border-border"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <RadioGroupItem value="in-progress" id="print-inprogress" className="sr-only" />
+                                            <div className="space-y-1">
+                                                <p className="font-medium leading-none">In-Progress Only</p>
+                                                <p className="text-xs text-muted-foreground">Only units currently in repair</p>
+                                            </div>
+                                        </div>
+                                        <Badge variant="outline" className="ml-auto font-mono text-orange-600 border-orange-200">
+                                            {tableRecords.filter(r => !(r.source === 'history' || r.completed_at || r.isArchived)).length}
+                                        </Badge>
+                                    </Label>
+                                </RadioGroup>
+                            </div>
+
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsPrintModalOpen(false)}>Cancel</Button>
+                                <Button onClick={executePrint} className="gap-2">
+                                    <Printer className="w-4 h-4" />
+                                    Generate PDF
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
