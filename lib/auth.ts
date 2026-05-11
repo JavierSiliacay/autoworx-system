@@ -38,19 +38,19 @@ const AUTHORIZED_SALES_EMAILS = [
 ]
 
 export function isAuthorizedAdminEmail(email?: string | null) {
-  return !!email && AUTHORIZED_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
+  return !!email && AUTHORIZED_EMAILS.some(e => e.trim().toLowerCase() === email.trim().toLowerCase())
 }
 
 export function isDeveloperEmail(email?: string | null) {
-  return !!email && DEVELOPER_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
+  return !!email && DEVELOPER_EMAILS.some(e => e.trim().toLowerCase() === email.trim().toLowerCase())
 }
 
 export function isAuthorizedForReport(email?: string | null) {
-  return !!email && AUTHORIZED_REPORT_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
+  return !!email && AUTHORIZED_REPORT_EMAILS.some(e => e.trim().toLowerCase() === email.trim().toLowerCase())
 }
 
 export function isAuthorizedForSales(email?: string | null) {
-  return !!email && AUTHORIZED_SALES_EMAILS.some(e => e.toLowerCase() === email.toLowerCase())
+  return !!email && AUTHORIZED_SALES_EMAILS.some(e => e.trim().toLowerCase() === email.trim().toLowerCase())
 }
 
 type SignInCallbackParams = { user: { email?: string | null } }
