@@ -361,11 +361,18 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
             return
         }
 
-        // Reuse the same generator but we can customize the title if we want
+        // Determine dynamic title based on status
+        let dynamicTitle = "SALES MONITORING"
+        if (printFilter === "in-progress") {
+            dynamicTitle = "SALES MONITORING IN-PROGRESS / ON-GOING REPAIRS"
+        } else if (printFilter === "released") {
+            dynamicTitle = "SALES MONITORING RELEASED"
+        }
+
         const htmlContent = generateReleaseMonitoringDoc(filteredRecords, reportPeriodLabel, (costing: any, recordId?: string) => {
             const record = filteredRecords.find(r => String(r.id) === String(recordId)) || { costing };
             return getCategorizedCosts(record);
-        }, "SALES MONITORING", "DATE ENTRY")
+        }, dynamicTitle, "DATE ENTRY")
 
         const printWindow = window.open("", "_blank")
         if (!printWindow) {

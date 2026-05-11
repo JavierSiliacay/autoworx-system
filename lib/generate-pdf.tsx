@@ -38,6 +38,8 @@ interface TrackingAppointment {
   damageImages?: string[]
   orcrImage?: string
   orcrImage2?: string
+  jobDescription?: string
+  scopeOfWorks?: string
 }
 
 export async function generateConfirmationPDF(options: PDFGeneratorOptions): Promise<string> {
@@ -298,7 +300,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       }
       return options.documentDate; // Fallback to raw string if completely invalid
     }
-    
+
     // Default to today MM/DD/YYYY
     const today = new Date();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -335,10 +337,10 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       flex-direction: column;
     }
     .header { border-bottom: none; padding-bottom: 0; margin-bottom: 0; position: relative; }
-    .header-container { display: flex; align-items: center; justify-content: space-between; gap: 15px; width: 100%; padding-bottom: 3px; }
+    .header-container { display: flex; align-items: center; justify-content: center; gap: 25px; width: 100%; padding-bottom: 3px; }
     .logo-container { width: 110px; }
     .logo-container img { width: 110px; height: auto; }
-    .header-content { flex-grow: 1; text-align: left; padding-top: 3px; }
+    .header-content { text-align: center; padding-top: 3px; }
     .header h1 { color: #2e74b5; font-size: 18px; font-weight: bold; margin-bottom: 1px; font-family: "Times New Roman", Times, serif; }
     .header .address { color: #000; font-size: 8.5px; margin-bottom: 1px; font-weight: 500; }
     .header .contact { color: #000; font-size: 8.5px; margin-bottom: 1px; }
@@ -850,14 +852,14 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       ? new Date(r.completed_at || r.completedAt || r.original_created_at || r.createdAt).toLocaleDateString("en-US")
       : "";
 
-    const completeDateStr = (r.status_updated_at || r.statusUpdatedAt) 
-      ? new Date(r.status_updated_at || r.statusUpdatedAt).toLocaleDateString("en-US") 
+    const completeDateStr = (r.status_updated_at || r.statusUpdatedAt)
+      ? new Date(r.status_updated_at || r.statusUpdatedAt).toLocaleDateString("en-US")
       : (r.completed_at || r.completedAt ? new Date(r.completed_at || r.completedAt).toLocaleDateString("en-US") : "-");
 
     const effectiveDateColumnValue = isSales ? entryDateStr : releaseDateStr;
 
     // Age Calculation
-    const entryDateObj = (r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at) 
+    const entryDateObj = (r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at)
       ? new Date(r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at)
       : null;
     const now = new Date();
@@ -866,7 +868,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
     if (entryDateObj && !isNaN(entryDateObj.getTime())) {
       const diffTime = Math.abs(now.getTime() - entryDateObj.getTime());
       ageDaysText = `${Math.floor(diffTime / (1000 * 60 * 60 * 24))}d`;
-      
+
       let months = (now.getFullYear() - entryDateObj.getFullYear()) * 12 + (now.getMonth() - entryDateObj.getMonth());
       if (now.getDate() < entryDateObj.getDate()) {
         months--;
@@ -972,10 +974,19 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       font-weight: bold;
       font-family: 'Times New Roman', serif;
       letter-spacing: 2px;
-      display: inline-block;
+      display: inline-flex;
       padding-bottom: 5px;
-      border-bottom: 4px solid;
-      border-image: linear-gradient(to right, #FF0000 50%, #000000 50%) 1;
+    }
+    .red-line {
+      border-bottom: 4px solid #FF0000;
+      color: #FF0000;
+      text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;
+      padding-right: 5px;
+    }
+    .black-line {
+      border-bottom: 4px solid #000000;
+      color: #000000;
+      text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;
     }
   </style>
 </head>
@@ -985,12 +996,18 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       <tr>
         <th colspan="18" style="text-align: left; border: none; padding-bottom: 10px;">
           <h1>
-            <span style="color: #FF0000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc; padding-right: 5px;">${title.split(' ')[0]}</span>
-            <span style="color: #000000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;">${title.split(' ').slice(1).join(' ')}</span>
+            <span class="red-line">SALES</span>
+            <span class="black-line">MONITORING</span>
+            <span style="border: none; margin-left: 10px; color: #000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;">${title.replace('SALES MONITORING', '').trim()}</span>
           </h1>
-          <div style="display: flex; gap: 40px; align-items: baseline; margin-top: 8px;">
-            <div style="font-weight: bold; font-size: 10px;">${title.includes('SALES') ? 'UNIT ENTRY' : 'RELEASE MONITORING'}</div>
-            <div style="font-weight: normal; font-size: 13px; margin-left: 20px; color: #333;">As of: ${monthLabel}</div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px;">
+            <div style="display: flex; gap: 40px; align-items: baseline;">
+              <div style="font-weight: bold; font-size: 10px;">${title.includes('SALES') ? 'UNIT ENTRY' : 'RELEASE MONITORING'}</div>
+              <div style="font-weight: normal; font-size: 13px; margin-left: 20px; color: #333;">As of: ${monthLabel}</div>
+            </div>
+            <div style="font-weight: bold; font-size: 16px; color: #000;">
+              Date Printed: <span style="font-weight: normal; font-size: 14px; margin-left: 8px;">${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} ${new Date().toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+            </div>
           </div>
         </th>
       </tr>
@@ -1027,9 +1044,38 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
 
 export async function generateJobOrderPDF(appointment: TrackingAppointment): Promise<string> {
   const displayTitle = "JOB ORDER"
-  
-  const partsTotal = (appointment.costing?.items || []).filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
-  const laborTotal = (appointment.costing?.items || []).filter(item => item.type !== 'parts').reduce((sum, item) => sum + item.total, 0) || 0
+  const isReleased = appointment.isArchived
+  const repairStatus = getRepairStatusLabel(isReleased ? "completed_ready" : appointment.repairStatus)
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : PRODUCTION_URL
+
+  const categoryOrder = ["Parts", "Tinsmith/Alignment", "Mechanical Works", "Electrical", "Aircon", "Painting", "Detailing", "Glassworks", "Remove and Install", "Others"];
+
+  const categorized = (appointment.costing?.items || []).reduce((acc, item) => {
+    let group = item.category && item.category !== "Others" ? item.category : "";
+    const type = item.type as string;
+
+    if (!group) {
+      if (type === 'parts') group = "Parts";
+      else if (type === 'service') group = "Service";
+      else if (type === 'labor') group = "Labor";
+      else if (type === 'service_labor') group = "Service/Labor";
+      else group = "Others";
+    }
+
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc
+  }, { "Parts": [] } as Record<string, any[]>)
+
+  const activeCategories = Object.keys(categorized).filter(cat => cat === "Parts" || categorized[cat].length > 0);
+  activeCategories.sort((a, b) => {
+    const indexA = categoryOrder.indexOf(a);
+    const indexB = categoryOrder.indexOf(b);
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return a.localeCompare(b);
+  });
 
   const today = new Date();
   const formattedDate = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
@@ -1045,161 +1091,186 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       font-family: Arial, sans-serif; 
-      font-size: 10px; 
+      font-size: 9.5px; 
       line-height: 1.3; 
-      color: #333; 
+      color: #000; 
       background: white; 
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     @page { 
       size: A4; 
-      margin: 0.5in; 
+      margin: 0.4in; 
     }
-    .container { width: 100%; margin: 0 auto; }
-    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #2e74b5; padding-bottom: 10px; }
+    .container { width: 100%; margin: 0 auto; border: 2px solid #000; padding: 15px; }
+    
+    .header { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 10px; gap: 25px; }
     .logo-container { width: 110px; }
     .logo-container img { width: 110px; height: auto; }
-    .company-info h1 { color: #2e74b5; font-size: 18px; margin-bottom: 2px; }
-    .company-info p { font-size: 8px; color: #666; }
+    .header-content { text-align: center; }
+    .header h1 { color: #c00; font-size: 20px; font-weight: bold; margin-bottom: 2px; }
+    .header p { font-size: 8.5px; line-height: 1.4; color: #333; }
     
-    .jo-title { text-align: center; font-size: 24px; font-weight: bold; color: #2e74b5; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; border: 2px solid #2e74b5; padding: 5px; }
+    .title-banner { background: #000 !important; color: #fff !important; text-align: center; padding: 6px; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; }
     
-    .meta-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
-    .meta-table td { padding: 6px; border: 1px solid #ddd; }
-    .label { font-weight: bold; background: #f4f4f4; width: 18%; font-size: 9px; }
-    .value { width: 32%; font-size: 10px; }
+    .meta-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+    .meta-box { border: 1px solid #000; padding: 8px; background: #f9f9f9 !important; }
+    .meta-label { font-size: 8px; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 2px; }
+    .meta-value { font-size: 11px; font-weight: bold; color: #000; }
     
-    .section-title { background: #2e74b5; color: white; padding: 5px 10px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; font-size: 11px; }
+    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; border: 1px solid #000; padding: 10px; }
+    .info-item { display: flex; flex-direction: column; gap: 2px; }
+    .info-label { font-size: 7.5px; font-weight: bold; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 1px; }
+    .info-value { font-size: 9.5px; font-weight: 600; padding-top: 2px; }
     
-    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    .items-table th { background: #f4f4f4; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 10px; }
-    .items-table td { border: 1px solid #ddd; padding: 8px; font-size: 10px; }
-    .text-right { text-align: right; }
+    .section-header { background: #eee !important; padding: 5px 10px; font-weight: bold; border: 1px solid #000; border-bottom: none; font-size: 10px; text-transform: uppercase; display: flex; justify-content: space-between; }
     
-    .totals-section { width: 40%; margin-left: auto; margin-bottom: 30px; }
-    .total-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; }
-    .total-row.grand-total { border-top: 2px solid #2e74b5; font-weight: bold; font-size: 12px; color: #2e74b5; padding-top: 8px; }
+    .job-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #000; }
+    .job-table th, .job-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; }
+    .job-table th { background: #f4f4f4 !important; font-size: 9px; text-transform: uppercase; }
+    .job-table td { font-size: 9.5px; vertical-align: top; }
+    .category-row { background: #fdfdfd !important; font-weight: bold; font-size: 10px; color: #c00; }
     
-    .signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 50px; }
-    .sig-box { text-align: center; border-top: 1px solid #333; padding-top: 8px; }
-    .sig-label { font-size: 9px; color: #666; text-transform: uppercase; margin-top: 4px; }
-    .sig-name { font-weight: bold; font-size: 11px; }
+    .qr-and-status { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; }
+    .qr-container { text-align: center; border: 1px dashed #000; padding: 5px; }
+    .qr-container p { font-size: 7px; margin-top: 4px; font-weight: bold; }
+    .delivery-info { flex: 1; border: 2px solid #c00; padding: 10px; color: #c00; font-weight: bold; text-align: center; font-size: 12px; }
     
-    .footer-note { margin-top: 40px; font-size: 9px; color: #666; border-top: 1px dashed #ddd; padding-top: 10px; font-style: italic; }
+    .footer-sections { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; margin-top: 20px; }
+    .terms-section { font-size: 8px; line-height: 1.4; }
+    .terms-section h4 { text-decoration: underline; margin-bottom: 5px; }
+    .terms-section ol { padding-left: 15px; }
+    
+    .sig-section { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; margin-top: 20px; }
+    .sig-box { width: 100%; border-top: 1px solid #000; padding-top: 5px; text-align: center; }
+    .sig-title { font-size: 8px; color: #444; text-transform: uppercase; }
+    .sig-name { font-weight: bold; font-size: 10px; margin-bottom: 2px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="company-info">
-        <h1>Autoworx Repair and General Mdse. Co. Ltd.</h1>
-        <p>Zone 7 Sepulvida Street, Kauswagan Highway, Cagayan de Oro City</p>
-        <p>Telefax /Landline: (088) 880-4825 | Mobile: 09363549603</p>
-        <p>Email: alfred_autoworks@yahoo.com / paulsuazo64@gmail.com</p>
-      </div>
       <div class="logo-container">
         <img src="/autoworxlogo.png" alt="Logo" />
       </div>
+      <div class="header-content">
+        <h1>Autoworx Repair and General Mdse.</h1>
+        <p>Zone 7 Sepulvida Street, Kauswagan Highway, CDO City</p>
+        <p>Telefax: (088) 880-4825 | Mobile: 09363549603</p>
+        <p>Email: autoworxcagayan2025@gmail.com</p>
+      </div>
     </div>
     
-    <div class="jo-title">Job Order</div>
+    <div class="title-banner">${displayTitle}</div>
     
-    <table class="meta-table">
-      <tr>
-        <td class="label">JO NUMBER:</td>
-        <td class="value"><strong>${appointment.estimateNumber || "PENDING"}</strong></td>
-        <td class="label">DATE:</td>
-        <td class="value">${formattedDate}</td>
-      </tr>
-      <tr>
-        <td class="label">CLIENT NAME:</td>
-        <td class="value">${appointment.name}</td>
-        <td class="label">PLATE NUMBER:</td>
-        <td class="value"><strong>${appointment.vehiclePlate}</strong></td>
-      </tr>
-      <tr>
-        <td class="label">VEHICLE UNIT:</td>
-        <td class="value">${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}</td>
-        <td class="label">VEHICLE COLOR:</td>
-        <td class="value">${appointment.vehicleColor || "N/A"}</td>
-      </tr>
-      <tr>
-        <td class="label">INSURANCE:</td>
-        <td class="value">${appointment.insurance || "N/A"}</td>
-        <td class="label">TRACKING CODE:</td>
-        <td class="value" style="font-family: monospace;">${appointment.trackingCode}</td>
-      </tr>
-      <tr>
-        <td class="label">CHASSIS NO:</td>
-        <td class="value">${appointment.chassisNumber || "N/A"}</td>
-        <td class="label">ENGINE NO:</td>
-        <td class="value">${appointment.engineNumber || "N/A"}</td>
-      </tr>
-      <tr>
-        <td class="label">SERVICE ADVISOR:</td>
-        <td class="value" style="text-transform: uppercase;">${appointment.costing?.serviceAdvisorName || appointment.serviceAdvisor || "N/A"}</td>
-        <td class="label">SERVICE TYPE:</td>
-        <td class="value">${appointment.service}</td>
-      </tr>
-    </table>
+    <div class="meta-info">
+      <div class="meta-box">
+        <p class="meta-label">JO Number</p>
+        <p class="meta-value">${appointment.estimateNumber || "_______"}</p>
+      </div>
+      <div class="meta-box">
+        <p class="meta-label">Date Issued</p>
+        <p class="meta-value">${formattedDate}</p>
+      </div>
+      <div class="meta-box">
+        <p class="meta-label">Assignee:</p>
+        <p class="meta-value">${appointment.assigneeDriver || "_______"}</p>
+      </div>
+    </div>
+
+    <div class="section-header">Customer & Service Overview</div>
+    <div class="info-grid" style="grid-template-columns: 1fr 1fr; padding: 15px; gap: 20px;">
+      <div class="info-item" style="grid-column: span 2; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 5px;">
+        <p class="info-label">VEHICLE UNIT (PRIMARY IDENTIFIER)</p>
+        <p class="info-value" style="font-size: 22px; font-weight: 900; color: #000; text-transform: uppercase;">
+          ${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}
+        </p>
+        <p style="font-size: 14px; font-weight: bold; color: #c00; margin-top: 5px;">PLATE: ${appointment.vehiclePlate}</p>
+      </div>
+
+      <div class="info-item">
+        <p class="info-label">CLIENT NAME</p>
+        <p class="info-value" style="font-size: 14px;">${appointment.name}</p>
+      </div>
+      <div class="info-item">
+        <p class="info-label">SERVICE TYPE</p>
+        <p class="info-value" style="font-size: 14px; text-transform: uppercase; color: #c00;">${appointment.service}</p>
+      </div>
+      
+      <div class="info-item" style="grid-column: span 2; margin-top: 5px;">
+        <p class="info-label">CLAIM TYPE</p>
+        <div style="display: flex; gap: 30px; padding-top: 5px; font-size: 11px; font-weight: bold;">
+          <span>[${(!appointment.insurance || appointment.insurance === 'PERSONAL') ? '✓' : '&nbsp;&nbsp;'}] PERSONAL</span>
+          <span>[${(appointment.insurance && appointment.insurance !== 'PERSONAL' && !appointment.insurance.toLowerCase().includes('company')) ? '✓' : '&nbsp;&nbsp;'}] INSURANCE</span>
+          <span>[${(appointment.insurance?.toLowerCase().includes('company')) ? '✓' : '&nbsp;&nbsp;'}] COMPANY</span>
+        </div>
+        <div class="section-header">
+      <span>Job Description & Scope of Work</span>
+    </div>
     
-    <div class="section-title">Scope of Work & Materials Breakdown</div>
-    <table class="items-table">
+    ${(appointment.costing?.jobDescription || appointment.jobDescription) ? `
+      <div style="padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; font-size: 10px; min-height: 50px; background: #fff;">
+        <strong>JOB DESCRIPTION:</strong><br/>
+        ${(appointment.costing?.jobDescription || appointment.jobDescription || "").replace(/\n/g, '<br/>')}
+      </div>
+    ` : ""}
+
+    ${(appointment.costing?.scopeOfWorks || appointment.scopeOfWorks) ? `
+      <div style="padding: 10px; border: 1px solid #ddd; margin-bottom: 20px; font-size: 10px; min-height: 100px; background: #fff;">
+        <strong>SCOPE OF WORKS:</strong><br/>
+        ${(appointment.costing?.scopeOfWorks || appointment.scopeOfWorks || "").replace(/\n/g, '<br/>')}
+      </div>
+    ` : `
+    <table class="job-table">
       <thead>
         <tr>
-          <th style="width: 55%;">Description of Work / Materials</th>
-          <th style="width: 10%;">Qty</th>
+          <th style="width: 70%;">Description of Work / Materials</th>
+          <th style="width: 15%;">Qty</th>
           <th style="width: 15%;">Unit</th>
-          <th style="width: 20%;" class="text-right">Amount</th>
         </tr>
       </thead>
       <tbody>
-        ${(appointment.costing?.items || []).map(item => `
-          <tr>
-            <td style="white-space: pre-wrap;">${item.description}</td>
-            <td>${item.quantity}</td>
-            <td>${item.unit || "PC"}</td>
-            <td class="text-right">₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-          </tr>
-        `).join("")}
-        ${(appointment.costing?.items || []).length === 0 ? '<tr><td colspan="4" style="text-align: center; color: #999; padding: 20px;">No items listed for this job order.</td></tr>' : ''}
+        ${activeCategories.map(cat => {
+          const items = categorized[cat];
+          return `
+            <tr class="category-row">
+              <td colspan="3">${cat}</td>
+            </tr>
+            ${items.length > 0 ? items.map((item: CostItem) => `
+              <tr>
+                <td style="padding-left: 20px; white-space: pre-wrap;">${item.description}</td>
+                <td>${item.quantity}</td>
+                <td>${item.unit || "PC"}</td>
+              </tr>
+            `).join("") : `<tr><td colspan="3" style="padding-left: 20px; color: #999; font-style: italic;">No specific items.</td></tr>`}
+          `
+        }).join("")}
       </tbody>
     </table>
-    
-    <div class="totals-section">
-      <div class="total-row"><span>Parts Total:</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
-      <div class="total-row"><span>Labor Total:</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
-      ${(appointment.costing?.discount || 0) > 0 ? `
-        <div class="total-row" style="color: #f97316;">
-          <span>Discount:</span>
-          <span>-₱${(appointment.costing!.discountType === "percentage" 
-            ? (appointment.costing!.subtotal * appointment.costing!.discount) / 100 
-            : appointment.costing!.discount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-        </div>` : ""}
-      ${appointment.costing?.vatEnabled ? `<div class="total-row" style="color: #666;"><span>VAT 12%:</span><span>₱${(appointment.costing?.vatAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
-      <div class="total-row grand-total"><span>GRAND TOTAL:</span><span>₱${(appointment.costing?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
-    </div>
-    
-    <div class="signatures">
-      <div class="sig-box">
-        <p class="sig-name">${appointment.costing?.serviceAdvisorName || 'Ryan Christopher D. Quintos'}</p>
-        <p class="sig-label">Prepared By (Service Advisor)</p>
+    `}  </tbody>
+    </table>
+
+
+
+    <div class="footer-sections">
+      <div class="terms-section">
+        <h4>TERMS AND CONDITIONS:</h4>
+        <ol>
+          <li><strong>Authorization:</strong> The shop is authorized to perform the repairs described, including the use of necessary parts. Additional repairs exceeding (e.g., $100) must be authorized by the customer.</li>
+          <li><strong>Payment & Storage:</strong> Payment is due upon completion. Vehicles not collected within <strong style="color: red;">15 days</strong> of notification of completion may be subject to a daily storage fee of <strong style="color: red;">₱250 to ₱500</strong>.</li>
+          <li><strong>Lien Clause:</strong> The shop has a mechanic's lien on the vehicle to secure payment for repairs, parts, and storage fees.</li>
+          <li><strong>Liability:</strong> The shop is not responsible for loss or damage to the vehicle or articles left inside due to fire, theft, or any other cause beyond its control.</li>
+          <li><strong>Parts:</strong> Replaced parts will be discarded unless requested by the customer at the time of job approval.</li>
+          <li><strong>Warranty:</strong> Warranties on parts are provided by the manufacturer. Labor is guaranteed for <strong style="color: red;">7 days</strong> from date of repair.</li>
+          <li><strong>Hidden Defects:</strong> If, during disassembly, further damage is discovered, the customer will be notified for further authorization.</li>
+        </ol>
       </div>
-      <div class="sig-box">
-        <p class="sig-name">Paul D. Suazo</p>
-        <p class="sig-label">Approved By (Service Manager)</p>
+      <div class="sig-section">
+        <div class="sig-box">
+          <p class="sig-name">${appointment.costing?.serviceAdvisorName || 'RYAN QUINTOS'}</p>
+          <p class="sig-title">Prepared By (Service Advisor)</p>
+        </div>
       </div>
-      <div class="sig-box">
-        <p><br/></p>
-        <p class="sig-label">Conforme (Customer Signature)</p>
-      </div>
-    </div>
-    
-    <div class="footer-note">
-      <p>* This Job Order serves as an official authorization for the repairs and materials stated above.</p>
-      <p>* Any additional works found necessary during the repair process will be subject to client approval and additional charges.</p>
-      <p>* Autoworx is not responsible for any personal belongings left inside the vehicle.</p>
     </div>
   </div>
 </body>
@@ -1207,3 +1278,5 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
 `
   return htmlContent
 }
+
+
