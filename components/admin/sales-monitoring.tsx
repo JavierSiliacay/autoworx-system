@@ -1001,7 +1001,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     <div className="font-normal text-sm text-foreground ml-5">As of: {reportPeriodLabel}</div>
                                 </div>
                             </th>
-                            <th colSpan={6} className="text-right pb-4 border-none align-bottom">
+                            <th colSpan={8} className="text-right pb-4 border-none align-bottom">
                                 <div className="flex items-center justify-end gap-3 mb-2">
                                     <Input placeholder="Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-64 h-10" />
                                 </div>
@@ -1022,6 +1022,8 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                             <th className="p-2 border border-border text-center font-bold text-[10px]">TOTAL<br /><span className="text-[7px] font-normal leading-tight opacity-80">(w/ VAT/DISCOUNT)</span></th>
                             <th className="p-2 border border-border text-center font-bold text-[10px] w-12">MOD</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px]">DATE ENTERED</th>
+                            <th className="p-2 border border-border text-center font-bold text-[10px] w-14">AGE (DAYS)</th>
+                            <th className="p-2 border border-border text-center font-bold text-[10px] w-14">AGE (MONTHS)</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px] w-32">REMARKS</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px] w-16 no-print">STATUS</th>
                         </tr>
@@ -1046,6 +1048,23 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     // Try snake_case then camelCase
                                     const camelField = field.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
                                     return r[field] ?? r[camelField] ?? "";
+                                }
+
+                                // Age Calculation logic
+                                const entryDate = syncDateStr ? new Date(syncDateStr) : null;
+                                const now = new Date();
+                                let ageDays = 0;
+                                let ageMonths = 0;
+
+                                if (entryDate) {
+                                    const diffTime = Math.abs(now.getTime() - entryDate.getTime());
+                                    ageDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                                    
+                                    ageMonths = (now.getFullYear() - entryDate.getFullYear()) * 12 + (now.getMonth() - entryDate.getMonth());
+                                    if (now.getDate() < entryDate.getDate()) {
+                                        ageMonths--;
+                                    }
+                                    ageMonths = Math.max(0, ageMonths);
                                 }
 
                                 return (
@@ -1160,7 +1179,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         <td className="p-2 border border-border text-center">
                                             {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} /> : (r.current_repair_part || r.currentRepairPart || "")}
                                         </td>
-                                        <td className="p-2 border border-border text-center">
+                                        <td className="p-2 border border-border text-center font-mono text-[9px] uppercase">
                                             {isEditing ? (
                                                 <Input 
                                                     type="date" 
@@ -1169,6 +1188,12 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                     onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), synced_at: e.target.value } }))} 
                                                 />
                                             ) : dateStr}
+                                        </td>
+                                        <td className="p-2 border border-border text-center font-mono text-[10px]">
+                                            {ageDays}d
+                                        </td>
+                                        <td className="p-2 border border-border text-center font-mono text-[10px]">
+                                            {ageMonths}m
                                         </td>
                                         <td className="p-2 border border-border">
                                             {isEditing ? (
@@ -1216,7 +1241,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                 )
                             })
                         ) : (
-                            <tr><td colSpan={16} className="p-12 text-center text-muted-foreground italic">No records found for {reportPeriodLabel}.</td></tr>
+                            <tr><td colSpan={18} className="p-12 text-center text-muted-foreground italic">No records found for {reportPeriodLabel}.</td></tr>
                         )}
                     </tbody>
                     {tableRecords.length > 0 && (
@@ -1228,7 +1253,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                 <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.electrical > 0 ? tableTotals.electrical.toLocaleString() : "-"}</td>
                                 <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.mechanical > 0 ? tableTotals.mechanical.toLocaleString() : "-"}</td>
                                 <td className="p-2 border border-border text-right font-mono text-blue-600 dark:text-blue-400 text-[12px] font-black">₱{tableTotals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                <td colSpan={4} className="p-2 border border-border"></td>
+                                <td colSpan={6} className="p-2 border border-border"></td>
                             </tr>
                         </tfoot>
                     )}

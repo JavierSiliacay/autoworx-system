@@ -856,6 +856,24 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
 
     const effectiveDateColumnValue = isSales ? entryDateStr : releaseDateStr;
 
+    // Age Calculation
+    const entryDateObj = (r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at) 
+      ? new Date(r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at)
+      : null;
+    const now = new Date();
+    let ageDaysText = "-";
+    let ageMonthsText = "-";
+    if (entryDateObj && !isNaN(entryDateObj.getTime())) {
+      const diffTime = Math.abs(now.getTime() - entryDateObj.getTime());
+      ageDaysText = `${Math.floor(diffTime / (1000 * 60 * 60 * 24))}d`;
+      
+      let months = (now.getFullYear() - entryDateObj.getFullYear()) * 12 + (now.getMonth() - entryDateObj.getMonth());
+      if (now.getDate() < entryDateObj.getDate()) {
+        months--;
+      }
+      ageMonthsText = `${Math.max(0, months)}m`;
+    }
+
     const costs = getCategorizedCosts(r.costing, r.id);
 
     totalBRPAD += costs.brpad;
@@ -888,6 +906,8 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         ` : ""}
         ${showCompleteDate ? `<td>${completeDateStr}</td>` : ""}
         <td>${effectiveDateColumnValue}</td>
+        <td>${ageDaysText}</td>
+        <td>${ageMonthsText}</td>
         <td class="text-left">${r.paul_notes || r.paulNotes || r.remarks || ""}</td>
       </tr>
     `;
@@ -901,7 +921,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       <td class="text-right" style="border-top: 2px solid #000;">${totalElectrical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000;">${totalMechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000; color: #c00;">${grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-      <td colspan="4" style="border-top: 2px solid #000;"></td>
+      <td colspan="6" style="border-top: 2px solid #000;"></td>
     </tr>
   ` : "";
 
@@ -963,7 +983,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
   <table>
     <thead>
       <tr>
-        <th colspan="16" style="text-align: left; border: none; padding-bottom: 10px;">
+        <th colspan="18" style="text-align: left; border: none; padding-bottom: 10px;">
           <h1>
             <span style="color: #FF0000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc; padding-right: 5px;">${title.split(' ')[0]}</span>
             <span style="color: #000000; text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;">${title.split(' ').slice(1).join(' ')}</span>
@@ -991,6 +1011,8 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         ${title.includes("SALES") ? `<th style="font-size: 8px; width: 6%;">STATUS</th>` : ""}
         ${!title.includes("SALES") ? `<th style="font-size: 8px; width: 7%;">DATE COMPLETE</th>` : ""}
         <th style="font-size: 8px; width: 7%;">${dateColumnLabel}</th>
+        <th style="font-size: 8px; width: 4%;">AGE (D)</th>
+        <th style="font-size: 8px; width: 4%;">AGE (M)</th>
         <th style="font-size: 8px; width: 10%;">REMARKS</th>
       </tr>
     </thead>
@@ -1001,4 +1023,187 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
   </table>
 </body>
 </html>`;
+}
+
+export async function generateJobOrderPDF(appointment: TrackingAppointment): Promise<string> {
+  const displayTitle = "JOB ORDER"
+  
+  const partsTotal = (appointment.costing?.items || []).filter(item => item.type === 'parts').reduce((sum, item) => sum + item.total, 0) || 0
+  const laborTotal = (appointment.costing?.items || []).filter(item => item.type !== 'parts').reduce((sum, item) => sum + item.total, 0) || 0
+
+  const today = new Date();
+  const formattedDate = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${displayTitle} - ${appointment.vehiclePlate}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: Arial, sans-serif; 
+      font-size: 10px; 
+      line-height: 1.3; 
+      color: #333; 
+      background: white; 
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page { 
+      size: A4; 
+      margin: 0.5in; 
+    }
+    .container { width: 100%; margin: 0 auto; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #2e74b5; padding-bottom: 10px; }
+    .logo-container { width: 110px; }
+    .logo-container img { width: 110px; height: auto; }
+    .company-info h1 { color: #2e74b5; font-size: 18px; margin-bottom: 2px; }
+    .company-info p { font-size: 8px; color: #666; }
+    
+    .jo-title { text-align: center; font-size: 24px; font-weight: bold; color: #2e74b5; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; border: 2px solid #2e74b5; padding: 5px; }
+    
+    .meta-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
+    .meta-table td { padding: 6px; border: 1px solid #ddd; }
+    .label { font-weight: bold; background: #f4f4f4; width: 18%; font-size: 9px; }
+    .value { width: 32%; font-size: 10px; }
+    
+    .section-title { background: #2e74b5; color: white; padding: 5px 10px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; font-size: 11px; }
+    
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .items-table th { background: #f4f4f4; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 10px; }
+    .items-table td { border: 1px solid #ddd; padding: 8px; font-size: 10px; }
+    .text-right { text-align: right; }
+    
+    .totals-section { width: 40%; margin-left: auto; margin-bottom: 30px; }
+    .total-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; }
+    .total-row.grand-total { border-top: 2px solid #2e74b5; font-weight: bold; font-size: 12px; color: #2e74b5; padding-top: 8px; }
+    
+    .signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 50px; }
+    .sig-box { text-align: center; border-top: 1px solid #333; padding-top: 8px; }
+    .sig-label { font-size: 9px; color: #666; text-transform: uppercase; margin-top: 4px; }
+    .sig-name { font-weight: bold; font-size: 11px; }
+    
+    .footer-note { margin-top: 40px; font-size: 9px; color: #666; border-top: 1px dashed #ddd; padding-top: 10px; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="company-info">
+        <h1>Autoworx Repair and General Mdse. Co. Ltd.</h1>
+        <p>Zone 7 Sepulvida Street, Kauswagan Highway, Cagayan de Oro City</p>
+        <p>Telefax /Landline: (088) 880-4825 | Mobile: 09363549603</p>
+        <p>Email: alfred_autoworks@yahoo.com / paulsuazo64@gmail.com</p>
+      </div>
+      <div class="logo-container">
+        <img src="/autoworxlogo.png" alt="Logo" />
+      </div>
+    </div>
+    
+    <div class="jo-title">Job Order</div>
+    
+    <table class="meta-table">
+      <tr>
+        <td class="label">JO NUMBER:</td>
+        <td class="value"><strong>${appointment.estimateNumber || "PENDING"}</strong></td>
+        <td class="label">DATE:</td>
+        <td class="value">${formattedDate}</td>
+      </tr>
+      <tr>
+        <td class="label">CLIENT NAME:</td>
+        <td class="value">${appointment.name}</td>
+        <td class="label">PLATE NUMBER:</td>
+        <td class="value"><strong>${appointment.vehiclePlate}</strong></td>
+      </tr>
+      <tr>
+        <td class="label">VEHICLE UNIT:</td>
+        <td class="value">${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}</td>
+        <td class="label">VEHICLE COLOR:</td>
+        <td class="value">${appointment.vehicleColor || "N/A"}</td>
+      </tr>
+      <tr>
+        <td class="label">INSURANCE:</td>
+        <td class="value">${appointment.insurance || "N/A"}</td>
+        <td class="label">TRACKING CODE:</td>
+        <td class="value" style="font-family: monospace;">${appointment.trackingCode}</td>
+      </tr>
+      <tr>
+        <td class="label">CHASSIS NO:</td>
+        <td class="value">${appointment.chassisNumber || "N/A"}</td>
+        <td class="label">ENGINE NO:</td>
+        <td class="value">${appointment.engineNumber || "N/A"}</td>
+      </tr>
+      <tr>
+        <td class="label">SERVICE ADVISOR:</td>
+        <td class="value" style="text-transform: uppercase;">${appointment.costing?.serviceAdvisorName || appointment.serviceAdvisor || "N/A"}</td>
+        <td class="label">SERVICE TYPE:</td>
+        <td class="value">${appointment.service}</td>
+      </tr>
+    </table>
+    
+    <div class="section-title">Scope of Work & Materials Breakdown</div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width: 55%;">Description of Work / Materials</th>
+          <th style="width: 10%;">Qty</th>
+          <th style="width: 15%;">Unit</th>
+          <th style="width: 20%;" class="text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(appointment.costing?.items || []).map(item => `
+          <tr>
+            <td style="white-space: pre-wrap;">${item.description}</td>
+            <td>${item.quantity}</td>
+            <td>${item.unit || "PC"}</td>
+            <td class="text-right">₱${item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+          </tr>
+        `).join("")}
+        ${(appointment.costing?.items || []).length === 0 ? '<tr><td colspan="4" style="text-align: center; color: #999; padding: 20px;">No items listed for this job order.</td></tr>' : ''}
+      </tbody>
+    </table>
+    
+    <div class="totals-section">
+      <div class="total-row"><span>Parts Total:</span><span>₱${partsTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+      <div class="total-row"><span>Labor Total:</span><span>₱${laborTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+      ${(appointment.costing?.discount || 0) > 0 ? `
+        <div class="total-row" style="color: #f97316;">
+          <span>Discount:</span>
+          <span>-₱${(appointment.costing!.discountType === "percentage" 
+            ? (appointment.costing!.subtotal * appointment.costing!.discount) / 100 
+            : appointment.costing!.discount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+        </div>` : ""}
+      ${appointment.costing?.vatEnabled ? `<div class="total-row" style="color: #666;"><span>VAT 12%:</span><span>₱${(appointment.costing?.vatAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
+      <div class="total-row grand-total"><span>GRAND TOTAL:</span><span>₱${(appointment.costing?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
+    </div>
+    
+    <div class="signatures">
+      <div class="sig-box">
+        <p class="sig-name">${appointment.costing?.serviceAdvisorName || 'Ryan Christopher D. Quintos'}</p>
+        <p class="sig-label">Prepared By (Service Advisor)</p>
+      </div>
+      <div class="sig-box">
+        <p class="sig-name">Paul D. Suazo</p>
+        <p class="sig-label">Approved By (Service Manager)</p>
+      </div>
+      <div class="sig-box">
+        <p><br/></p>
+        <p class="sig-label">Conforme (Customer Signature)</p>
+      </div>
+    </div>
+    
+    <div class="footer-note">
+      <p>* This Job Order serves as an official authorization for the repairs and materials stated above.</p>
+      <p>* Any additional works found necessary during the repair process will be subject to client approval and additional charges.</p>
+      <p>* Autoworx is not responsible for any personal belongings left inside the vehicle.</p>
+    </div>
+  </div>
+</body>
+</html>
+`
+  return htmlContent
 }

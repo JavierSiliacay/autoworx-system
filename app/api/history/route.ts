@@ -91,6 +91,7 @@ export async function PUT(request: Request) {
     if (updates.syncedAt !== undefined) dbUpdates.synced_at = updates.syncedAt
     if (updates.completed_at !== undefined) dbUpdates.completed_at = updates.completed_at
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt
+    if (updates.originalCreatedAt !== undefined || updates.original_created_at !== undefined) dbUpdates.original_created_at = updates.originalCreatedAt ?? updates.original_created_at
 
     console.log(`[API History PUT] Attempting direct ID update for: ${id}`);
     // Try by ID first using admin client to bypass RLS

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import { useRouter } from "next/navigation"
@@ -62,7 +62,11 @@ import {
   Database,
   Activity,
   Zap,
-  Gauge
+  Gauge,
+  Printer,
+  FileClock,
+  Timer,
+  Bell
 } from "lucide-react"
 import { PistonIcon, GearsIcon, SuspensionIcon, BatteryIcon, CarFrontIcon, TowingIcon, DifferentialIcon, DetailingIcon, DiagnosticsIcon, TireIcon, OilIcon, WrenchPistonIcon } from "@/components/icons/automotive-icons"
 import { motion, AnimatePresence } from "framer-motion"
@@ -257,6 +261,8 @@ interface Announcement {
   author_email: string
   created_at: string
 }
+
+
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ovovmpxfzhpndpajisgh.supabase.co";
 const storageBucket = "damage-images";
@@ -1835,6 +1841,124 @@ export default function AdminDashboard() {
     }
   }
 
+  const updateSubmissionInfo = async (appointmentId: string, updates: { createdAt?: string, submissionIcon?: string }) => {
+    const appointment = appointments.find(a => a.id === appointmentId)
+    if (!appointment) return
+
+    const updatedCosting = {
+      ...(appointment.costing || {
+        items: [],
+        subtotal: 0,
+        discount: 0,
+        discountType: "fixed",
+        vatEnabled: false,
+        vatAmount: 0,
+        total: 0,
+        notes: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as CostingData),
+      submissionIcon: updates.submissionIcon ?? appointment.costing?.submissionIcon,
+      updatedAt: new Date().toISOString()
+    }
+
+    const updatedData = {
+      id: appointmentId,
+      createdAt: updates.createdAt ?? appointment.createdAt,
+      costing: updatedCosting
+    }
+
+    // Optimistic update
+    setAppointments(prev => prev.map(apt => 
+      apt.id === appointmentId ? { ...apt, ...updatedData } : apt
+    ))
+
+    try {
+      const response = await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedData),
+      })
+      
+      if (!response.ok) throw new Error("Failed to update")
+
+      toast({
+        title: "Information Updated",
+        description: "Submission details have been updated successfully.",
+      })
+    } catch (err) {
+      console.error("Failed to update submission info:", err)
+      loadAppointments() // Revert on failure
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not save submission updates.",
+      })
+    }
+  }
+
+  const updateHistorySubmissionInfo = async (recordId: string, updates: { originalCreatedAt?: string, submissionIcon?: string }) => {
+    const record = historyRecords.find(r => r.id === recordId)
+    if (!record) return
+
+    const updatedCosting = {
+      ...(record.costing || {
+        items: [],
+        subtotal: 0,
+        discount: 0,
+        discountType: "fixed",
+        vatEnabled: false,
+        vatAmount: 0,
+        total: 0,
+        notes: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as CostingData),
+      submissionIcon: updates.submissionIcon ?? record.costing?.submissionIcon,
+      updatedAt: new Date().toISOString()
+    }
+
+    const payload = {
+      id: recordId,
+      updates: {
+        original_created_at: updates.originalCreatedAt ?? record.original_created_at,
+        costing: updatedCosting
+      }
+    }
+
+    // Optimistic update
+    setHistoryRecords(prev => prev.map(rec => 
+      rec.id === recordId ? { 
+        ...rec, 
+        original_created_at: updates.originalCreatedAt ?? rec.original_created_at,
+        costing: updatedCosting 
+      } : rec
+    ))
+
+    try {
+      const response = await fetch("/api/history", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      
+      if (!response.ok) throw new Error("Failed to update history")
+
+      toast({
+        title: "History Updated",
+        description: "Submission details have been updated successfully.",
+      })
+    } catch (err) {
+      console.error("Failed to update history submission info:", err)
+      loadHistory() // Revert on failure
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not save history updates.",
+      })
+    }
+  }
+
   const handleEditAppointment = (appointment: Appointment) => {
     setUseCustomEditMake(!!appointment.vehicleMake && !VEHICLE_BRANDS.includes(appointment.vehicleMake))
 
@@ -2291,6 +2415,9 @@ export default function AdminDashboard() {
       });
     }
   };
+
+
+
 
 
   const handleCopyAppointment = (appointment: Appointment, includeCosting: boolean = false) => {
@@ -3900,10 +4027,35 @@ export default function AdminDashboard() {
                                       <span className="text-orange-500 font-medium">Working on: {appointment.currentRepairPart}</span>
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Clock className="w-4 h-4" />
-                                    <span>Submitted: {formatDate(appointment.createdAt)}</span>
-                                  </div>
+                                  
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button 
+                                        className="flex items-center gap-3 py-1 px-2.5 bg-secondary/50 rounded-lg border border-border/50 group/submission hover:border-primary/30 transition-all text-left"
+                                        title="Change Submission Date"
+                                      >
+                                        <Clock className="w-4 h-4 text-muted-foreground group-hover/submission:text-primary transition-colors shrink-0" />
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="font-bold text-xs text-muted-foreground shrink-0">Submitted:</span>
+                                          <span className="text-[11px] text-muted-foreground group-hover/submission:text-foreground transition-colors underline decoration-dotted underline-offset-4 decoration-muted-foreground/30 group-hover/submission:decoration-primary truncate">
+                                            {formatDate(appointment.createdAt)}
+                                          </span>
+                                        </div>
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent align="start" className="w-auto p-0 border-none shadow-2xl">
+                                      <CalendarUI
+                                        mode="single"
+                                        selected={new Date(appointment.createdAt)}
+                                        onSelect={(date) => {
+                                          if (date) {
+                                            updateSubmissionInfo(appointment.id, { createdAt: date.toISOString() })
+                                          }
+                                        }}
+                                        initialFocus
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
                                 </div>
 
                                 {appointment.statusUpdatedAt && (
@@ -5668,10 +5820,34 @@ export default function AdminDashboard() {
                                         <span>Preferred: {record.preferred_date}</span>
                                       </div>
                                     )}
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                      <Clock className="w-4 h-4" />
-                                      <span>Submitted: {formatDate(record.original_created_at)}</span>
-                                    </div>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button 
+                                          className="flex items-center gap-3 py-1 px-2.5 bg-secondary/30 rounded-lg border border-border/40 group/submission hover:border-primary/20 transition-all text-left"
+                                          title="Change Submission Date"
+                                        >
+                                          <Clock className="w-3.5 h-3.5 text-muted-foreground group-hover/submission:text-primary transition-colors shrink-0" />
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="font-bold text-[10px] text-muted-foreground shrink-0">Submitted:</span>
+                                            <span className="text-[10px] text-muted-foreground group-hover/submission:text-foreground transition-colors underline decoration-dotted underline-offset-2 decoration-muted-foreground/20 group-hover/submission:decoration-primary truncate">
+                                              {formatDate(record.original_created_at)}
+                                            </span>
+                                          </div>
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent align="start" className="w-auto p-0 border-none shadow-2xl">
+                                        <CalendarUI
+                                          mode="single"
+                                          selected={new Date(record.original_created_at)}
+                                          onSelect={(date) => {
+                                            if (date) {
+                                              updateHistorySubmissionInfo(record.id, { originalCreatedAt: date.toISOString() })
+                                            }
+                                          }}
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                       <Clock className="w-4 h-4" />
                                       <span>Completed: {formatDate(record.completed_at)}</span>

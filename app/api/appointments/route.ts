@@ -349,6 +349,7 @@ export async function PUT(request: Request) {
   if (updates.assigneeDriver !== undefined || updates.assignee_driver !== undefined) dbUpdates.assignee_driver = updates.assigneeDriver ?? updates.assignee_driver
   if (updates.service !== undefined) dbUpdates.service = updates.service
   if (updates.message !== undefined) dbUpdates.message = updates.message
+  if (updates.createdAt !== undefined || updates.created_at !== undefined) dbUpdates.created_at = updates.createdAt ?? updates.created_at
 
   // Soft delete support
   if (updates.deletedAt !== undefined) dbUpdates.deleted_at = updates.deletedAt

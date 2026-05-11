@@ -124,6 +124,7 @@ export interface CostingData {
   loaAttachment?: string
   loaAttachment2?: string
   loaAttachments?: string[]
+  submissionIcon?: string
   gatepass_breakdown?: {
     brpad: number
     aircon: number
