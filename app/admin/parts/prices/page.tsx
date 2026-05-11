@@ -235,7 +235,7 @@ export default function PartsPricesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input 
                 placeholder="Search parts or brands..." 
-                className="pl-9 bg-slate-100/50 border-slate-200 focus:bg-white transition-all text-black font-medium"
+                className="pl-9 bg-slate-100/10 border-slate-700/50 focus:bg-slate-800/50 transition-all text-slate-100 placeholder:text-slate-500 font-medium"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -467,7 +467,7 @@ export default function PartsPricesPage() {
                   value={formData.brand} 
                   onValueChange={(val) => setFormData({...formData, brand: val})}
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 font-medium">
+                  <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-100 font-medium">
                     <SelectValue placeholder="Select Brand" />
                   </SelectTrigger>
                   <SelectContent>
@@ -483,7 +483,7 @@ export default function PartsPricesPage() {
                   value={formData.category} 
                   onValueChange={(val) => setFormData({...formData, category: val})}
                 >
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 font-medium">
+                  <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-100 font-medium">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -502,7 +502,7 @@ export default function PartsPricesPage() {
                 placeholder="e.g. Oil Filter, Brake Pads"
                 value={formData.part_name}
                 onChange={(e) => setFormData({...formData, part_name: e.target.value})}
-                className="bg-slate-50 border-slate-200 text-black font-medium"
+                className="bg-slate-800/50 border-slate-700 text-slate-100 font-medium placeholder:text-slate-500"
               />
             </div>
 
@@ -516,7 +516,7 @@ export default function PartsPricesPage() {
                   placeholder="0.00"
                   value={formData.price}
                   onChange={(e) => setFormData({...formData, price: formatNumberWithCommas(e.target.value)})}
-                  className="pl-8 bg-slate-50 border-slate-200 font-bold text-black text-lg"
+                  className="pl-8 bg-slate-800/50 border-slate-700 font-bold text-slate-100 text-lg placeholder:text-slate-500"
                 />
               </div>
             </div>
@@ -528,7 +528,7 @@ export default function PartsPricesPage() {
                 placeholder="e.g. 1pc, 4L, or specific dimensions"
                 value={formData.specifications}
                 onChange={(e) => setFormData({...formData, specifications: e.target.value})}
-                className="bg-slate-50 border-slate-200 text-black"
+                className="bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
               />
             </div>
 
