@@ -5,6 +5,7 @@ import type { JWT } from "next-auth/jwt"
 // Authorized emails for admin access
 const AUTHORIZED_EMAILS = [
   "autoworxcagayan2025@gmail.com",
+  "alfredagbong123@gmail.com",
   "alfredagbong76@gmail.com",
   "siliacay.javier@gmail.com",
   "paulsuazo64@gmail.com",
@@ -22,6 +23,7 @@ const DEVELOPER_EMAILS = [
 // Authorized emails for Release Monitoring Report (Owners/High-level managers)
 const AUTHORIZED_REPORT_EMAILS = [
   "paulsuazo64@gmail.com",
+  "alfredagbong123@gmail.com",
   "alfredagbong76@gmail.com",
   "alfred_autoworks@yahoo.com",
   "siliacay.javier@gmail.com",
@@ -32,6 +34,7 @@ const AUTHORIZED_REPORT_EMAILS = [
 // Authorized emails for Sales Monitoring (Owners, Managers, and specific monitoring staff)
 const AUTHORIZED_SALES_EMAILS = [
   "paulsuazo64@gmail.com",
+  "alfredagbong123@gmail.com",
   "alfredagbong76@gmail.com",
   "autoworxcagayan2025@gmail.com",
   "alfred_autoworks@yahoo.com",
