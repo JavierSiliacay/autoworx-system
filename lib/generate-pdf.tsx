@@ -20,6 +20,7 @@ interface TrackingAppointment {
   chassisNumber?: string
   engineNumber?: string
   assigneeDriver?: string
+  assignedTechnician?: string
   service: string
   message?: string
   status: string
@@ -1080,6 +1081,64 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
   const today = new Date();
   const formattedDate = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
 
+  const parseScopeText = (text: string) => {
+    if (!text) return `<div style="color: #999; font-style: italic; margin-top: 5px;">No scope of works specified.</div>`;
+    const lines = text.split('\n');
+    let html = '';
+    let inList = false;
+    let inSection = false;
+
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      
+      if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
+        if (!inList) { 
+          html += '<ul style="margin-top: 2px; padding-left: 18px; margin-bottom: 0;">'; 
+          inList = true; 
+        }
+        html += `<li style="margin-bottom: 2px;">${trimmed.substring(1).trim()}</li>`;
+      } else {
+        // Close previous list if open
+        if (inList) { 
+          html += '</ul>'; 
+          inList = false; 
+        }
+        // Close previous section if open
+        if (inSection) {
+          html += '</div>';
+        }
+        // Start new section
+        html += `<div style="break-inside: avoid; margin-bottom: 8px;">
+                   <div style="margin-bottom: 2px;"><strong style="color: #000; font-size: 10.5px;">${trimmed}</strong></div>`;
+        inSection = true;
+      }
+    }
+    if (inList) html += '</ul>';
+    if (inSection) html += '</div>';
+    return html;
+  };
+
+  const parsePartsText = (text: string) => {
+    if (!text) return `<div style="display: flex; flex: 1; align-items: center; justify-content: center; min-height: 120px;">
+         <div style="font-size: 22px; font-weight: 900; color: #bbb; text-transform: uppercase; letter-spacing: 2px; text-align: center; width: 100%;">NO PARTS<br/>WERE ADDED</div>
+       </div>`;
+    
+    const lines = text.split('\n');
+    let html = '<ul style="margin-top: 2px; padding-left: 18px; margin-bottom: 0;">';
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const content = (trimmed.startsWith('-') || trimmed.startsWith('•')) ? trimmed.substring(1).trim() : trimmed;
+      html += `<li style="margin-bottom: 2px;">${content}</li>`;
+    }
+    html += '</ul>';
+    return html;
+  };
+
+  const scopeOfWorksHtml = parseScopeText(appointment.costing?.scopeOfWorks || appointment.scopeOfWorks || "");
+  const partsHtml = parsePartsText(appointment.costing?.partsText || "");
+
   const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -1100,51 +1159,63 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
     }
     @page { 
       size: A4; 
-      margin: 0.4in; 
+      margin: 0.1in; 
     }
-    .container { width: 100%; margin: 0 auto; border: 2px solid #000; padding: 15px; }
+    .container { width: 100%; margin: 0 auto; border: 2px solid #000; padding: 10px; max-height: 10.6in; overflow: hidden; position: relative; }
     
-    .header { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 10px; gap: 25px; }
-    .logo-container { width: 110px; }
-    .logo-container img { width: 110px; height: auto; }
+    .page-marker {
+      text-align: center;
+      font-size: 8px;
+      font-weight: bold;
+      color: #999;
+      margin-top: 8px;
+      border-top: 1px dashed #ccc;
+      padding-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .header { display: flex; justify-content: center; align-items: center; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 8px; gap: 20px; }
+    .logo-container { width: 90px; }
+    .logo-container img { width: 90px; height: auto; }
     .header-content { text-align: center; }
-    .header h1 { color: #c00; font-size: 20px; font-weight: bold; margin-bottom: 2px; }
-    .header p { font-size: 8.5px; line-height: 1.4; color: #333; }
+    .header h1 { color: #c00; font-size: 18px; font-weight: bold; margin-bottom: 1px; }
+    .header p { font-size: 8px; line-height: 1.3; color: #333; }
     
-    .title-banner { background: #000 !important; color: #fff !important; text-align: center; padding: 6px; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; }
+    .title-banner { background: #e6e6e6 !important; color: #000 !important; text-align: center; padding: 8px; font-size: 20px; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 4px; border: 1px solid #000; }
     
-    .meta-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-    .meta-box { border: 1px solid #000; padding: 8px; background: #f9f9f9 !important; }
-    .meta-label { font-size: 8px; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 2px; }
-    .meta-value { font-size: 11px; font-weight: bold; color: #000; }
+    .meta-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .meta-box { border: 1px solid #000; padding: 6px; background: #f9f9f9 !important; }
+    .meta-label { font-size: 7px; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 1px; }
+    .meta-value { font-size: 10px; font-weight: bold; color: #000; }
     
-    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; border: 1px solid #000; padding: 10px; }
-    .info-item { display: flex; flex-direction: column; gap: 2px; }
-    .info-label { font-size: 7.5px; font-weight: bold; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 1px; }
-    .info-value { font-size: 9.5px; font-weight: 600; padding-top: 2px; }
+    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; border: 1px solid #000; padding: 8px; }
+    .info-item { display: flex; flex-direction: column; gap: 1px; }
+    .info-label { font-size: 7px; font-weight: bold; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 1px; }
+    .info-value { font-size: 9px; font-weight: 600; padding-top: 1px; }
     
-    .section-header { background: #eee !important; padding: 5px 10px; font-weight: bold; border: 1px solid #000; border-bottom: none; font-size: 10px; text-transform: uppercase; display: flex; justify-content: space-between; }
+    .section-header { background: #eee !important; padding: 4px 8px; font-weight: bold; border: 1px solid #000; border-bottom: none; font-size: 9px; text-transform: uppercase; display: flex; justify-content: space-between; }
     
-    .job-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #000; }
-    .job-table th, .job-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; }
-    .job-table th { background: #f4f4f4 !important; font-size: 9px; text-transform: uppercase; }
-    .job-table td { font-size: 9.5px; vertical-align: top; }
-    .category-row { background: #fdfdfd !important; font-weight: bold; font-size: 10px; color: #c00; }
+    .job-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border: 1px solid #000; }
+    .job-table th, .job-table td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
+    .job-table th { background: #f4f4f4 !important; font-size: 8px; text-transform: uppercase; }
+    .job-table td { font-size: 9px; vertical-align: top; }
+    .category-row { background: #fdfdfd !important; font-weight: bold; font-size: 9px; color: #c00; }
     
     .qr-and-status { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; }
     .qr-container { text-align: center; border: 1px dashed #000; padding: 5px; }
     .qr-container p { font-size: 7px; margin-top: 4px; font-weight: bold; }
     .delivery-info { flex: 1; border: 2px solid #c00; padding: 10px; color: #c00; font-weight: bold; text-align: center; font-size: 12px; }
     
-    .footer-sections { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; margin-top: 20px; }
-    .terms-section { font-size: 8px; line-height: 1.4; }
-    .terms-section h4 { text-decoration: underline; margin-bottom: 5px; }
-    .terms-section ol { padding-left: 15px; }
+    .footer-sections { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-top: 10px; }
+    .terms-section { font-size: 7.5px; line-height: 1.3; }
+    .terms-section h4 { text-decoration: underline; margin-bottom: 3px; font-size: 8px; }
+    .terms-section ol { padding-left: 12px; }
     
-    .sig-section { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; margin-top: 20px; }
-    .sig-box { width: 100%; border-top: 1px solid #000; padding-top: 5px; text-align: center; }
-    .sig-title { font-size: 8px; color: #444; text-transform: uppercase; }
-    .sig-name { font-weight: bold; font-size: 10px; margin-bottom: 2px; }
+    .sig-section { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; margin-top: 10px; }
+    .sig-box { width: 100%; border-top: 1px solid #000; padding-top: 4px; text-align: center; }
+    .sig-title { font-size: 7.5px; color: #444; text-transform: uppercase; }
+    .sig-name { font-weight: bold; font-size: 9px; margin-bottom: 1px; }
   </style>
 </head>
 <body>
@@ -1173,13 +1244,13 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
         <p class="meta-value">${formattedDate}</p>
       </div>
       <div class="meta-box">
-        <p class="meta-label">Assignee:</p>
-        <p class="meta-value">${appointment.assigneeDriver || "_______"}</p>
+        <p class="meta-label">Assigned Technician:</p>
+        <p class="meta-value">${appointment.assignedTechnician || appointment.costing?.jobOrderHistory?.slice(-1)[0]?.assignee || "_______"}</p>
       </div>
     </div>
 
     <div class="section-header">Customer & Service Overview</div>
-    <div class="info-grid" style="grid-template-columns: 1fr 1fr; padding: 15px; gap: 20px;">
+    <div class="info-grid" style="grid-template-columns: 1fr 1fr; padding: 8px; gap: 12px;">
       <div class="info-item" style="grid-column: span 2; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 5px;">
         <p class="info-label">VEHICLE UNIT (PRIMARY IDENTIFIER)</p>
         <p class="info-value" style="font-size: 22px; font-weight: 900; color: #000; text-transform: uppercase;">
@@ -1199,56 +1270,40 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
       
       <div class="info-item" style="grid-column: span 2; margin-top: 5px;">
         <p class="info-label">CLAIM TYPE</p>
-        <div style="display: flex; gap: 30px; padding-top: 5px; font-size: 11px; font-weight: bold;">
-          <span>[${(!appointment.insurance || appointment.insurance === 'PERSONAL') ? '✓' : '&nbsp;&nbsp;'}] PERSONAL</span>
-          <span>[${(appointment.insurance && appointment.insurance !== 'PERSONAL' && !appointment.insurance.toLowerCase().includes('company')) ? '✓' : '&nbsp;&nbsp;'}] INSURANCE</span>
-          <span>[${(appointment.insurance?.toLowerCase().includes('company')) ? '✓' : '&nbsp;&nbsp;'}] COMPANY</span>
+        <div style="display: flex; gap: 25px; margin-top: 8px; font-size: 11px; font-weight: bold; color: #000; padding-left: 5px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 14px; height: 14px; border: 1.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px;">${appointment.insurance === 'PERSONAL' ? '✓' : ''}</div>
+            <span>PERSONAL</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 14px; height: 14px; border: 1.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px;">${appointment.insurance === 'INSURANCE' ? '✓' : ''}</div>
+            <span>INSURANCE</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 14px; height: 14px; border: 1.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px;">${appointment.insurance === 'COMPANY' ? '✓' : ''}</div>
+            <span>COMPANY</span>
+          </div>
         </div>
-        <div class="section-header">
-      <span>Job Description & Scope of Work</span>
+      </div>
     </div>
-    
-    ${(appointment.costing?.jobDescription || appointment.jobDescription) ? `
-      <div style="padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; font-size: 10px; min-height: 50px; background: #fff;">
-        <strong>JOB DESCRIPTION:</strong><br/>
-        ${(appointment.costing?.jobDescription || appointment.jobDescription || "").replace(/\n/g, '<br/>')}
-      </div>
-    ` : ""}
+    <div class="section-header">
+      <span>Job Details & Instructions</span>
+    </div>
 
-    ${(appointment.costing?.scopeOfWorks || appointment.scopeOfWorks) ? `
-      <div style="padding: 10px; border: 1px solid #ddd; margin-bottom: 20px; font-size: 10px; min-height: 100px; background: #fff;">
-        <strong>SCOPE OF WORKS:</strong><br/>
-        ${(appointment.costing?.scopeOfWorks || appointment.scopeOfWorks || "").replace(/\n/g, '<br/>')}
+    <div style="display: flex; flex-grow: 1; min-height: 0; gap: 10px; margin-bottom: 15px;">
+      <div style="flex: 1; padding: 10px; border: 1px solid #000; font-size: 9px; min-height: 150px; background: #fff; overflow: hidden; display: flex; flex-direction: column;">
+        <strong style="text-decoration: underline; color: #c00; font-size: 10.5px; display: block; margin-bottom: 8px;">SCOPE OF WORKS:</strong>
+        <div style="column-width: 160px; column-gap: 15px; flex-grow: 1; overflow: hidden;">
+          ${scopeOfWorksHtml}
+        </div>
       </div>
-    ` : `
-    <table class="job-table">
-      <thead>
-        <tr>
-          <th style="width: 70%;">Description of Work / Materials</th>
-          <th style="width: 15%;">Qty</th>
-          <th style="width: 15%;">Unit</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${activeCategories.map(cat => {
-          const items = categorized[cat];
-          return `
-            <tr class="category-row">
-              <td colspan="3">${cat}</td>
-            </tr>
-            ${items.length > 0 ? items.map((item: CostItem) => `
-              <tr>
-                <td style="padding-left: 20px; white-space: pre-wrap;">${item.description}</td>
-                <td>${item.quantity}</td>
-                <td>${item.unit || "PC"}</td>
-              </tr>
-            `).join("") : `<tr><td colspan="3" style="padding-left: 20px; color: #999; font-style: italic;">No specific items.</td></tr>`}
-          `
-        }).join("")}
-      </tbody>
-    </table>
-    `}  </tbody>
-    </table>
+      <div style="flex: 1; padding: 10px; border: 1px solid #000; font-size: 9px; min-height: 150px; background: #fff; overflow: hidden; display: flex; flex-direction: column;">
+        <strong style="text-decoration: underline; color: #c00; font-size: 10.5px; display: block; margin-bottom: 8px;">PARTS:</strong>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; column-width: 160px; column-gap: 15px; overflow: hidden;">
+          ${partsHtml}
+        </div>
+      </div>
+    </div>
 
 
 
@@ -1256,7 +1311,7 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
       <div class="terms-section">
         <h4>TERMS AND CONDITIONS:</h4>
         <ol>
-          <li><strong>Authorization:</strong> The shop is authorized to perform the repairs described, including the use of necessary parts. Additional repairs exceeding (e.g., $100) must be authorized by the customer.</li>
+          <li><strong>Authorization:</strong> The shop is authorized to perform the repairs described, including the use of necessary parts. Additional repairs exceeding (e.g., ₱500) must be authorized by the customer.</li>
           <li><strong>Payment & Storage:</strong> Payment is due upon completion. Vehicles not collected within <strong style="color: red;">15 days</strong> of notification of completion may be subject to a daily storage fee of <strong style="color: red;">₱250 to ₱500</strong>.</li>
           <li><strong>Lien Clause:</strong> The shop has a mechanic's lien on the vehicle to secure payment for repairs, parts, and storage fees.</li>
           <li><strong>Liability:</strong> The shop is not responsible for loss or damage to the vehicle or articles left inside due to fire, theft, or any other cause beyond its control.</li>
@@ -1271,6 +1326,9 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
           <p class="sig-title">Prepared By (Service Advisor)</p>
         </div>
       </div>
+    </div>
+    <div class="page-marker">
+      --- END OF JOB ORDER (PAGE 1 OF 1) ---
     </div>
   </div>
 </body>

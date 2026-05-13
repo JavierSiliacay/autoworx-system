@@ -104,6 +104,18 @@ export interface CostItem {
   total: number
 }
 
+export interface JobOrderHistoryEntry {
+  id: string
+  printedAt: string
+  printedBy: string
+  assignee: string
+  jobClassification: string
+  jobDescription?: string
+  scopeOfWorks: string
+  partsText: string
+  serviceAdvisor: string
+}
+
 export interface CostingData {
   items: CostItem[]
   subtotal: number
@@ -127,6 +139,8 @@ export interface CostingData {
   submissionIcon?: string
   jobDescription?: string
   scopeOfWorks?: string
+  partsText?: string
+  jobOrderHistory?: JobOrderHistoryEntry[]
   gatepass_breakdown?: {
     brpad: number
     aircon: number
