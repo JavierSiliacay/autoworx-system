@@ -44,6 +44,8 @@ export async function POST(request: Request) {
             .from("appointments")
             .select("estimate_number")
             .not("estimate_number", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(5)
 
         if (searchError) {
             return NextResponse.json({ error: searchError.message }, { status: 500 })
@@ -53,6 +55,8 @@ export async function POST(request: Request) {
             .from("appointment_history")
             .select("estimate_number")
             .not("estimate_number", "is", null)
+            .order("original_created_at", { ascending: false })
+            .limit(5)
 
         if (historyError) {
             // Log error but continue, assuming history might be empty or not critical if query fails

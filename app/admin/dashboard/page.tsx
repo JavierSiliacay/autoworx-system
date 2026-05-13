@@ -537,12 +537,25 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Pagination states
+  const [activePage, setActivePage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
+  const itemsPerPage = 10;
+
   // History search, filter, and sort states
   const [historySearchQuery, setHistorySearchQuery] = useState<string>("")
   const [historyServiceFilter, setHistoryServiceFilter] = useState<string>("all")
   const [historyDateRangeFilter, setHistoryDateRangeFilter] = useState<string>("all")
   const [historySortBy, setHistorySortBy] = useState<"latest" | "oldest" | "status" | "name">("latest")
   const [historyViewMode, setHistoryViewMode] = useState<"list" | "release_monitoring">("list")
+
+  useEffect(() => {
+    setActivePage(1);
+  }, [searchQuery, filter, vehicleBrandFilter, serviceFilter, dateRangeFilter]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historySearchQuery, historyServiceFilter, historyDateRangeFilter, historySortBy]);
 
   // Custom repair part input states
   const [useCustomRepairPart, setUseCustomRepairPart] = useState<Record<string, boolean>>({})
@@ -4093,7 +4106,9 @@ export default function AdminDashboard() {
 
                   const plateRunningIndex: Record<string, number> = {}
 
-                  return filteredAppointments.map((appointment) => {
+                  const paginatedActive = filteredAppointments.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+
+                  return paginatedActive.map((appointment) => {
                     const status = statusConfig[appointment.status]
                     const repairStatusInfo = getRepairStatusInfo(appointment.repairStatus)
                     const isExpanded = expandedCards.has(appointment.id)
@@ -5700,6 +5715,36 @@ export default function AdminDashboard() {
                     </div>
                   )
                 })})()}
+
+                {/* Active List Pagination Controls */}
+                {filteredAppointments.length > itemsPerPage && (
+                  <div className="flex justify-between items-center mt-6 pt-4 border-t border-border">
+                    <div className="text-sm text-muted-foreground hidden sm:block">
+                      Showing {Math.min((activePage - 1) * itemsPerPage + 1, filteredAppointments.length)} to {Math.min(activePage * itemsPerPage, filteredAppointments.length)} of {filteredAppointments.length} entries
+                    </div>
+                    <div className="flex space-x-2 w-full sm:w-auto justify-between sm:justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActivePage(prev => Math.max(1, prev - 1))}
+                        disabled={activePage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center justify-center px-4 font-medium text-sm">
+                        Page {activePage} of {Math.ceil(filteredAppointments.length / itemsPerPage)}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActivePage(prev => Math.min(Math.ceil(filteredAppointments.length / itemsPerPage), prev + 1))}
+                        disabled={activePage >= Math.ceil(filteredAppointments.length / itemsPerPage)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -5985,7 +6030,7 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredAndSortedHistory.map((record) => {
+                  {filteredAndSortedHistory.slice((historyPage - 1) * itemsPerPage, historyPage * itemsPerPage).map((record) => {
                     const isExpanded = expandedCards.has(record.id)
 
                     return (
@@ -6608,6 +6653,36 @@ export default function AdminDashboard() {
                       </div>
                     )
                   })}
+
+                  {/* History List Pagination Controls */}
+                  {filteredAndSortedHistory.length > itemsPerPage && (
+                    <div className="flex justify-between items-center mt-6 pt-4 border-t border-border">
+                      <div className="text-sm text-muted-foreground hidden sm:block">
+                        Showing {Math.min((historyPage - 1) * itemsPerPage + 1, filteredAndSortedHistory.length)} to {Math.min(historyPage * itemsPerPage, filteredAndSortedHistory.length)} of {filteredAndSortedHistory.length} entries
+                      </div>
+                      <div className="flex space-x-2 w-full sm:w-auto justify-between sm:justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
+                          disabled={historyPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="flex items-center justify-center px-4 font-medium text-sm">
+                          Page {historyPage} of {Math.ceil(filteredAndSortedHistory.length / itemsPerPage)}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setHistoryPage(prev => Math.min(Math.ceil(filteredAndSortedHistory.length / itemsPerPage), prev + 1))}
+                          disabled={historyPage >= Math.ceil(filteredAndSortedHistory.length / itemsPerPage)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

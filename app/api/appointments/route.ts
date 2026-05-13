@@ -179,34 +179,27 @@ export async function POST(request: Request) {
     const { data: latestEstimates } = await supabase
       .from("appointments")
       .select("estimate_number")
-      .like("estimate_number", `${prefix}%`)
-      .order("estimate_number", { ascending: false })
-      .limit(1)
+      .not("estimate_number", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(5)
 
     const { data: latestHistoryEstimates } = await supabase
       .from("appointment_history")
       .select("estimate_number")
-      .like("estimate_number", `${prefix}%`)
-      .order("estimate_number", { ascending: false })
-      .limit(1)
+      .not("estimate_number", "is", null)
+      .order("original_created_at", { ascending: false })
+      .limit(5)
 
     let maxSequence = 0
 
-    if (latestEstimates && latestEstimates.length > 0 && latestEstimates[0].estimate_number) {
-      const lastNum = latestEstimates[0].estimate_number
-      const parts = lastNum.split('-')
-      if (parts.length === 2) {
-        maxSequence = Math.max(maxSequence, parseInt(parts[1]))
-      }
+    const parseSeq = (est: string | null) => {
+      if (!est) return 0
+      const parts = est.split('-')
+      return parts.length === 2 ? (parseInt(parts[1]) || 0) : 0
     }
 
-    if (latestHistoryEstimates && latestHistoryEstimates.length > 0 && latestHistoryEstimates[0].estimate_number) {
-      const lastNum = latestHistoryEstimates[0].estimate_number
-      const parts = lastNum.split('-')
-      if (parts.length === 2) {
-        maxSequence = Math.max(maxSequence, parseInt(parts[1]))
-      }
-    }
+    latestEstimates?.forEach(r => maxSequence = Math.max(maxSequence, parseSeq(r.estimate_number)))
+    latestHistoryEstimates?.forEach(r => maxSequence = Math.max(maxSequence, parseSeq(r.estimate_number)))
 
     const nextSequence = maxSequence + 1
 
