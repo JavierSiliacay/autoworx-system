@@ -34,11 +34,13 @@ import {
   ExternalLink,
   Rocket,
   Sparkles,
-  Wand2
+  Wand2,
+  FileText
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface DeveloperTask {
   id: string;
@@ -355,6 +357,18 @@ export function DeveloperTasksModal({
             </div>
             
             <div className="flex items-center gap-2">
+              {isDeveloper && (
+                <Link href="/resume" target="_blank">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-9 bg-rose-600/10 border-rose-500/20 text-rose-400 hover:bg-rose-600 hover:text-white transition-all gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Print Resume
+                  </Button>
+                </Link>
+              )}
               <Select value={filter} onValueChange={setFilter}>
                 <SelectTrigger className="w-[130px] bg-white/5 border-white/10 h-9">
                   <SelectValue placeholder="Status" />

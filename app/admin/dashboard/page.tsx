@@ -136,14 +136,14 @@ const parseNumberFromInput = (val: string) => {
 
 const getServiceCategoryLabel = (appointment: any) => {
   if (!appointment.service) return "";
-  
+
   const services = appointment.service.split(", ").filter((s: string) => s && s.trim() !== "");
   if (services.length === 0) return "";
 
   const shorten = (s: string) => {
     // Handle custom "Other" services
     if (s.startsWith("Other: ")) return s.replace("Other: ", "");
-    
+
     const mapping: Record<string, string> = {
       "Mechanical Services": "Mechanical",
       "Preventive Maintenance": "Preventive Maintenance",
@@ -169,18 +169,18 @@ const getServiceCategoryLabel = (appointment: any) => {
 
   if (labels.length === 1) return labels[0];
   if (labels.length === 2) return `${labels[0]}, ${labels[1]}`;
-  
+
   return `${labels[0]}, ${labels[1]} +${labels.length - 2}`;
 };
 
 const getPlateCopyLabel = (appointment: any, allAppointments: any[]) => {
   const plate = appointment.vehiclePlate?.trim().toUpperCase() || 'N/A';
   if (plate === 'N/A') return "";
-  
+
   const filtered = allAppointments.filter(a => (a.vehiclePlate?.trim().toUpperCase() || 'N/A') === plate);
   const sorted = [...filtered].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const index = sorted.findIndex(a => a.id === appointment.id);
-  
+
   if (index < 1) return "";
   const currentIndex = index + 1;
   return `${currentIndex}${currentIndex === 2 ? 'nd' : currentIndex === 3 ? 'rd' : 'th'} Copy`;
@@ -706,7 +706,7 @@ export default function AdminDashboard() {
   const [isUploadingHistoryLOA, setIsUploadingHistoryLOA] = useState<Record<string, boolean>>({})
   const [isUploadingDamage, setIsUploadingDamage] = useState<Record<string, boolean>>({})
   const [isUploadingORCR, setIsUploadingORCR] = useState<Record<string, boolean>>({})
-  
+
   // Job Order Configuration States
   const [isJobOrderConfigModalOpen, setIsJobOrderConfigModalOpen] = useState(false)
   const [configAppointment, setConfigAppointment] = useState<Appointment | null>(null)
@@ -1950,7 +1950,7 @@ export default function AdminDashboard() {
     }
 
     // Optimistic update
-    setAppointments(prev => prev.map(apt => 
+    setAppointments(prev => prev.map(apt =>
       apt.id === appointmentId ? { ...apt, ...updatedData } : apt
     ))
 
@@ -1960,7 +1960,7 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedData),
       })
-      
+
       if (!response.ok) throw new Error("Failed to update")
 
       toast({
@@ -2008,11 +2008,11 @@ export default function AdminDashboard() {
     }
 
     // Optimistic update
-    setHistoryRecords(prev => prev.map(rec => 
-      rec.id === recordId ? { 
-        ...rec, 
+    setHistoryRecords(prev => prev.map(rec =>
+      rec.id === recordId ? {
+        ...rec,
         original_created_at: updates.originalCreatedAt ?? rec.original_created_at,
-        costing: updatedCosting 
+        costing: updatedCosting
       } : rec
     ))
 
@@ -2022,7 +2022,7 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      
+
       if (!response.ok) throw new Error("Failed to update history")
 
       toast({
@@ -2405,7 +2405,7 @@ export default function AdminDashboard() {
     const copyLabel = getPlateCopyLabel(appointment, appointments);
     const currentEstimateNumber = appointment.estimateNumber || "PENDING";
     const unitModel = `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim();
-    
+
     const parts = [
       currentEstimateNumber,
       appointment.vehiclePlate,
@@ -2504,7 +2504,7 @@ export default function AdminDashboard() {
   const handlePrintJobOrder = (appointment: Appointment) => {
     // Extract actual service/work descriptions from items, ignoring UNIT, QTY, PRICE
     const items = appointment.costing?.items || [];
-    
+
     // Group items like in generateJobOrderPDF
     const categorized = items.reduce((acc, item) => {
       let group = item.category && item.category !== "Others" ? item.category : "";
@@ -2549,7 +2549,7 @@ export default function AdminDashboard() {
     if (!configAppointment) return
 
     setIsSavingJobOrderConfig(true)
-    
+
     // 1. Save to Database
     try {
       const newHistoryEntry: JobOrderHistoryEntry = {
@@ -2596,13 +2596,13 @@ export default function AdminDashboard() {
       if (error) throw error
 
       // Update local state
-      setAppointments(prev => prev.map(a => 
-        a.id === configAppointment.id 
-          ? { 
-              ...a, 
-              insurance: jobOrderConfig.jobClassification,
-              costing: updatedCosting as any
-            } 
+      setAppointments(prev => prev.map(a =>
+        a.id === configAppointment.id
+          ? {
+            ...a,
+            insurance: jobOrderConfig.jobClassification,
+            costing: updatedCosting as any
+          }
           : a
       ))
 
@@ -2718,7 +2718,7 @@ export default function AdminDashboard() {
 
     const categoryLabel = getServiceCategoryLabel(appointment);
     const filename = `JO_HIST_${appointment.estimateNumber || appointment.trackingCode}_${categoryLabel ? `[${categoryLabel}]_` : ""}${format(new Date(entry.printedAt), "yyyyMMdd")}.pdf`
-    
+
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
       toast({
@@ -2772,14 +2772,14 @@ export default function AdminDashboard() {
 
   const handleDeleteJobOrderHistoryEntry = async (entry: JobOrderHistoryEntry) => {
     if (!configAppointment) return
-    
+
     if (!window.confirm("Are you sure you want to delete this JO print history record?")) return
 
     setIsSavingJobOrderConfig(true)
     try {
       const currentHistory = configAppointment.costing?.jobOrderHistory || []
       const updatedHistory = currentHistory.filter(h => h.id !== entry.id)
-      
+
       const updatedCosting = {
         ...(configAppointment.costing || {}),
         jobOrderHistory: updatedHistory
@@ -2788,7 +2788,7 @@ export default function AdminDashboard() {
       // 1. Update UI immediately
       const updatedAppointment = { ...configAppointment, costing: updatedCosting }
       setConfigAppointment(updatedAppointment)
-      
+
       if (updatedAppointment.source === 'history') {
         setHistoryRecords(prev => prev.map(rec => rec.id === updatedAppointment.id ? { ...rec, costing: updatedCosting } : rec))
       } else {
@@ -4187,7 +4187,7 @@ export default function AdminDashboard() {
 
                       if (currentIndex > 1) {
                         duplicateLabel = `${currentIndex}${currentIndex === 2 ? 'nd' : currentIndex === 3 ? 'rd' : 'th'} Copy`;
-                        
+
                         duplicateColor = currentIndex === 2
                           ? "text-blue-600 border-blue-500/50 bg-blue-500/10"
                           : currentIndex === 3
@@ -4196,1596 +4196,1597 @@ export default function AdminDashboard() {
                       }
                     }
 
-                  return (
-                    <div
-                      key={appointment.id}
-                      className="bg-card rounded-xl border border-border overflow-hidden mb-2"
-                    >
-                      {/* Folder Header */}
+                    return (
                       <div
-                        onClick={() => toggleCardExpanded(appointment.id)}
-                        className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-primary"
+                        key={appointment.id}
+                        className="bg-card rounded-xl border border-border overflow-hidden mb-2"
                       >
-                        {isExpanded ? (
-                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                        )}
+                        {/* Folder Header */}
+                        <div
+                          onClick={() => toggleCardExpanded(appointment.id)}
+                          className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-primary"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                          )}
 
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm uppercase">
-                          <span className="font-mono font-bold text-primary">
-                            {appointment.estimateNumber || "NO-ESTIMATE"}
-                          </span>
-                          <span className="font-bold text-foreground">
-                            {appointment.vehiclePlate}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {appointment.vehicleMake} {appointment.vehicleModel}
-                          </span>
-                          {appointment.insurance && (
-                            <span className="text-emerald-600 font-medium px-2 py-0.5 bg-emerald-500/10 rounded-full text-xs">
-                              {appointment.insurance}
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm uppercase">
+                            <span className="font-mono font-bold text-primary">
+                              {appointment.estimateNumber || "NO-ESTIMATE"}
                             </span>
-                          )}
-                          <span className="font-medium text-foreground">
-                            {appointment.name}
-                          </span>
-                          {appointment.isBackJob && (
-                            <Badge variant="outline" className="text-amber-600 border-amber-500/50 bg-amber-500/10 rounded-full text-[10px] font-bold py-0 h-5">
-                              BACK-JOB
-                            </Badge>
-                          )}
-                          {(() => {
-                            const categoryLabel = getServiceCategoryLabel(appointment);
-                            return categoryLabel && (
-                              <Badge variant="outline" className="text-blue-600 border-blue-500/50 bg-blue-500/10 rounded-full text-[10px] font-bold py-0 h-5 uppercase">
-                                {categoryLabel}
-                              </Badge>
-                            );
-                          })()}
-                          {duplicateLabel && (
-                            <Badge variant="outline" className={cn("rounded-full text-[10px] font-bold py-0 h-5 animate-pulse", duplicateColor)}>
-                              {duplicateLabel}
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="ml-auto flex items-center gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant={status.variant} className={cn("mr-2", appointment.status === "completed" && "cursor-help")}>
-                                {status.label}
-                              </Badge>
-                            </TooltipTrigger>
-                            {appointment.status === "completed" && appointment.statusUpdatedAt && (
-                              <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
-                                <div className="flex flex-col gap-0.5">
-                                  <p className="font-bold">Unit Completed on:</p>
-                                  <p className="font-mono text-[10px]">{formatDate(appointment.statusUpdatedAt)}</p>
-                                </div>
-                              </TooltipContent>
+                            <span className="font-bold text-foreground">
+                              {appointment.vehiclePlate}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {appointment.vehicleMake} {appointment.vehicleModel}
+                            </span>
+                            {appointment.insurance && (
+                              <span className="text-emerald-600 font-medium px-2 py-0.5 bg-emerald-500/10 rounded-full text-xs">
+                                {appointment.insurance}
+                              </span>
                             )}
-                          </Tooltip>
-                        </div>
-                      </div>
+                            <span className="font-medium text-foreground">
+                              {appointment.name}
+                            </span>
+                            {appointment.isBackJob && (
+                              <Badge variant="outline" className="text-amber-600 border-amber-500/50 bg-amber-500/10 rounded-full text-[10px] font-bold py-0 h-5">
+                                BACK-JOB
+                              </Badge>
+                            )}
+                            {(() => {
+                              const categoryLabel = getServiceCategoryLabel(appointment);
+                              return categoryLabel && (
+                                <Badge variant="outline" className="text-blue-600 border-blue-500/50 bg-blue-500/10 rounded-full text-[10px] font-bold py-0 h-5 uppercase">
+                                  {categoryLabel}
+                                </Badge>
+                              );
+                            })()}
+                            {duplicateLabel && (
+                              <Badge variant="outline" className={cn("rounded-full text-[10px] font-bold py-0 h-5 animate-pulse", duplicateColor)}>
+                                {duplicateLabel}
+                              </Badge>
+                            )}
+                          </div>
 
-                      {/* Expanded Full Unit Details */}
-                      {isExpanded && (
-                        <div className="border-t border-border animate-in slide-in-from-top-2 duration-200">
-                          <div className="p-6">
-                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                              {/* Main Info */}
-                              <div className="flex-1 space-y-3">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <div className="flex items-center gap-3">
-                                      <h3 className="font-semibold text-foreground">{appointment.name}</h3>
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
+                          <div className="ml-auto flex items-center gap-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant={status.variant} className={cn("mr-2", appointment.status === "completed" && "cursor-help")}>
+                                  {status.label}
+                                </Badge>
+                              </TooltipTrigger>
+                              {appointment.status === "completed" && appointment.statusUpdatedAt && (
+                                <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
+                                  <div className="flex flex-col gap-0.5">
+                                    <p className="font-bold">Unit Completed on:</p>
+                                    <p className="font-mono text-[10px]">{formatDate(appointment.statusUpdatedAt)}</p>
+                                  </div>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </div>
+                        </div>
+
+                        {/* Expanded Full Unit Details */}
+                        {isExpanded && (
+                          <div className="border-t border-border animate-in slide-in-from-top-2 duration-200">
+                            <div className="p-6">
+                              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                                {/* Main Info */}
+                                <div className="flex-1 space-y-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <div className="flex items-center gap-3">
+                                        <h3 className="font-semibold text-foreground">{appointment.name}</h3>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
+                                            >
+                                              <Copy className="w-3 h-3 text-primary" />
+                                              Copy & New Appointment
+                                              <ChevronDown className="w-3 h-3 ml-1" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleCopyAppointment(appointment, false)} className="gap-2 text-[11px] cursor-pointer">
+                                              <FileText className="w-3 h-3 text-muted-foreground" />
+                                              Copy Information Only
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleCopyAppointment(appointment, true)} className="gap-2 text-[11px] cursor-pointer">
+                                              <Receipt className="w-3 h-3 text-primary" />
+                                              Copy Everything
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+
+                                        {!appointment.isSynced && (
                                           <Button
                                             variant="outline"
                                             size="sm"
-                                            className="h-7 px-2 text-[10px] gap-1.5 border-primary/30 hover:bg-primary/5 shadow-sm"
+                                            onClick={() => handleSyncToSales(appointment)}
+                                            disabled={savingIds.has(appointment.id)}
+                                            className="h-7 px-2 text-[10px] gap-1.5 border-amber-500/30 text-amber-600 hover:bg-amber-50 shadow-sm"
                                           >
-                                            <Copy className="w-3 h-3 text-primary" />
-                                            Copy & New Appointment
-                                            <ChevronDown className="w-3 h-3 ml-1" />
+                                            {savingIds.has(appointment.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                            Sync in Sales Monitoring
                                           </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          <DropdownMenuItem onClick={() => handleCopyAppointment(appointment, false)} className="gap-2 text-[11px] cursor-pointer">
-                                            <FileText className="w-3 h-3 text-muted-foreground" />
-                                            Copy Information Only
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem onClick={() => handleCopyAppointment(appointment, true)} className="gap-2 text-[11px] cursor-pointer">
-                                            <Receipt className="w-3 h-3 text-primary" />
-                                            Copy Everything
-                                          </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-
-                                      {!appointment.isSynced && (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleSyncToSales(appointment)}
-                                          disabled={savingIds.has(appointment.id)}
-                                          className="h-7 px-2 text-[10px] gap-1.5 border-amber-500/30 text-amber-600 hover:bg-amber-50 shadow-sm"
+                                        )}
+                                        {appointment.isSynced && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleSyncToSales(appointment)}
+                                            disabled={savingIds.has(appointment.id)}
+                                            className="h-7 px-2 text-[10px] bg-amber-50 text-amber-600 border-amber-200 gap-1.5 shadow-sm hover:bg-amber-100"
+                                          >
+                                            {savingIds.has(appointment.id) ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Check className="w-2.5 h-2.5" />}
+                                            Synced in Sales Monitoring
+                                          </Button>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <p className="text-xs text-muted-foreground">
+                                          Tracking: <span className="font-mono text-primary">{appointment.trackingCode}</span>
+                                        </p>
+                                        <Link
+                                          href={`/track?code=${appointment.trackingCode}`}
+                                          target="_blank"
+                                          className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
                                         >
-                                          {savingIds.has(appointment.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                          Sync in Sales Monitoring
-                                        </Button>
-                                      )}
-                                      {appointment.isSynced && (
-                                        <Button
+                                          View live
+                                          <ArrowUpRight className="w-2.5 h-2.5" />
+                                        </Link>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2 items-end">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge variant={status.variant} className={cn(appointment.status === "completed" && "cursor-help")}>
+                                            <status.icon className="w-3 h-3 mr-1" />
+                                            {status.label}
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        {appointment.status === "completed" && appointment.statusUpdatedAt && (
+                                          <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
+                                            <div className="flex flex-col gap-0.5">
+                                              <p className="font-bold">Unit Completed on:</p>
+                                              <p className="font-mono text-[10px]">{formatDate(appointment.statusUpdatedAt)}</p>
+                                            </div>
+                                          </TooltipContent>
+                                        )}
+                                      </Tooltip>
+                                      {appointment.repairStatus && (
+                                        <Badge
                                           variant="outline"
-                                          size="sm"
-                                          onClick={() => handleSyncToSales(appointment)}
-                                          disabled={savingIds.has(appointment.id)}
-                                          className="h-7 px-2 text-[10px] bg-amber-50 text-amber-600 border-amber-200 gap-1.5 shadow-sm hover:bg-amber-100"
+                                          className={`${repairStatusInfo.bgColor} ${repairStatusInfo.borderColor} ${repairStatusInfo.color} bg-transparent`}
                                         >
-                                          {savingIds.has(appointment.id) ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Check className="w-2.5 h-2.5" />}
-                                          Synced in Sales Monitoring
-                                        </Button>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <p className="text-xs text-muted-foreground">
-                                        Tracking: <span className="font-mono text-primary">{appointment.trackingCode}</span>
-                                      </p>
-                                      <Link
-                                        href={`/track?code=${appointment.trackingCode}`}
-                                        target="_blank"
-                                        className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
-                                      >
-                                        View live
-                                        <ArrowUpRight className="w-2.5 h-2.5" />
-                                      </Link>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col gap-2 items-end">
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Badge variant={status.variant} className={cn(appointment.status === "completed" && "cursor-help")}>
-                                          <status.icon className="w-3 h-3 mr-1" />
-                                          {status.label}
+                                          <Settings2 className="w-3 h-3 mr-1" />
+                                          {repairStatusInfo.label}
                                         </Badge>
-                                      </TooltipTrigger>
-                                      {appointment.status === "completed" && appointment.statusUpdatedAt && (
-                                        <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
-                                          <div className="flex flex-col gap-0.5">
-                                            <p className="font-bold">Unit Completed on:</p>
-                                            <p className="font-mono text-[10px]">{formatDate(appointment.statusUpdatedAt)}</p>
-                                          </div>
-                                        </TooltipContent>
                                       )}
-                                    </Tooltip>
-                                    {appointment.repairStatus && (
-                                      <Badge
-                                        variant="outline"
-                                        className={`${repairStatusInfo.bgColor} ${repairStatusInfo.borderColor} ${repairStatusInfo.color} bg-transparent`}
-                                      >
-                                        <Settings2 className="w-3 h-3 mr-1" />
-                                        {repairStatusInfo.label}
-                                      </Badge>
-                                    )}
-                                    {appointment.isBackJob && (
-                                      <Badge variant="outline" className="text-amber-600 border-amber-500/50 bg-amber-500/10">
-                                        <Wrench className="w-3 h-3 mr-1" />
-                                        Back-Job Priority
-                                      </Badge>
-                                    )}
-                                    {searchQuery.trim() && getMatchCategories(appointment, searchQuery).map(cat => (
-                                      <Badge key={cat} variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4">
-                                        {cat}
-                                      </Badge>
-                                    ))}
+                                      {appointment.isBackJob && (
+                                        <Badge variant="outline" className="text-amber-600 border-amber-500/50 bg-amber-500/10">
+                                          <Wrench className="w-3 h-3 mr-1" />
+                                          Back-Job Priority
+                                        </Badge>
+                                      )}
+                                      {searchQuery.trim() && getMatchCategories(appointment, searchQuery).map(cat => (
+                                        <Badge key={cat} variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[9px] h-4">
+                                          {cat}
+                                        </Badge>
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Phone className="w-4 h-4 shrink-0" />
-                                    <a href={`tel:${appointment.phone}`} className="hover:text-foreground">
-                                      {appointment.phone}
-                                    </a>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Mail className="w-4 h-4 shrink-0" />
-                                    <a href={`mailto:${appointment.email}`} className="hover:text-foreground truncate">
-                                      {appointment.email}
-                                    </a>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Car className="w-4 h-4 shrink-0" />
-                                    <span>
-                                      {appointment.vehicleYear} {appointment.vehicleMake}{" "}
-                                      {appointment.vehicleModel}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-muted-foreground whitespace-nowrap">
-                                    <span className="font-mono font-semibold text-foreground">{appointment.vehiclePlate}</span>
-                                    {appointment.vehicleColor && (
-                                      <span className="text-xs bg-secondary px-1.5 py-0.5 rounded">
-                                        {appointment.vehicleColor}
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <Phone className="w-4 h-4 shrink-0" />
+                                      <a href={`tel:${appointment.phone}`} className="hover:text-foreground">
+                                        {appointment.phone}
+                                      </a>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <Mail className="w-4 h-4 shrink-0" />
+                                      <a href={`mailto:${appointment.email}`} className="hover:text-foreground truncate">
+                                        {appointment.email}
+                                      </a>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <Car className="w-4 h-4 shrink-0" />
+                                      <span>
+                                        {appointment.vehicleYear} {appointment.vehicleMake}{" "}
+                                        {appointment.vehicleModel}
                                       </span>
-                                    )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground whitespace-nowrap">
+                                      <span className="font-mono font-semibold text-foreground">{appointment.vehiclePlate}</span>
+                                      {appointment.vehicleColor && (
+                                        <span className="text-xs bg-secondary px-1.5 py-0.5 rounded">
+                                          {appointment.vehicleColor}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
 
-                                {(appointment.chassisNumber || appointment.engineNumber || appointment.assigneeDriver) && (
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-4 text-xs border-l-2 border-primary/20 pl-3">
-                                    {appointment.chassisNumber && (
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-muted-foreground">Chassis:</span>
-                                        <span className="font-medium">{appointment.chassisNumber}</span>
-                                      </div>
-                                    )}
-                                    {appointment.engineNumber && (
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-muted-foreground">Engine:</span>
-                                        <span className="font-medium">{appointment.engineNumber}</span>
-                                      </div>
-                                    )}
-                                    {appointment.assigneeDriver && (
-                                      <div className="flex items-center gap-1.5 sm:col-span-2">
-                                        <span className="text-muted-foreground">Assignee/Driver:</span>
-                                        <span className="font-medium">{appointment.assigneeDriver}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                <div className="flex flex-wrap items-center gap-4 text-sm">
-                                  <div className="flex items-center gap-2">
-                                    <Wrench className="w-4 h-4 text-primary" />
-                                    <span className="text-foreground">{appointment.service}</span>
-                                  </div>
-                                  {appointment.currentRepairPart && (
-                                    <div className="flex items-center gap-2">
-                                      <Settings2 className="w-4 h-4 text-orange-500" />
-                                      <span className="text-orange-500 font-medium">Working on: {appointment.currentRepairPart}</span>
+                                  {(appointment.chassisNumber || appointment.engineNumber || appointment.assigneeDriver) && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-4 text-xs border-l-2 border-primary/20 pl-3">
+                                      {appointment.chassisNumber && (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-muted-foreground">Chassis:</span>
+                                          <span className="font-medium">{appointment.chassisNumber}</span>
+                                        </div>
+                                      )}
+                                      {appointment.engineNumber && (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-muted-foreground">Engine:</span>
+                                          <span className="font-medium">{appointment.engineNumber}</span>
+                                        </div>
+                                      )}
+                                      {appointment.assigneeDriver && (
+                                        <div className="flex items-center gap-1.5 sm:col-span-2">
+                                          <span className="text-muted-foreground">Assignee/Driver:</span>
+                                          <span className="font-medium">{appointment.assigneeDriver}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
-                                  
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <button 
-                                        className="flex items-center gap-3 py-1 px-2.5 bg-secondary/50 rounded-lg border border-border/50 group/submission hover:border-primary/30 transition-all text-left"
-                                        title="Change Submission Date"
-                                      >
-                                        <Clock className="w-4 h-4 text-muted-foreground group-hover/submission:text-primary transition-colors shrink-0" />
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                          <span className="font-bold text-xs text-muted-foreground shrink-0">Submitted:</span>
-                                          <span className="text-[11px] text-muted-foreground group-hover/submission:text-foreground transition-colors underline decoration-dotted underline-offset-4 decoration-muted-foreground/30 group-hover/submission:decoration-primary truncate">
-                                            {formatDate(appointment.createdAt)}
-                                          </span>
-                                        </div>
-                                      </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent align="start" className="w-auto p-0 border-none shadow-2xl">
-                                      <CalendarUI
-                                        mode="single"
-                                        selected={new Date(appointment.createdAt)}
-                                        onSelect={(date) => {
-                                          if (date) {
-                                            updateSubmissionInfo(appointment.id, { createdAt: date.toISOString() })
-                                          }
-                                        }}
-                                        initialFocus
-                                      />
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
 
-                                {appointment.statusUpdatedAt && (
-                                  <div className="text-xs text-muted-foreground">
-                                    Repair status last updated: {formatDate(appointment.statusUpdatedAt)}
-                                  </div>
-                                )}
-
-                                {appointment.message && (
-                                  <div className="p-3 bg-secondary rounded-lg">
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                                      <User className="w-3 h-3" />
-                                      Additional Details
-                                    </div>
-                                    <p className="text-sm text-foreground">{appointment.message}</p>
-                                  </div>
-                                )}
-
-                                {/* Damage Images */}
-                                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                                  <div className="flex items-center justify-between gap-2 text-xs text-amber-600 dark:text-amber-400 mb-2">
+                                  <div className="flex flex-wrap items-center gap-4 text-sm">
                                     <div className="flex items-center gap-2">
-                                      <ImageIcon className="w-3 h-3" />
-                                      Damage Photos ({appointment.damageImages?.length || 0})
+                                      <Wrench className="w-4 h-4 text-primary" />
+                                      <span className="text-foreground">{appointment.service}</span>
                                     </div>
-                                    <label className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded cursor-pointer hover:bg-amber-500/20 transition-colors">
-                                      <Plus className="w-3 h-3" />
-                                      <span>Add Photo</span>
-                                      <input
-                                        type="file"
-                                        multiple
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={(e) => handleDamageImageUpload(appointment.id, e.target.files)}
-                                      />
-                                    </label>
-                                  </div>
-                                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                                    {(appointment.damageImages || []).map((image, index) => (
-                                      <div key={index} className="flex flex-col gap-1">
-                                        <div
-                                          role="button"
-                                          tabIndex={0}
-                                          onClick={() => {
-                                            setZoomImages(appointment.damageImages || [])
-                                            setZoomInitialIndex(index)
-                                            setZoomModalOpen(true)
+                                    {appointment.currentRepairPart && (
+                                      <div className="flex items-center gap-2">
+                                        <Settings2 className="w-4 h-4 text-orange-500" />
+                                        <span className="text-orange-500 font-medium">Working on: {appointment.currentRepairPart}</span>
+                                      </div>
+                                    )}
+
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button
+                                          className="flex items-center gap-3 py-1 px-2.5 bg-secondary/50 rounded-lg border border-border/50 group/submission hover:border-primary/30 transition-all text-left"
+                                          title="Change Submission Date"
+                                        >
+                                          <Clock className="w-4 h-4 text-muted-foreground group-hover/submission:text-primary transition-colors shrink-0" />
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="font-bold text-xs text-muted-foreground shrink-0">Submitted:</span>
+                                            <span className="text-[11px] text-muted-foreground group-hover/submission:text-foreground transition-colors underline decoration-dotted underline-offset-4 decoration-muted-foreground/30 group-hover/submission:decoration-primary truncate">
+                                              {formatDate(appointment.createdAt)}
+                                            </span>
+                                          </div>
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent align="start" className="w-auto p-0 border-none shadow-2xl">
+                                        <CalendarUI
+                                          mode="single"
+                                          selected={new Date(appointment.createdAt)}
+                                          onSelect={(date) => {
+                                            if (date) {
+                                              updateSubmissionInfo(appointment.id, { createdAt: date.toISOString() })
+                                            }
                                           }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+
+                                  {appointment.statusUpdatedAt && (
+                                    <div className="text-xs text-muted-foreground">
+                                      Repair status last updated: {formatDate(appointment.statusUpdatedAt)}
+                                    </div>
+                                  )}
+
+                                  {appointment.message && (
+                                    <div className="p-3 bg-secondary rounded-lg">
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                                        <User className="w-3 h-3" />
+                                        Additional Details
+                                      </div>
+                                      <p className="text-sm text-foreground">{appointment.message}</p>
+                                    </div>
+                                  )}
+
+                                  {/* Damage Images */}
+                                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                                    <div className="flex items-center justify-between gap-2 text-xs text-amber-600 dark:text-amber-400 mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <ImageIcon className="w-3 h-3" />
+                                        Damage Photos ({appointment.damageImages?.length || 0})
+                                      </div>
+                                      <label className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded cursor-pointer hover:bg-amber-500/20 transition-colors">
+                                        <Plus className="w-3 h-3" />
+                                        <span>Add Photo</span>
+                                        <input
+                                          type="file"
+                                          multiple
+                                          accept="image/*"
+                                          className="hidden"
+                                          onChange={(e) => handleDamageImageUpload(appointment.id, e.target.files)}
+                                        />
+                                      </label>
+                                    </div>
+                                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                      {(appointment.damageImages || []).map((image, index) => (
+                                        <div key={index} className="flex flex-col gap-1">
+                                          <div
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() => {
                                               setZoomImages(appointment.damageImages || [])
                                               setZoomInitialIndex(index)
                                               setZoomModalOpen(true)
-                                            }
-                                          }}
-                                          className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-zoom-in group"
-                                        >
-                                          <img
-                                            src={image || "/placeholder.svg"}
-                                            alt={`Damage photo ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                          />
-                                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                handleDamageImageDelete(appointment.id, image)
-                                              }}
-                                              className="p-1 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
-                                            >
-                                              <X className="w-2.5 h-2.5" />
-                                            </button>
+                                            }}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' || e.key === ' ') {
+                                                setZoomImages(appointment.damageImages || [])
+                                                setZoomInitialIndex(index)
+                                                setZoomModalOpen(true)
+                                              }
+                                            }}
+                                            className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-zoom-in group"
+                                          >
+                                            <img
+                                              src={image || "/placeholder.svg"}
+                                              alt={`Damage photo ${index + 1}`}
+                                              className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  handleDamageImageDelete(appointment.id, image)
+                                                }}
+                                                className="p-1 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
+                                              >
+                                                <X className="w-2.5 h-2.5" />
+                                              </button>
+                                            </div>
+                                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-0.5 text-center">
+                                              {index + 1}
+                                            </div>
                                           </div>
-                                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-0.5 text-center">
-                                            {index + 1}
-                                          </div>
+                                          <a
+                                            href={image}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] text-amber-600 hover:underline text-center"
+                                          >
+                                            Full Size
+                                          </a>
                                         </div>
-                                        <a
-                                          href={image}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-[10px] text-amber-600 hover:underline text-center"
-                                        >
-                                          Full Size
-                                        </a>
-                                      </div>
-                                    ))}
+                                      ))}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-2">
+                                      Click to zoom or "Full Size" to download
+                                    </p>
                                   </div>
-                                  <p className="text-[10px] text-muted-foreground mt-2">
-                                    Click to zoom or "Full Size" to download
-                                  </p>
-                                </div>
 
-                                {/* ORCR Images */}
-                                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                                  <div className="flex items-center justify-between gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2 font-bold uppercase tracking-wider">
-                                    <div className="flex items-center gap-2">
-                                      <ImageIcon className="w-3 h-3" />
-                                      Official Documents (OR/CR)
+                                  {/* ORCR Images */}
+                                  <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                                    <div className="flex items-center justify-between gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2 font-bold uppercase tracking-wider">
+                                      <div className="flex items-center gap-2">
+                                        <ImageIcon className="w-3 h-3" />
+                                        Official Documents (OR/CR)
+                                      </div>
+                                      <div className="flex gap-2">
+                                        {!appointment.orcrImage && (
+                                          <label className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded cursor-pointer hover:bg-blue-500/20 transition-colors capitalize font-normal">
+                                            <Plus className="w-3 h-3" />
+                                            <span>Add OR/CR 1</span>
+                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleORCRUpload(appointment.id, e.target.files[0], 1)} />
+                                          </label>
+                                        )}
+                                        {!appointment.orcrImage2 && (
+                                          <label className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded cursor-pointer hover:bg-blue-500/20 transition-colors capitalize font-normal">
+                                            <Plus className="w-3 h-3" />
+                                            <span>Add OR/CR 2</span>
+                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleORCRUpload(appointment.id, e.target.files[0], 2)} />
+                                          </label>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                      {!appointment.orcrImage && (
-                                        <label className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded cursor-pointer hover:bg-blue-500/20 transition-colors capitalize font-normal">
-                                          <Plus className="w-3 h-3" />
-                                          <span>Add OR/CR 1</span>
-                                          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleORCRUpload(appointment.id, e.target.files[0], 1)} />
-                                        </label>
-                                      )}
-                                      {!appointment.orcrImage2 && (
-                                        <label className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded cursor-pointer hover:bg-blue-500/20 transition-colors capitalize font-normal">
-                                          <Plus className="w-3 h-3" />
-                                          <span>Add OR/CR 2</span>
-                                          <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleORCRUpload(appointment.id, e.target.files[0], 2)} />
-                                        </label>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-wrap gap-4">
-                                    {appointment.orcrImage && (
-                                      <div className="space-y-1 w-[140px]">
-                                        <div
-                                          role="button"
-                                          tabIndex={0}
-                                          onClick={() => {
-                                            const images = [appointment.orcrImage!];
-                                            if (appointment.orcrImage2) images.push(appointment.orcrImage2);
-                                            setZoomImages(images);
-                                            setZoomInitialIndex(0);
-                                            setZoomModalOpen(true);
-                                          }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
+                                    <div className="flex flex-wrap gap-4">
+                                      {appointment.orcrImage && (
+                                        <div className="space-y-1 w-[140px]">
+                                          <div
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() => {
                                               const images = [appointment.orcrImage!];
                                               if (appointment.orcrImage2) images.push(appointment.orcrImage2);
                                               setZoomImages(images);
                                               setZoomInitialIndex(0);
                                               setZoomModalOpen(true);
-                                            }
-                                          }}
-                                          className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
-                                        >
-                                          <img
-                                            src={appointment.orcrImage}
-                                            alt="ORCR Photo 1"
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                          />
-                                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                const input = document.createElement('input')
-                                                input.type = 'file'
-                                                input.accept = 'image/*'
-                                                input.onchange = (ie) => {
-                                                  const file = (ie.target as HTMLInputElement).files?.[0]
-                                                  if (file) handleORCRUpload(appointment.id, file, 1)
-                                                }
-                                                input.click()
-                                              }}
-                                              className="p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600"
-                                              title="Change Photo"
-                                            >
-                                              <RefreshCw className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                handleORCRDelete(appointment.id, 1)
-                                              }}
-                                              className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
-                                              title="Remove Photo"
-                                            >
-                                              <Trash2 className="w-3 h-3" />
-                                            </button>
+                                            }}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' || e.key === ' ') {
+                                                const images = [appointment.orcrImage!];
+                                                if (appointment.orcrImage2) images.push(appointment.orcrImage2);
+                                                setZoomImages(images);
+                                                setZoomInitialIndex(0);
+                                                setZoomModalOpen(true);
+                                              }
+                                            }}
+                                            className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
+                                          >
+                                            <img
+                                              src={appointment.orcrImage}
+                                              alt="ORCR Photo 1"
+                                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  const input = document.createElement('input')
+                                                  input.type = 'file'
+                                                  input.accept = 'image/*'
+                                                  input.onchange = (ie) => {
+                                                    const file = (ie.target as HTMLInputElement).files?.[0]
+                                                    if (file) handleORCRUpload(appointment.id, file, 1)
+                                                  }
+                                                  input.click()
+                                                }}
+                                                className="p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600"
+                                                title="Change Photo"
+                                              >
+                                                <RefreshCw className="w-3 h-3" />
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  handleORCRDelete(appointment.id, 1)
+                                                }}
+                                                className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
+                                                title="Remove Photo"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </button>
+                                            </div>
+                                            <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
+                                              PHOTO 1 - CLICK TO ZOOM
+                                            </div>
                                           </div>
-                                          <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
-                                            PHOTO 1 - CLICK TO ZOOM
-                                          </div>
+                                          <a
+                                            href={appointment.orcrImage}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
+                                          >
+                                            <Download className="w-2 h-2" /> DOWNLOAD
+                                          </a>
                                         </div>
-                                        <a
-                                          href={appointment.orcrImage}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
-                                        >
-                                          <Download className="w-2 h-2" /> DOWNLOAD
-                                        </a>
-                                      </div>
-                                    )}
-                                    {appointment.orcrImage2 && (
-                                      <div className="space-y-1 w-[140px]">
-                                        <div
-                                          role="button"
-                                          tabIndex={0}
-                                          onClick={() => {
-                                            const images = [];
-                                            if (appointment.orcrImage) images.push(appointment.orcrImage);
-                                            images.push(appointment.orcrImage2!);
-                                            setZoomImages(images);
-                                            setZoomInitialIndex(images.length - 1);
-                                            setZoomModalOpen(true);
-                                          }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
+                                      )}
+                                      {appointment.orcrImage2 && (
+                                        <div className="space-y-1 w-[140px]">
+                                          <div
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() => {
                                               const images = [];
                                               if (appointment.orcrImage) images.push(appointment.orcrImage);
                                               images.push(appointment.orcrImage2!);
                                               setZoomImages(images);
                                               setZoomInitialIndex(images.length - 1);
                                               setZoomModalOpen(true);
-                                            }
-                                          }}
-                                          className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
-                                        >
-                                          <img
-                                            src={appointment.orcrImage2}
-                                            alt="ORCR Photo 2"
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                          />
-                                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                const input = document.createElement('input')
-                                                input.type = 'file'
-                                                input.accept = 'image/*'
-                                                input.onchange = (ie) => {
-                                                  const file = (ie.target as HTMLInputElement).files?.[0]
-                                                  if (file) handleORCRUpload(appointment.id, file, 2)
-                                                }
-                                                input.click()
-                                              }}
-                                              className="p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600"
-                                              title="Change Photo"
-                                            >
-                                              <RefreshCw className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                handleORCRDelete(appointment.id, 2)
-                                              }}
-                                              className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
-                                              title="Remove Photo"
-                                            >
-                                              <Trash2 className="w-3 h-3" />
-                                            </button>
+                                            }}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' || e.key === ' ') {
+                                                const images = [];
+                                                if (appointment.orcrImage) images.push(appointment.orcrImage);
+                                                images.push(appointment.orcrImage2!);
+                                                setZoomImages(images);
+                                                setZoomInitialIndex(images.length - 1);
+                                                setZoomModalOpen(true);
+                                              }
+                                            }}
+                                            className="relative aspect-[3/2] rounded-md overflow-hidden border border-blue-500/30 hover:border-blue-500 transition-all group cursor-zoom-in w-full shadow-sm"
+                                          >
+                                            <img
+                                              src={appointment.orcrImage2}
+                                              alt="ORCR Photo 2"
+                                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  const input = document.createElement('input')
+                                                  input.type = 'file'
+                                                  input.accept = 'image/*'
+                                                  input.onchange = (ie) => {
+                                                    const file = (ie.target as HTMLInputElement).files?.[0]
+                                                    if (file) handleORCRUpload(appointment.id, file, 2)
+                                                  }
+                                                  input.click()
+                                                }}
+                                                className="p-2 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600"
+                                                title="Change Photo"
+                                              >
+                                                <RefreshCw className="w-3 h-3" />
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  handleORCRDelete(appointment.id, 2)
+                                                }}
+                                                className="p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600"
+                                                title="Remove Photo"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </button>
+                                            </div>
+                                            <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
+                                              PHOTO 2 - CLICK TO ZOOM
+                                            </div>
                                           </div>
-                                          <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
-                                            PHOTO 2 - CLICK TO ZOOM
-                                          </div>
+                                          <a
+                                            href={appointment.orcrImage2}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
+                                          >
+                                            <Download className="w-2 h-2" /> DOWNLOAD
+                                          </a>
                                         </div>
-                                        <a
-                                          href={appointment.orcrImage2}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="flex items-center justify-center gap-1 text-[8px] text-blue-600 font-bold hover:underline"
-                                        >
-                                          <Download className="w-2 h-2" /> DOWNLOAD
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                {/* Insurance Info */}
-                                {appointment.insurance && (
-                                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                                    <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 mb-1">
-                                      <Badge className="w-4 h-4 p-0 flex items-center justify-center bg-emerald-500">
-                                        <ShieldCheck className="w-2.5 h-2.5" />
-                                      </Badge>
-                                      Insurance Information
-                                    </div>
-                                    <div className="mt-1">
-                                      <p className="text-xs text-muted-foreground">Provider</p>
-                                      <p className="text-sm font-semibold text-foreground italic">
-                                        {appointment.insurance}
-                                      </p>
+                                      )}
                                     </div>
                                   </div>
-                                )}
-                              </div>
-
-                              {/* Status Actions */}
-                              <div className="flex flex-wrap lg:flex-nowrap lg:flex-col gap-2 shrink-0">
-                                <Button
-                                  size="sm"
-                                  variant={appointment.status === "pending" ? "default" : "outline"}
-                                  onClick={() => updateStatus(appointment.id, "pending")}
-                                  disabled={appointment.status === "pending"}
-                                  className={appointment.status === "pending" ? "" : "bg-transparent"}
-                                >
-                                  Pending
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant={appointment.status === "contacted" ? "default" : "outline"}
-                                  onClick={() => updateStatus(appointment.id, "contacted")}
-                                  disabled={appointment.status === "contacted"}
-                                  className={appointment.status === "contacted" ? "" : "bg-transparent"}
-                                >
-                                  Contacted
-                                </Button>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className={cn(appointment.status === "completed" && "cursor-help")}>
-                                      <Button
-                                        size="sm"
-                                        variant={appointment.status === "completed" ? "default" : "outline"}
-                                        onClick={() => updateStatus(appointment.id, "completed")}
-                                        disabled={appointment.status === "completed"}
-                                        className={cn(
-                                          "w-full",
-                                          appointment.status === "completed" ? "" : "bg-transparent"
-                                        )}
-                                      >
-                                        Completed
-                                      </Button>
-                                    </div>
-                                  </TooltipTrigger>
-                                  {appointment.status === "completed" && appointment.statusUpdatedAt && (
-                                    <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
-                                      <div className="flex flex-col gap-0.5">
-                                        <p className="font-bold">Unit Completed on:</p>
-                                        <p className="font-mono text-[10px]">{formatDate(appointment.statusUpdatedAt)}</p>
+                                  {/* Insurance Info */}
+                                  {appointment.insurance && (
+                                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                                      <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 mb-1">
+                                        <Badge className="w-4 h-4 p-0 flex items-center justify-center bg-emerald-500">
+                                          <ShieldCheck className="w-2.5 h-2.5" />
+                                        </Badge>
+                                        Insurance Information
                                       </div>
-                                    </TooltipContent>
+                                      <div className="mt-1">
+                                        <p className="text-xs text-muted-foreground">Provider</p>
+                                        <p className="text-sm font-semibold text-foreground italic">
+                                          {appointment.insurance}
+                                        </p>
+                                      </div>
+                                    </div>
                                   )}
-                                </Tooltip>
-                                {appointment.service?.includes("Rent A Car") && (
+                                </div>
+
+                                {/* Status Actions */}
+                                <div className="flex flex-wrap lg:flex-nowrap lg:flex-col gap-2 shrink-0">
                                   <Button
                                     size="sm"
-                                    variant={appointment.status === "confirm" ? "default" : "outline"}
-                                    onClick={() => updateStatus(appointment.id, "confirm")}
-                                    disabled={appointment.status === "confirm"}
-                                    className={appointment.status === "confirm" ? "" : "bg-transparent"}
+                                    variant={appointment.status === "pending" ? "default" : "outline"}
+                                    onClick={() => updateStatus(appointment.id, "pending")}
+                                    disabled={appointment.status === "pending"}
+                                    className={appointment.status === "pending" ? "" : "bg-transparent"}
                                   >
-                                    Confirm
+                                    Pending
                                   </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border-blue-500/30 bg-transparent"
-                                  onClick={() => handleEditAppointment(appointment)}
-                                >
-                                  <Settings2 className="w-4 h-4 mr-1" />
-                                  Edit
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 bg-transparent"
-                                  onClick={() => openArchiveModal(appointment.id)}
-                                >
-                                  <Archive className="w-4 h-4 mr-1" />
-                                  Archive
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-red-500 hover:text-red-400 hover:bg-red-500/10 border-red-500/30 bg-transparent"
-                                  onClick={() => softDeleteAppointment(appointment.id)}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-1" />
-                                  Delete (Trash)
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-primary hover:text-primary/80 border-primary/30 bg-transparent"
-                                  onClick={() => handleDownloadFullReport(appointment)}
-                                >
-                                  <Download className="w-4 h-4 mr-1" />
-                                  {appointment.status === 'pending' ? 'Appointment Confirmation' : 'Download Full Report'}
-                                </Button>
-                                {appointment.isSynced && (
+                                  <Button
+                                    size="sm"
+                                    variant={appointment.status === "contacted" ? "default" : "outline"}
+                                    onClick={() => updateStatus(appointment.id, "contacted")}
+                                    disabled={appointment.status === "contacted"}
+                                    className={appointment.status === "contacted" ? "" : "bg-transparent"}
+                                  >
+                                    Contacted
+                                  </Button>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className={cn(appointment.status === "completed" && "cursor-help")}>
+                                        <Button
+                                          size="sm"
+                                          variant={appointment.status === "completed" ? "default" : "outline"}
+                                          onClick={() => updateStatus(appointment.id, "completed")}
+                                          disabled={appointment.status === "completed"}
+                                          className={cn(
+                                            "w-full",
+                                            appointment.status === "completed" ? "" : "bg-transparent"
+                                          )}
+                                        >
+                                          Completed
+                                        </Button>
+                                      </div>
+                                    </TooltipTrigger>
+                                    {appointment.status === "completed" && appointment.statusUpdatedAt && (
+                                      <TooltipContent side="top" className="bg-primary text-primary-foreground border-none shadow-xl">
+                                        <div className="flex flex-col gap-0.5">
+                                          <p className="font-bold">Unit Completed on:</p>
+                                          <p className="font-mono text-[10px]">{formatDate(appointment.statusUpdatedAt)}</p>
+                                        </div>
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                  {appointment.service?.includes("Rent A Car") && (
+                                    <Button
+                                      size="sm"
+                                      variant={appointment.status === "confirm" ? "default" : "outline"}
+                                      onClick={() => updateStatus(appointment.id, "confirm")}
+                                      disabled={appointment.status === "confirm"}
+                                      className={appointment.status === "confirm" ? "" : "bg-transparent"}
+                                    >
+                                      Confirm
+                                    </Button>
+                                  )}
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 border-emerald-500/30 bg-transparent"
-                                    onClick={() => handlePrintJobOrder(appointment)}
+                                    className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border-blue-500/30 bg-transparent"
+                                    onClick={() => handleEditAppointment(appointment)}
                                   >
-                                    <Printer className="w-4 h-4 mr-1" />
-                                    Print Job Order
+                                    <Settings2 className="w-4 h-4 mr-1" />
+                                    Edit
                                   </Button>
-                                )}
-                                {appointment.status === 'completed' && (
                                   <Button
                                     size="sm"
-                                    variant="default"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all hover:scale-[1.02]"
-                                    onClick={() => handleGenerateGatepass(appointment)}
+                                    variant="outline"
+                                    className="text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 bg-transparent"
+                                    onClick={() => openArchiveModal(appointment.id)}
                                   >
-                                    <FileCheck className="w-4 h-4 mr-1" />
-                                    Generate Gatepass
+                                    <Archive className="w-4 h-4 mr-1" />
+                                    Archive
                                   </Button>
-                                )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-red-500 hover:text-red-400 hover:bg-red-500/10 border-red-500/30 bg-transparent"
+                                    onClick={() => softDeleteAppointment(appointment.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-1" />
+                                    Delete (Trash)
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-primary hover:text-primary/80 border-primary/30 bg-transparent"
+                                    onClick={() => handleDownloadFullReport(appointment)}
+                                  >
+                                    <Download className="w-4 h-4 mr-1" />
+                                    {appointment.status === 'pending' ? 'Appointment Confirmation' : 'Download Full Report'}
+                                  </Button>
+                                  {appointment.isSynced && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 border-emerald-500/30 bg-transparent"
+                                      onClick={() => handlePrintJobOrder(appointment)}
+                                    >
+                                      <Printer className="w-4 h-4 mr-1" />
+                                      Print Job Order
+                                    </Button>
+                                  )}
+                                  {appointment.status === 'completed' && (
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all hover:scale-[1.02]"
+                                      onClick={() => handleGenerateGatepass(appointment)}
+                                    >
+                                      <FileCheck className="w-4 h-4 mr-1" />
+                                      Generate Gatepass
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Repair Status Control Panel - Expandable */}
-                          <div className="border-t border-border">
-                            <button
-                              onClick={() => toggleCardExpanded(appointment.id)}
-                              className="w-full px-6 py-3 flex items-center justify-between text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Settings2 className="w-4 h-4" />
-                                Repair Status Controls
-                              </div>
-                              {isExpanded ? (
-                                <ChevronUp className="w-4 h-4" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4" />
-                              )}
-                            </button>
+                            {/* Repair Status Control Panel - Expandable */}
+                            <div className="border-t border-border">
+                              <button
+                                onClick={() => toggleCardExpanded(appointment.id)}
+                                className="w-full px-6 py-3 flex items-center justify-between text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Settings2 className="w-4 h-4" />
+                                  Repair Status Controls
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
+                              </button>
 
-                            {isExpanded && (
-                              <div className="px-6 pb-6 pt-2 space-y-4 bg-secondary/30">
-                                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                                  {/* Repair Status Dropdown */}
-                                  <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">
-                                      Overall Vehicle Status
-                                    </label>
-                                    <Select
-                                      value={appointment.repairStatus || ""}
-                                      onValueChange={(value) => updateRepairStatus(appointment.id, value as RepairStatus)}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select repair status" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {REPAIR_STATUS_OPTIONS.filter(opt => {
-                                          const isInsuranceExclude = ['insurance_approved'].includes(opt.value);
-                                          const isConfirmExclude = opt.value === 'confirm' && !appointment.service?.includes('Rent A Car');
-                                          return !isInsuranceExclude && !isConfirmExclude;
-                                        }).map((option) => (
-                                          <SelectItem
-                                            key={option.value}
-                                            value={option.value}
-                                            onPointerUp={(e) => {
-                                              if (appointment.repairStatus === option.value) {
-                                                e.preventDefault();
-                                                updateRepairStatus(appointment.id, "" as RepairStatus);
-                                                // We simulate clicking outside to close the dropdown since we intercepted the event
-                                                document.body.click();
-                                              }
-                                            }}
-                                          >
-                                            {option.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+                              {isExpanded && (
+                                <div className="px-6 pb-6 pt-2 space-y-4 bg-secondary/30">
+                                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                                    {/* Repair Status Dropdown */}
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-medium text-foreground">
+                                        Overall Vehicle Status
+                                      </label>
+                                      <Select
+                                        value={appointment.repairStatus || ""}
+                                        onValueChange={(value) => updateRepairStatus(appointment.id, value as RepairStatus)}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select repair status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {REPAIR_STATUS_OPTIONS.filter(opt => {
+                                            const isInsuranceExclude = ['insurance_approved'].includes(opt.value);
+                                            const isConfirmExclude = opt.value === 'confirm' && !appointment.service?.includes('Rent A Car');
+                                            return !isInsuranceExclude && !isConfirmExclude;
+                                          }).map((option) => (
+                                            <SelectItem
+                                              key={option.value}
+                                              value={option.value}
+                                              onPointerUp={(e) => {
+                                                if (appointment.repairStatus === option.value) {
+                                                  e.preventDefault();
+                                                  updateRepairStatus(appointment.id, "" as RepairStatus);
+                                                  // We simulate clicking outside to close the dropdown since we intercepted the event
+                                                  document.body.click();
+                                                }
+                                              }}
+                                            >
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
 
-                                  {/* Insurance Monitoring UI */}
-                                  <div className="space-y-3">
-                                    {(() => {
-                                      const isWaiting = appointment.repairStatus === 'waiting_for_insurance' || appointment.repairStatus === 'insurance_approved' || appointment.repairStatus === 'completed_ready';
-                                      const isApproved = appointment.repairStatus === 'insurance_approved' || appointment.repairStatus === 'completed_ready';
-                                      const isCompleted = appointment.repairStatus === 'completed_ready';
+                                    {/* Insurance Monitoring UI */}
+                                    <div className="space-y-3">
+                                      {(() => {
+                                        const isWaiting = appointment.repairStatus === 'waiting_for_insurance' || appointment.repairStatus === 'insurance_approved' || appointment.repairStatus === 'completed_ready';
+                                        const isApproved = appointment.repairStatus === 'insurance_approved' || appointment.repairStatus === 'completed_ready';
+                                        const isCompleted = appointment.repairStatus === 'completed_ready';
 
-                                      return (
-                                        <>
-                                          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                                            <ShieldCheck className="w-3.5 h-3.5" />
-                                            Insurance Monitoring (Admin Only)
-                                          </label>
-                                          <div className="flex items-center justify-between p-4 bg-background/50 rounded-xl border border-border/50 shadow-sm relative overflow-hidden">
-                                            <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
+                                        return (
+                                          <>
+                                            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                              <ShieldCheck className="w-3.5 h-3.5" />
+                                              Insurance Monitoring (Admin Only)
+                                            </label>
+                                            <div className="flex items-center justify-between p-4 bg-background/50 rounded-xl border border-border/50 shadow-sm relative overflow-hidden">
+                                              <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
 
-                                            <div className="flex flex-1 items-center justify-between gap-2 max-w-full overflow-x-auto pb-1 hide-scrollbar">
-                                              {/* Waiting Approval */}
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className={cn(
-                                                  "h-auto flex flex-col gap-1.5 py-2 px-3 border transition-all flex-1 min-w-0",
-                                                  isWaiting ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
-                                                )}
-                                                onClick={() => updateRepairStatus(appointment.id, 'waiting_for_insurance')}
-                                              >
-                                                <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isWaiting ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
-                                                  {isWaiting ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                                                </div>
-                                                <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Waiting Approval</span>
-                                              </Button>
-
-                                              <ChevronRight className="w-3 h-3 text-muted-foreground/30 shrink-0" />
-
-                                              {/* Approved Step */}
-                                              <div className="flex-1 min-w-0">
+                                              <div className="flex flex-1 items-center justify-between gap-2 max-w-full overflow-x-auto pb-1 hide-scrollbar">
+                                                {/* Waiting Approval */}
                                                 <Button
                                                   variant="ghost"
                                                   size="sm"
                                                   className={cn(
-                                                    "h-auto w-full flex flex-col gap-1.5 py-2 px-3 border transition-all relative overflow-hidden",
-                                                    isApproved ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
+                                                    "h-auto flex flex-col gap-1.5 py-2 px-3 border transition-all flex-1 min-w-0",
+                                                    isWaiting ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
                                                   )}
-                                                  onClick={() => {
-                                                    if (!appointment.loaAttachment) {
-                                                      document.getElementById(`loa-upload-${appointment.id}`)?.click();
-                                                    } else {
-                                                      updateRepairStatus(appointment.id, 'insurance_approved');
-                                                    }
-                                                  }}
+                                                  onClick={() => updateRepairStatus(appointment.id, 'waiting_for_insurance')}
                                                 >
-                                                  <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isApproved ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
-                                                    {isApproved ? <Check className="w-3.5 h-3.5" /> : (isUploadingLOA[appointment.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />)}
+                                                  <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isWaiting ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
+                                                    {isWaiting ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
                                                   </div>
-                                                  <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Approved by Ins.</span>
-                                                  {appointment.loaAttachment && <div className="absolute top-0 right-0 bg-emerald-500 text-[8px] text-white px-1 font-bold">LOA</div>}
+                                                  <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Waiting Approval</span>
                                                 </Button>
-                                              </div>
 
-                                              <ChevronRight className="w-3 h-3 text-muted-foreground/30 shrink-0" />
+                                                <ChevronRight className="w-3 h-3 text-muted-foreground/30 shrink-0" />
 
-                                              {/* Completed Step */}
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
+                                                {/* Approved Step */}
+                                                <div className="flex-1 min-w-0">
                                                   <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     className={cn(
-                                                      "h-auto flex flex-col gap-1.5 py-2 px-3 border transition-all flex-1 min-w-0",
-                                                      isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm cursor-help" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
+                                                      "h-auto w-full flex flex-col gap-1.5 py-2 px-3 border transition-all relative overflow-hidden",
+                                                      isApproved ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
                                                     )}
-                                                    onClick={() => updateRepairStatus(appointment.id, 'completed_ready')}
+                                                    onClick={() => {
+                                                      if (!appointment.loaAttachment) {
+                                                        document.getElementById(`loa-upload-${appointment.id}`)?.click();
+                                                      } else {
+                                                        updateRepairStatus(appointment.id, 'insurance_approved');
+                                                      }
+                                                    }}
                                                   >
-                                                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isCompleted ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
-                                                      {isCompleted ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                                                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isApproved ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
+                                                      {isApproved ? <Check className="w-3.5 h-3.5" /> : (isUploadingLOA[appointment.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />)}
                                                     </div>
-                                                    <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Completed</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Approved by Ins.</span>
+                                                    {appointment.loaAttachment && <div className="absolute top-0 right-0 bg-emerald-500 text-[8px] text-white px-1 font-bold">LOA</div>}
                                                   </Button>
-                                                </TooltipTrigger>
-                                                {isCompleted && appointment.statusUpdatedAt && (
-                                                  <TooltipContent side="top" className="bg-emerald-600 text-white border-none shadow-xl">
-                                                    <div className="flex flex-col gap-0.5">
-                                                      <p className="font-bold text-[10px]">Repair Finished on:</p>
-                                                      <p className="font-mono text-[9px]">{formatDate(appointment.statusUpdatedAt)}</p>
-                                                    </div>
-                                                  </TooltipContent>
-                                                )}
-                                              </Tooltip>
-                                            </div>
-                                          </div>
-
-                                          {/* LOA Actions - Unlimited Array Support */}
-                                          <div className="flex flex-col gap-3 min-h-[20px] w-full mt-1">
-                                            {/* List of current LOAs */}
-                                            {(() => {
-                                              const allLOAs = Array.from(new Set([
-                                                ...(appointment.loaAttachments || []),
-                                                ...(appointment.loaAttachment ? [appointment.loaAttachment] : []),
-                                                ...(appointment.loaAttachment2 ? [appointment.loaAttachment2] : [])
-                                              ])).filter(Boolean) as string[];
-
-                                              return allLOAs.length > 0 ? (
-                                                <div className="space-y-2">
-                                                  {allLOAs.map((url, idx) => (
-                                                    <div key={idx} className="flex items-center gap-3 w-full bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/10">
-                                                      <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-700">
-                                                        <FileCheck className="w-3.5 h-3.5" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-tight">LOA {idx + 1}</span>
-                                                      </div>
-
-                                                      <div className="flex items-center gap-2 ml-auto">
-                                                        {url.toLowerCase().endsWith('.pdf') ? (
-                                                          <a
-                                                            href={url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
-                                                          >
-                                                            <FileText className="w-3 h-3" /> View
-                                                          </a>
-                                                        ) : (
-                                                          <button
-                                                            onClick={() => {
-                                                              setZoomImages([url]);
-                                                              setZoomInitialIndex(0);
-                                                              setZoomModalOpen(true);
-                                                            }}
-                                                            className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
-                                                          >
-                                                            <Search className="w-3 h-3" /> Preview
-                                                          </button>
-                                                        )}
-
-                                                        <div className="w-[1px] h-3 bg-border" />
-
-                                                        <button
-                                                          onClick={() => handleRemoveLOA(appointment.id, url)}
-                                                          className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors cursor-pointer"
-                                                        >
-                                                          <Trash2 className="w-3 h-3" /> Remove
-                                                        </button>
-                                                      </div>
-                                                    </div>
-                                                  ))}
                                                 </div>
-                                              ) : (
-                                                <p className="text-[10px] text-muted-foreground italic">No LOA attachment found. Click &apos;Approved&apos; to upload.</p>
-                                              );
-                                            })()}
 
-                                            {/* Upload Trigger */}
-                                            <div className="flex items-center justify-between w-full border-t border-dashed border-border pt-2 mt-1">
-                                              <p className="text-[9px] text-muted-foreground italic flex items-center gap-1">
-                                                <PlusCircle className="w-3 h-3" /> Need more LOAs?
-                                              </p>
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="h-6 px-2 text-[9px] font-bold border-dashed border-emerald-500/40 text-emerald-600 hover:bg-emerald-50"
-                                                onClick={() => document.getElementById(`loa-upload-${appointment.id}`)?.click()}
-                                              >
-                                                Upload LOA
-                                              </Button>
+                                                <ChevronRight className="w-3 h-3 text-muted-foreground/30 shrink-0" />
+
+                                                {/* Completed Step */}
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      className={cn(
+                                                        "h-auto flex flex-col gap-1.5 py-2 px-3 border transition-all flex-1 min-w-0",
+                                                        isCompleted ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 shadow-sm cursor-help" : "bg-muted/10 border-muted text-muted-foreground opacity-60 hover:opacity-100"
+                                                      )}
+                                                      onClick={() => updateRepairStatus(appointment.id, 'completed_ready')}
+                                                    >
+                                                      <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm", isCompleted ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
+                                                        {isCompleted ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                                                      </div>
+                                                      <span className="text-[9px] font-black uppercase tracking-tight truncate w-full">Completed</span>
+                                                    </Button>
+                                                  </TooltipTrigger>
+                                                  {isCompleted && appointment.statusUpdatedAt && (
+                                                    <TooltipContent side="top" className="bg-emerald-600 text-white border-none shadow-xl">
+                                                      <div className="flex flex-col gap-0.5">
+                                                        <p className="font-bold text-[10px]">Repair Finished on:</p>
+                                                        <p className="font-mono text-[9px]">{formatDate(appointment.statusUpdatedAt)}</p>
+                                                      </div>
+                                                    </TooltipContent>
+                                                  )}
+                                                </Tooltip>
+                                              </div>
                                             </div>
-                                          </div>
-                                          <input
-                                            id={`loa-upload-${appointment.id}`}
-                                            type="file"
-                                            className="hidden"
-                                            accept="image/*,application/pdf"
-                                            onChange={(e) => {
-                                              const file = e.target.files?.[0];
-                                              if (file) handleLOAUpload(appointment.id, file);
-                                              e.target.value = ''; // Reset for next selection
-                                            }}
-                                          />
-                                        </>
-                                      );
-                                    })()}
-                                  </div>
 
-                                  {/* Current Part Being Repaired */}
-                                  <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">
-                                      Current Part Being Repaired
-                                    </label>
-                                    {!useCustomRepairPart[appointment.id] ? (
-                                      <Select
-                                        value={appointment.currentRepairPart || ""}
-                                        onValueChange={(value) => {
-                                          if (value === "custom") {
-                                            setUseCustomRepairPart((prev) => ({ ...prev, [appointment.id]: true }))
-                                            updateCurrentRepairPart(appointment.id, "")
-                                          } else {
-                                            updateCurrentRepairPart(appointment.id, value)
-                                          }
-                                        }}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Select part" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {REPAIR_PARTS.map((part) => (
-                                            <SelectItem key={part} value={part}>
-                                              {part}
-                                            </SelectItem>
-                                          ))}
-                                          <SelectItem value="custom">
-                                            Enter custom part
-                                          </SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    ) : (
-                                      <div className="flex gap-2">
-                                        <Input
+                                            {/* LOA Actions - Unlimited Array Support */}
+                                            <div className="flex flex-col gap-3 min-h-[20px] w-full mt-1">
+                                              {/* List of current LOAs */}
+                                              {(() => {
+                                                const allLOAs = Array.from(new Set([
+                                                  ...(appointment.loaAttachments || []),
+                                                  ...(appointment.loaAttachment ? [appointment.loaAttachment] : []),
+                                                  ...(appointment.loaAttachment2 ? [appointment.loaAttachment2] : [])
+                                                ])).filter(Boolean) as string[];
+
+                                                return allLOAs.length > 0 ? (
+                                                  <div className="space-y-2">
+                                                    {allLOAs.map((url, idx) => (
+                                                      <div key={idx} className="flex items-center gap-3 w-full bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/10">
+                                                        <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-700">
+                                                          <FileCheck className="w-3.5 h-3.5" />
+                                                          <span className="text-[10px] font-bold uppercase tracking-tight">LOA {idx + 1}</span>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 ml-auto">
+                                                          {url.toLowerCase().endsWith('.pdf') ? (
+                                                            <a
+                                                              href={url}
+                                                              target="_blank"
+                                                              rel="noopener noreferrer"
+                                                              className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                                                            >
+                                                              <FileText className="w-3 h-3" /> View
+                                                            </a>
+                                                          ) : (
+                                                            <button
+                                                              onClick={() => {
+                                                                setZoomImages([url]);
+                                                                setZoomInitialIndex(0);
+                                                                setZoomModalOpen(true);
+                                                              }}
+                                                              className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                                                            >
+                                                              <Search className="w-3 h-3" /> Preview
+                                                            </button>
+                                                          )}
+
+                                                          <div className="w-[1px] h-3 bg-border" />
+
+                                                          <button
+                                                            onClick={() => handleRemoveLOA(appointment.id, url)}
+                                                            className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors cursor-pointer"
+                                                          >
+                                                            <Trash2 className="w-3 h-3" /> Remove
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                ) : (
+                                                  <p className="text-[10px] text-muted-foreground italic">No LOA attachment found. Click &apos;Approved&apos; to upload.</p>
+                                                );
+                                              })()}
+
+                                              {/* Upload Trigger */}
+                                              <div className="flex items-center justify-between w-full border-t border-dashed border-border pt-2 mt-1">
+                                                <p className="text-[9px] text-muted-foreground italic flex items-center gap-1">
+                                                  <PlusCircle className="w-3 h-3" /> Need more LOAs?
+                                                </p>
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  className="h-6 px-2 text-[9px] font-bold border-dashed border-emerald-500/40 text-emerald-600 hover:bg-emerald-50"
+                                                  onClick={() => document.getElementById(`loa-upload-${appointment.id}`)?.click()}
+                                                >
+                                                  Upload LOA
+                                                </Button>
+                                              </div>
+                                            </div>
+                                            <input
+                                              id={`loa-upload-${appointment.id}`}
+                                              type="file"
+                                              className="hidden"
+                                              accept="image/*,application/pdf"
+                                              onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleLOAUpload(appointment.id, file);
+                                                e.target.value = ''; // Reset for next selection
+                                              }}
+                                            />
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+
+                                    {/* Current Part Being Repaired */}
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-medium text-foreground">
+                                        Current Part Being Repaired
+                                      </label>
+                                      {!useCustomRepairPart[appointment.id] ? (
+                                        <Select
                                           value={appointment.currentRepairPart || ""}
-                                          onChange={(e) => {
-                                            const updated = appointments.map((apt) =>
-                                              apt.id === appointment.id
-                                                ? { ...apt, currentRepairPart: e.target.value }
-                                                : apt
-                                            )
-                                            setAppointments(updated)
-                                          }}
-                                          onBlur={() => {
-                                            if (appointment.currentRepairPart?.trim()) {
-                                              fetch("/api/appointments", {
-                                                method: "PUT",
-                                                headers: { "Content-Type": "application/json" },
-                                                body: JSON.stringify({
-                                                  id: appointment.id,
-                                                  currentRepairPart: appointment.currentRepairPart,
-                                                }),
-                                              }).catch(console.error)
+                                          onValueChange={(value) => {
+                                            if (value === "custom") {
+                                              setUseCustomRepairPart((prev) => ({ ...prev, [appointment.id]: true }))
+                                              updateCurrentRepairPart(appointment.id, "")
+                                            } else {
+                                              updateCurrentRepairPart(appointment.id, value)
                                             }
                                           }}
-                                          placeholder="Enter repair part"
-                                          className="flex-1"
-                                        />
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => {
-                                            setUseCustomRepairPart((prev) => ({ ...prev, [appointment.id]: false }))
-                                            updateCurrentRepairPart(appointment.id, "")
-                                          }}
                                         >
-                                          Cancel
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Current Status Display */}
-                                {appointment.repairStatus && (
-                                  <div className={`p-4 rounded-lg ${repairStatusInfo.bgColor} ${repairStatusInfo.borderColor} border`}>
-                                    <div className="flex items-center gap-2">
-                                      <div className={`w-3 h-3 rounded-full ${repairStatusInfo.color.replace("text-", "bg-")}`} />
-                                      <span className={`font-medium ${repairStatusInfo.color}`}>
-                                        {repairStatusInfo.label}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {repairStatusInfo.description}
-                                    </p>
-                                  </div>
-                                )}
-
-                                {/* Sir Paul's Notes */}
-                                <div className="pt-4 border-t border-border space-y-2">
-                                  <div className="flex items-center gap-2 text-primary">
-                                    <Megaphone className="w-4 h-4" />
-                                    <h4 className="font-semibold text-foreground">Sir Paul&apos;s Notes</h4>
-                                  </div>
-                                  {session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email) ? (
-                                    <div className="space-y-3">
-                                      <Textarea
-                                        value={appointment.paulNotes || ""}
-                                        onChange={(e) => updatePaulNotes(appointment.id, e.target.value)}
-                                        placeholder="Type notes or special instructions for this unit..."
-                                        className="min-h-[80px] text-sm bg-primary/5 border-primary/20 focus-visible:ring-primary resize-none"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div className="p-3 bg-primary/5 border border-primary/10 rounded-lg">
-                                      {appointment.paulNotes ? (
-                                        <div className="space-y-2">
-                                          <p className="text-sm text-foreground italic whitespace-pre-wrap">
-                                            &ldquo;{appointment.paulNotes}&rdquo;
-                                          </p>
-                                          {appointment.costing?.includePaulSignature && (
-                                            <div className="flex items-center gap-1.5 text-[10px] text-primary font-medium bg-primary/10 w-fit px-2 py-0.5 rounded-full">
-                                              <CheckCircle2 className="w-3 h-3" />
-                                              Signed by Sir Paul
-                                            </div>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <p className="text-sm text-muted-foreground italic">
-                                          No specific notes from Sir Paul yet.
-                                        </p>
-                                      )}
-                                    </div>
-                                  )}
-                                  <p className="text-[10px] text-muted-foreground">
-                                    * Visible to all administrators. Authorized personnel only.
-                                  </p>
-                                </div>
-
-                                {/* Costing Section */}
-                                <div className="pt-4 border-t border-border">
-                                  <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                      <Receipt className="w-4 h-4 text-green-500" />
-                                      <h4 className="font-semibold text-foreground">Cost Breakdown</h4>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className={cn(
-                                          "h-10 w-10 ml-1 transition-all duration-200",
-                                          costingHistory[appointment.id]?.length > 0
-                                            ? "text-primary hover:bg-primary/10 opacity-100"
-                                            : "text-muted-foreground/30 opacity-50 cursor-not-allowed"
-                                        )}
-                                        onClick={() => undoCosting(appointment.id)}
-                                        disabled={!(costingHistory[appointment.id]?.length > 0)}
-                                        title="Undo last change"
-                                      >
-                                        <Undo2 className="w-3.5 h-3.5" />
-                                      </Button>
-                                    </div>
-                                    <div className="flex gap-2 flex-wrap items-center">
-
-                                      <div className="mr-2">
-                                        <Select
-                                          value={selectedCategory || "default"}
-                                          onValueChange={(val) => setSelectedCategory(val === "default" ? undefined : val)}
-                                        >
-                                          <SelectTrigger className="h-8 w-[140px] text-xs">
-                                            <SelectValue placeholder="Category..." />
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select part" />
                                           </SelectTrigger>
                                           <SelectContent>
-                                            <SelectItem value="default">Default (None)</SelectItem>
-                                            {COST_ITEM_CATEGORIES.map((cat) => (
-                                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                            {REPAIR_PARTS.map((part) => (
+                                              <SelectItem key={part} value={part}>
+                                                {part}
+                                              </SelectItem>
                                             ))}
+                                            <SelectItem value="custom">
+                                              Enter custom part
+                                            </SelectItem>
                                           </SelectContent>
                                         </Select>
-                                      </div>
-                                      {COST_ITEM_TYPES.map((type) => (
-                                        <Button
-                                          key={type.value}
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => addCostItem(appointment.id, type.value, "")}
-                                          className="bg-transparent text-xs"
-                                        >
-                                          <Plus className="w-3 h-3 mr-1" />
-                                          {type.label}
-                                        </Button>
-                                      ))}
+                                      ) : (
+                                        <div className="flex gap-2">
+                                          <Input
+                                            value={appointment.currentRepairPart || ""}
+                                            onChange={(e) => {
+                                              const updated = appointments.map((apt) =>
+                                                apt.id === appointment.id
+                                                  ? { ...apt, currentRepairPart: e.target.value }
+                                                  : apt
+                                              )
+                                              setAppointments(updated)
+                                            }}
+                                            onBlur={() => {
+                                              if (appointment.currentRepairPart?.trim()) {
+                                                fetch("/api/appointments", {
+                                                  method: "PUT",
+                                                  headers: { "Content-Type": "application/json" },
+                                                  body: JSON.stringify({
+                                                    id: appointment.id,
+                                                    currentRepairPart: appointment.currentRepairPart,
+                                                  }),
+                                                }).catch(console.error)
+                                              }
+                                            }}
+                                            placeholder="Enter repair part"
+                                            className="flex-1"
+                                          />
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setUseCustomRepairPart((prev) => ({ ...prev, [appointment.id]: false }))
+                                              updateCurrentRepairPart(appointment.id, "")
+                                            }}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
 
-                                  {/* Cost Items List */}
-                                  {appointment.costing?.items && appointment.costing.items.length > 0 ? (
-                                    <div className="space-y-0">
-                                      {appointment.costing.items.map((item, index) => {
-                                        const prevItem = index > 0 ? appointment.costing!.items[index - 1] : null;
-                                        const currentCategory = item.type === 'parts' ? 'Parts' : (item.category || "Others");
-                                        const prevCategory = prevItem ? (prevItem.type === 'parts' ? 'Parts' : (prevItem.category || "Others")) : null;
-                                        const isNewGroup = currentCategory !== prevCategory;
+                                  {/* Current Status Display */}
+                                  {appointment.repairStatus && (
+                                    <div className={`p-4 rounded-lg ${repairStatusInfo.bgColor} ${repairStatusInfo.borderColor} border`}>
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-3 h-3 rounded-full ${repairStatusInfo.color.replace("text-", "bg-")}`} />
+                                        <span className={`font-medium ${repairStatusInfo.color}`}>
+                                          {repairStatusInfo.label}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {repairStatusInfo.description}
+                                      </p>
+                                    </div>
+                                  )}
 
-                                        return (
-                                          <div key={item.id}>
-                                            {isNewGroup && (
-                                              <div className={cn("flex items-center gap-3 py-4 group/header cursor-pointer", index > 0 ? "mt-6" : "mt-2")} onClick={() => {
-                                                const itemsToCopy = appointment.costing!.items.filter(i =>
-                                                  (i.type === 'parts' ? 'Parts' : (i.category || "Others")) === currentCategory
-                                                );
-                                                const textBody = itemsToCopy.map(i => `${i.description}`).join('\n');
-                                                const fullText = `${textBody}`;
-                                                navigator.clipboard.writeText(fullText).then(() => {
-                                                  toast({ title: "Copied List", description: `Copied ${itemsToCopy.length} item(s) from ${currentCategory} to your clipboard.` });
-                                                });
-                                              }} title={`Click to copy all ${currentCategory} list to clipboard`}>
-                                                <div className="h-px bg-blue-500/20 flex-grow" />
-                                                <div className="flex items-center gap-2">
-                                                  <span className="text-[10px] font-bold uppercase tracking-wider text-white whitespace-nowrap bg-blue-600 px-3 py-1 rounded-full border border-blue-400/50 shadow-[0_0_15px_rgba(37,99,235,0.2)] hover:bg-blue-500 transition-colors">
-                                                    {currentCategory}
-                                                  </span>
-                                                  <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="w-6 h-6 rounded-full opacity-0 group-hover/header:opacity-100 transition-opacity bg-primary/10 hover:bg-primary/20 text-primary pointer-events-none group-hover/header:pointer-events-auto"
-                                                  >
-                                                    <Copy className="w-3 h-3" />
-                                                  </Button>
-                                                </div>
-                                                <div className="h-px bg-blue-500/20 flex-grow" />
+                                  {/* Sir Paul's Notes */}
+                                  <div className="pt-4 border-t border-border space-y-2">
+                                    <div className="flex items-center gap-2 text-primary">
+                                      <Megaphone className="w-4 h-4" />
+                                      <h4 className="font-semibold text-foreground">Sir Paul&apos;s Notes</h4>
+                                    </div>
+                                    {session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email) ? (
+                                      <div className="space-y-3">
+                                        <Textarea
+                                          value={appointment.paulNotes || ""}
+                                          onChange={(e) => updatePaulNotes(appointment.id, e.target.value)}
+                                          placeholder="Type notes or special instructions for this unit..."
+                                          className="min-h-[80px] text-sm bg-primary/5 border-primary/20 focus-visible:ring-primary resize-none"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className="p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                                        {appointment.paulNotes ? (
+                                          <div className="space-y-2">
+                                            <p className="text-sm text-foreground italic whitespace-pre-wrap">
+                                              &ldquo;{appointment.paulNotes}&rdquo;
+                                            </p>
+                                            {appointment.costing?.includePaulSignature && (
+                                              <div className="flex items-center gap-1.5 text-[10px] text-primary font-medium bg-primary/10 w-fit px-2 py-0.5 rounded-full">
+                                                <CheckCircle2 className="w-3 h-3" />
+                                                Signed by Sir Paul
                                               </div>
                                             )}
-                                            <div className="p-3 bg-background rounded-lg border border-border">
-                                              <div className="flex flex-col gap-3">
-                                                <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
-                                                  {(() => {
-                                                    const isWidened = widenedItems.has(item.id) || item.description?.includes('\n')
-                                                    return (
-                                                      <div className={cn(isWidened ? "sm:col-span-7" : "sm:col-span-3")}>
-                                                        <div className="flex items-center gap-1.5 mb-1 group/category">
-                                                          <label className="text-xs text-muted-foreground block">
-                                                            {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
-                                                          </label>
-                                                          <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                              <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground/60 hover:text-primary transition-all hover:bg-primary/20 bg-primary/5 rounded-full ring-1 ring-primary/10">
-                                                                <Settings2 className="h-3 w-3" />
-                                                              </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="start" className="w-56 bg-card border-border shadow-2xl">
-                                                              <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Move to Group</div>
-                                                              <DropdownMenuItem
-                                                                onClick={() => updateCostItem(appointment.id, item.id, { type: 'parts', category: undefined })}
-                                                                className={cn("flex items-center justify-between text-sm", item.type === 'parts' && "bg-primary/10 text-primary")}
-                                                              >
-                                                                Parts
-                                                                {item.type === 'parts' && <Check className="h-3 w-3" />}
-                                                              </DropdownMenuItem>
-                                                              <DropdownMenuSeparator />
-                                                              <div className="max-h-[300px] overflow-y-auto">
-                                                                {COST_ITEM_CATEGORIES.map((cat) => (
-                                                                  <DropdownMenuItem
-                                                                    key={cat}
-                                                                    onClick={() => updateCostItem(appointment.id, item.id, { type: 'service_labor', category: cat })}
-                                                                    className={cn("flex items-center justify-between text-sm", item.category === cat && "bg-primary/10 text-primary")}
-                                                                  >
-                                                                    {cat}
-                                                                    {item.category === cat && <Check className="h-3 w-3" />}
-                                                                  </DropdownMenuItem>
-                                                                ))}
-                                                              </div>
-                                                            </DropdownMenuContent>
-                                                          </DropdownMenu>
+                                          </div>
+                                        ) : (
+                                          <p className="text-sm text-muted-foreground italic">
+                                            No specific notes from Sir Paul yet.
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                    <p className="text-[10px] text-muted-foreground">
+                                      * Visible to all administrators. Authorized personnel only.
+                                    </p>
+                                  </div>
+
+                                  {/* Costing Section */}
+                                  <div className="pt-4 border-t border-border">
+                                    <div className="flex items-center justify-between mb-4">
+                                      <div className="flex items-center gap-2">
+                                        <Receipt className="w-4 h-4 text-green-500" />
+                                        <h4 className="font-semibold text-foreground">Cost Breakdown</h4>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className={cn(
+                                            "h-10 w-10 ml-1 transition-all duration-200",
+                                            costingHistory[appointment.id]?.length > 0
+                                              ? "text-primary hover:bg-primary/10 opacity-100"
+                                              : "text-muted-foreground/30 opacity-50 cursor-not-allowed"
+                                          )}
+                                          onClick={() => undoCosting(appointment.id)}
+                                          disabled={!(costingHistory[appointment.id]?.length > 0)}
+                                          title="Undo last change"
+                                        >
+                                          <Undo2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </div>
+                                      <div className="flex gap-2 flex-wrap items-center">
+
+                                        <div className="mr-2">
+                                          <Select
+                                            value={selectedCategory || "default"}
+                                            onValueChange={(val) => setSelectedCategory(val === "default" ? undefined : val)}
+                                          >
+                                            <SelectTrigger className="h-8 w-[140px] text-xs">
+                                              <SelectValue placeholder="Category..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="default">Default (None)</SelectItem>
+                                              {COST_ITEM_CATEGORIES.map((cat) => (
+                                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        {COST_ITEM_TYPES.map((type) => (
+                                          <Button
+                                            key={type.value}
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => addCostItem(appointment.id, type.value, "")}
+                                            className="bg-transparent text-xs"
+                                          >
+                                            <Plus className="w-3 h-3 mr-1" />
+                                            {type.label}
+                                          </Button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Cost Items List */}
+                                    {appointment.costing?.items && appointment.costing.items.length > 0 ? (
+                                      <div className="space-y-0">
+                                        {appointment.costing.items.map((item, index) => {
+                                          const prevItem = index > 0 ? appointment.costing!.items[index - 1] : null;
+                                          const currentCategory = item.type === 'parts' ? 'Parts' : (item.category || "Others");
+                                          const prevCategory = prevItem ? (prevItem.type === 'parts' ? 'Parts' : (prevItem.category || "Others")) : null;
+                                          const isNewGroup = currentCategory !== prevCategory;
+
+                                          return (
+                                            <div key={item.id}>
+                                              {isNewGroup && (
+                                                <div className={cn("flex items-center gap-3 py-4 group/header cursor-pointer", index > 0 ? "mt-6" : "mt-2")} onClick={() => {
+                                                  const itemsToCopy = appointment.costing!.items.filter(i =>
+                                                    (i.type === 'parts' ? 'Parts' : (i.category || "Others")) === currentCategory
+                                                  );
+                                                  const textBody = itemsToCopy.map(i => `${i.description}`).join('\n');
+                                                  const fullText = `${textBody}`;
+                                                  navigator.clipboard.writeText(fullText).then(() => {
+                                                    toast({ title: "Copied List", description: `Copied ${itemsToCopy.length} item(s) from ${currentCategory} to your clipboard.` });
+                                                  });
+                                                }} title={`Click to copy all ${currentCategory} list to clipboard`}>
+                                                  <div className="h-px bg-blue-500/20 flex-grow" />
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-white whitespace-nowrap bg-blue-600 px-3 py-1 rounded-full border border-blue-400/50 shadow-[0_0_15px_rgba(37,99,235,0.2)] hover:bg-blue-500 transition-colors">
+                                                      {currentCategory}
+                                                    </span>
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="icon"
+                                                      className="w-6 h-6 rounded-full opacity-0 group-hover/header:opacity-100 transition-opacity bg-primary/10 hover:bg-primary/20 text-primary pointer-events-none group-hover/header:pointer-events-auto"
+                                                    >
+                                                      <Copy className="w-3 h-3" />
+                                                    </Button>
+                                                  </div>
+                                                  <div className="h-px bg-blue-500/20 flex-grow" />
+                                                </div>
+                                              )}
+                                              <div className="p-3 bg-background rounded-lg border border-border">
+                                                <div className="flex flex-col gap-3">
+                                                  <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
+                                                    {(() => {
+                                                      const isWidened = widenedItems.has(item.id) || item.description?.includes('\n')
+                                                      return (
+                                                        <div className={cn(isWidened ? "sm:col-span-7" : "sm:col-span-3")}>
+                                                          <div className="flex items-center gap-1.5 mb-1 group/category">
+                                                            <label className="text-xs text-muted-foreground block">
+                                                              {item.type === 'parts' ? 'Parts Description' : (item.category ? `${item.category} Description` : (COST_ITEM_TYPES.find(t => t.value === item.type)?.label || ((item.type as any) === 'service' ? 'Service' : (item.type as any) === 'labor' ? 'Labor' : item.type) + ' Description'))}
+                                                            </label>
+                                                            <DropdownMenu>
+                                                              <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground/60 hover:text-primary transition-all hover:bg-primary/20 bg-primary/5 rounded-full ring-1 ring-primary/10">
+                                                                  <Settings2 className="h-3 w-3" />
+                                                                </Button>
+                                                              </DropdownMenuTrigger>
+                                                              <DropdownMenuContent align="start" className="w-56 bg-card border-border shadow-2xl">
+                                                                <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Move to Group</div>
+                                                                <DropdownMenuItem
+                                                                  onClick={() => updateCostItem(appointment.id, item.id, { type: 'parts', category: undefined })}
+                                                                  className={cn("flex items-center justify-between text-sm", item.type === 'parts' && "bg-primary/10 text-primary")}
+                                                                >
+                                                                  Parts
+                                                                  {item.type === 'parts' && <Check className="h-3 w-3" />}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <div className="max-h-[300px] overflow-y-auto">
+                                                                  {COST_ITEM_CATEGORIES.map((cat) => (
+                                                                    <DropdownMenuItem
+                                                                      key={cat}
+                                                                      onClick={() => updateCostItem(appointment.id, item.id, { type: 'service_labor', category: cat })}
+                                                                      className={cn("flex items-center justify-between text-sm", item.category === cat && "bg-primary/10 text-primary")}
+                                                                    >
+                                                                      {cat}
+                                                                      {item.category === cat && <Check className="h-3 w-3" />}
+                                                                    </DropdownMenuItem>
+                                                                  ))}
+                                                                </div>
+                                                              </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                          </div>
+                                                          {isWidened ? (
+                                                            <Textarea
+                                                              id={`description-${item.id}`}
+                                                              value={item.description}
+                                                              onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                                              onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                                  e.preventDefault()
+                                                                  addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                                }
+                                                              }}
+                                                              placeholder="Enter long description..."
+                                                              className="min-h-[80px] text-sm bg-background whitespace-pre-wrap"
+                                                            />
+                                                          ) : (
+                                                            <Input
+                                                              id={`description-${item.id}`}
+                                                              value={item.description}
+                                                              onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                                              onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && e.shiftKey) {
+                                                                  e.preventDefault()
+                                                                  updateCostItem(appointment.id, item.id, { description: item.description + "\n" }, true)
+                                                                  toggleWidenItem(item.id)
+                                                                  setFocusNewItem(item.id)
+                                                                } else if (e.key === 'Enter' && !e.shiftKey) {
+                                                                  e.preventDefault()
+                                                                  addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                                }
+                                                              }}
+                                                              placeholder="Enter description..."
+                                                              className="h-8 text-sm"
+                                                            />
+                                                          )}
                                                         </div>
-                                                        {isWidened ? (
-                                                          <Textarea
-                                                            id={`description-${item.id}`}
-                                                            value={item.description}
-                                                            onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                                      )
+                                                    })()}
+                                                    <div>
+                                                      <label className="text-xs text-muted-foreground mb-1 block">Qty</label>
+                                                      <Input
+                                                        type="number"
+                                                        min="1"
+                                                        value={item.quantity}
+                                                        onChange={(e) => updateCostItem(appointment.id, item.id, { quantity: parseInt(e.target.value) || 1 })}
+                                                        onKeyDown={(e) => {
+                                                          if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault()
+                                                            addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                          }
+                                                        }}
+                                                        className="h-8 text-sm"
+                                                      />
+                                                    </div>
+                                                    <div>
+                                                      <label className="text-xs text-muted-foreground mb-1 block">Unit</label>
+                                                      {(item.unit && (!COMMON_UNITS.includes(item.unit as any) || item.unit === "__CUSTOM__") && item.unit !== "") ? (
+                                                        <div className="relative group">
+                                                          <Input
+                                                            value={item.unit === "__CUSTOM__" ? "" : item.unit}
+                                                            onChange={(e) => updateCostItem(appointment.id, item.id, { unit: e.target.value })}
+                                                            placeholder="Type unit..."
+                                                            className="h-8 text-sm pr-6 bg-background"
+                                                            autoFocus
                                                             onKeyDown={(e) => {
                                                               if (e.key === 'Enter' && !e.shiftKey) {
                                                                 e.preventDefault()
                                                                 addCostItem(appointment.id, item.type, item.category, item.unit)
                                                               }
                                                             }}
-                                                            placeholder="Enter long description..."
-                                                            className="min-h-[80px] text-sm bg-background whitespace-pre-wrap"
                                                           />
-                                                        ) : (
-                                                          <Input
-                                                            id={`description-${item.id}`}
-                                                            value={item.description}
-                                                            onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
-                                                            onKeyDown={(e) => {
-                                                              if (e.key === 'Enter' && e.shiftKey) {
-                                                                e.preventDefault()
-                                                                updateCostItem(appointment.id, item.id, { description: item.description + "\n" }, true)
-                                                                toggleWidenItem(item.id)
-                                                                setFocusNewItem(item.id)
-                                                              } else if (e.key === 'Enter' && !e.shiftKey) {
-                                                                e.preventDefault()
-                                                                addCostItem(appointment.id, item.type, item.category, item.unit)
-                                                              }
-                                                            }}
-                                                            placeholder="Enter description..."
-                                                            className="h-8 text-sm"
-                                                          />
-                                                        )}
-                                                      </div>
-                                                    )
-                                                  })()}
-                                                  <div>
-                                                    <label className="text-xs text-muted-foreground mb-1 block">Qty</label>
-                                                    <Input
-                                                      type="number"
-                                                      min="1"
-                                                      value={item.quantity}
-                                                      onChange={(e) => updateCostItem(appointment.id, item.id, { quantity: parseInt(e.target.value) || 1 })}
-                                                      onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                                          e.preventDefault()
-                                                          addCostItem(appointment.id, item.type, item.category, item.unit)
-                                                        }
-                                                      }}
-                                                      className="h-8 text-sm"
-                                                    />
-                                                  </div>
-                                                  <div>
-                                                    <label className="text-xs text-muted-foreground mb-1 block">Unit</label>
-                                                    {(item.unit && (!COMMON_UNITS.includes(item.unit as any) || item.unit === "__CUSTOM__") && item.unit !== "") ? (
-                                                      <div className="relative group">
-                                                        <Input
-                                                          value={item.unit === "__CUSTOM__" ? "" : item.unit}
-                                                          onChange={(e) => updateCostItem(appointment.id, item.id, { unit: e.target.value })}
-                                                          placeholder="Type unit..."
-                                                          className="h-8 text-sm pr-6 bg-background"
-                                                          autoFocus
-                                                          onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                              e.preventDefault()
-                                                              addCostItem(appointment.id, item.type, item.category, item.unit)
-                                                            }
-                                                          }}
-                                                        />
-                                                        <Button
-                                                          size="icon"
-                                                          variant="ghost"
-                                                          onClick={() => updateCostItem(appointment.id, item.id, { unit: "PC" })}
-                                                          className="absolute right-0 top-0 h-8 w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        >
-                                                          <X className="w-3 h-3" />
-                                                        </Button>
-                                                      </div>
-                                                    ) : (
-                                                      <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
                                                           <Button
-                                                            variant="outline"
-                                                            className="h-8 w-full text-sm font-normal px-2 justify-between bg-background border-input hover:bg-accent hover:text-accent-foreground"
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            onClick={() => updateCostItem(appointment.id, item.id, { unit: "PC" })}
+                                                            className="absolute right-0 top-0 h-8 w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                                                           >
-                                                            <span className="truncate">{item.unit || ""}</span>
-                                                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                                            <X className="w-3 h-3" />
                                                           </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="start" className="w-40">
-                                                          <DropdownMenuItem
-                                                            className="text-muted-foreground italic"
-                                                            onClick={() => updateCostItem(appointment.id, item.id, { unit: "" })}
-                                                          >
-                                                            (Blank)
-                                                          </DropdownMenuItem>
-                                                          <DropdownMenuSeparator />
-                                                          <div className="max-h-[200px] overflow-y-auto">
-                                                            {COMMON_UNITS.map((u) => (
-                                                              <DropdownMenuItem
-                                                                key={u}
-                                                                onClick={() => updateCostItem(appointment.id, item.id, { unit: item.unit === u ? "" : u })}
-                                                                className="flex items-center justify-between"
-                                                              >
-                                                                {u}
-                                                                {item.unit === u && <Check className="w-3 h-3 text-primary" />}
-                                                              </DropdownMenuItem>
-                                                            ))}
-                                                          </div>
-                                                          <DropdownMenuSeparator />
-                                                          <DropdownMenuItem
-                                                            onClick={() => updateCostItem(appointment.id, item.id, { unit: "__CUSTOM__" })}
-                                                            className="text-primary font-medium"
-                                                          >
-                                                            <Plus className="w-3 h-3 mr-2" />
-                                                            Custom Unit
-                                                          </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                      </DropdownMenu>
-                                                    )}
-                                                  </div>
-                                                  <div>
-                                                    <label className="text-xs text-muted-foreground mb-1 block">Unit Price</label>
-                                                    <Input
-                                                      type="number"
-                                                      min="0"
-                                                      step="0.01"
-                                                      value={item.unitPrice}
-                                                      onChange={(e) => updateCostItem(appointment.id, item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                                                      onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                                          e.preventDefault()
-                                                          addCostItem(appointment.id, item.type, item.category, item.unit)
-                                                        }
-                                                      }}
-                                                      className="h-8 text-sm"
-                                                    />
-                                                  </div>
-                                                  <div className="flex items-end justify-between">
-                                                    <div>
-                                                      <label className="text-xs text-muted-foreground mb-1 block">Total</label>
-                                                      <p className="font-mono font-semibold text-foreground h-8 flex items-center">
-                                                        P{item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                                      </p>
+                                                        </div>
+                                                      ) : (
+                                                        <DropdownMenu>
+                                                          <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                              variant="outline"
+                                                              className="h-8 w-full text-sm font-normal px-2 justify-between bg-background border-input hover:bg-accent hover:text-accent-foreground"
+                                                            >
+                                                              <span className="truncate">{item.unit || ""}</span>
+                                                              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                                            </Button>
+                                                          </DropdownMenuTrigger>
+                                                          <DropdownMenuContent align="start" className="w-40">
+                                                            <DropdownMenuItem
+                                                              className="text-muted-foreground italic"
+                                                              onClick={() => updateCostItem(appointment.id, item.id, { unit: "" })}
+                                                            >
+                                                              (Blank)
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <div className="max-h-[200px] overflow-y-auto">
+                                                              {COMMON_UNITS.map((u) => (
+                                                                <DropdownMenuItem
+                                                                  key={u}
+                                                                  onClick={() => updateCostItem(appointment.id, item.id, { unit: item.unit === u ? "" : u })}
+                                                                  className="flex items-center justify-between"
+                                                                >
+                                                                  {u}
+                                                                  {item.unit === u && <Check className="w-3 h-3 text-primary" />}
+                                                                </DropdownMenuItem>
+                                                              ))}
+                                                            </div>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                              onClick={() => updateCostItem(appointment.id, item.id, { unit: "__CUSTOM__" })}
+                                                              className="text-primary font-medium"
+                                                            >
+                                                              <Plus className="w-3 h-3 mr-2" />
+                                                              Custom Unit
+                                                            </DropdownMenuItem>
+                                                          </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                      )}
                                                     </div>
-                                                    <Button
-                                                      size="sm"
-                                                      variant="ghost"
-                                                      onClick={() => removeCostItem(appointment.id, item.id)}
-                                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                                                    >
-                                                      <X className="w-4 h-4" />
-                                                    </Button>
+                                                    <div>
+                                                      <label className="text-xs text-muted-foreground mb-1 block">Unit Price</label>
+                                                      <Input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={item.unitPrice}
+                                                        onChange={(e) => updateCostItem(appointment.id, item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                                                        onKeyDown={(e) => {
+                                                          if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault()
+                                                            addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                          }
+                                                        }}
+                                                        className="h-8 text-sm"
+                                                      />
+                                                    </div>
+                                                    <div className="flex items-end justify-between">
+                                                      <div>
+                                                        <label className="text-xs text-muted-foreground mb-1 block">Total</label>
+                                                        <p className="font-mono font-semibold text-foreground h-8 flex items-center">
+                                                          P{item.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                                        </p>
+                                                      </div>
+                                                      <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => removeCostItem(appointment.id, item.id)}
+                                                        className="h-8 w-8 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                                                      >
+                                                        <X className="w-4 h-4" />
+                                                      </Button>
+                                                    </div>
                                                   </div>
                                                 </div>
                                               </div>
                                             </div>
-                                          </div>
-                                        )
-                                      })}
+                                          )
+                                        })}
 
-                                      {/* Discount & Total */}
-                                      <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg space-y-3">
-                                        {/* Total Parts */}
-                                        <div className="flex items-center justify-between text-sm">
-                                          <span className="text-muted-foreground">Total Parts</span>
-                                          <span className="font-mono text-foreground">
-                                            P{((appointment.costing?.items || []).filter(i => i.type === 'parts').reduce((sum, i) => sum + i.total, 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                          </span>
-                                        </div>
-                                        {/* Total Labor */}
-                                        <div className="flex items-center justify-between text-sm pb-2 border-b border-green-500/20">
-                                          <span className="text-muted-foreground">Total Labor</span>
-                                          <span className="font-mono text-foreground">
-                                            P{((appointment.costing?.items || []).filter(i => i.type !== 'parts').reduce((sum, i) => sum + i.total, 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-sm">
-                                          <span className="text-muted-foreground">Subtotal</span>
-                                          <span className="font-mono font-semibold text-foreground">
-                                            P{(appointment.costing?.subtotal || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                          <span className="text-sm text-muted-foreground">Discount</span>
-                                          <Input
-                                            type="number"
-                                            min="0"
-                                            value={appointment.costing?.discount || 0}
-                                            onChange={(e) => updateDiscount(appointment.id, parseFloat(e.target.value) || 0, appointment.costing?.discountType || "fixed")}
-                                            className="h-8 text-sm w-24"
-                                          />
-                                          <Select
-                                            value={appointment.costing?.discountType || "fixed"}
-                                            onValueChange={(value) => updateDiscount(appointment.id, appointment.costing?.discount || 0, value as "fixed" | "percentage", true)}
-                                          >
-                                            <SelectTrigger className="w-24 h-8">
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="fixed">Fixed (P)</SelectItem>
-                                              <SelectItem value="percentage">Percent (%)</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                          <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                              type="checkbox"
-                                              checked={appointment.costing?.vatEnabled || false}
-                                              onChange={(e) => toggleVat(appointment.id, e.target.checked)}
-                                              className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                                            />
-                                            <span className="text-sm text-muted-foreground">Add 12% VAT</span>
-                                          </label>
-                                          {appointment.costing?.vatEnabled && (
-                                            <span className="font-mono text-sm text-foreground ml-auto">
-                                              +P{(appointment.costing?.vatAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                            </span>
-                                          )}
-                                          <div className="flex items-center justify-between pt-2 border-t border-green-500/30">
-                                            <span className="font-semibold text-foreground flex items-center gap-2">
-                                              <DollarSign className="w-4 h-4 text-green-500" />
-                                              Total {appointment.costing?.vatEnabled && <span className="text-xs font-normal text-muted-foreground">(VAT inclusive)</span>}
-                                            </span>
-                                            <span className="font-mono text-xl font-bold text-green-500">
-                                              P{(appointment.costing?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                        {/* Discount & Total */}
+                                        <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg space-y-3">
+                                          {/* Total Parts */}
+                                          <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Total Parts</span>
+                                            <span className="font-mono text-foreground">
+                                              P{((appointment.costing?.items || []).filter(i => i.type === 'parts').reduce((sum, i) => sum + i.total, 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                             </span>
                                           </div>
-                                        </div>
-                                      </div>
-
-                                      {/* Advisor Names */}
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium text-foreground">Service Advisor Name</label>
-                                          <Input
-                                            value={appointment.costing?.serviceAdvisorName ?? "Ryan Christopher D. Quintos"}
-                                            onChange={(e) => updateCostingStringField(appointment.id, 'serviceAdvisorName', e.target.value)}
-                                            placeholder="e.g. Ryan Christopher D. Quintos"
-                                            className="h-9 text-sm bg-background border-border"
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium text-foreground">BRP Advisor Name</label>
-                                          <Input
-                                            value={appointment.costing?.brpAdvisorName || ""}
-                                            onChange={(e) => updateCostingStringField(appointment.id, 'brpAdvisorName', e.target.value)}
-                                            placeholder="e.g. John Doe (Leave blank if none)"
-                                            className="h-9 text-sm bg-background border-border"
-                                          />
-                                        </div>
-                                      </div>
-
-                                      {/* Delivery & Form Info */}
-                                      <div className="grid grid-cols-1 gap-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                          <div className="space-y-2">
-                                            <label className="text-sm font-medium text-foreground uppercase tracking-widest text-[10px]">Delivery Date (Working Days)</label>
+                                          {/* Total Labor */}
+                                          <div className="flex items-center justify-between text-sm pb-2 border-b border-green-500/20">
+                                            <span className="text-muted-foreground">Total Labor</span>
+                                            <span className="font-mono text-foreground">
+                                              P{((appointment.costing?.items || []).filter(i => i.type !== 'parts').reduce((sum, i) => sum + i.total, 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Subtotal</span>
+                                            <span className="font-mono font-semibold text-foreground">
+                                              P{(appointment.costing?.subtotal || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <span className="text-sm text-muted-foreground">Discount</span>
                                             <Input
-                                              type="text"
-                                              value={appointment.costing?.deliveryDate || ""}
-                                              onChange={(e) => updateCostingStringField(appointment.id, 'deliveryDate', e.target.value)}
-                                              placeholder="e.g. 5-7"
+                                              type="number"
+                                              min="0"
+                                              value={appointment.costing?.discount || 0}
+                                              onChange={(e) => updateDiscount(appointment.id, parseFloat(e.target.value) || 0, appointment.costing?.discountType || "fixed")}
+                                              className="h-8 text-sm w-24"
+                                            />
+                                            <Select
+                                              value={appointment.costing?.discountType || "fixed"}
+                                              onValueChange={(value) => updateDiscount(appointment.id, appointment.costing?.discount || 0, value as "fixed" | "percentage", true)}
+                                            >
+                                              <SelectTrigger className="w-24 h-8">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="fixed">Fixed (P)</SelectItem>
+                                                <SelectItem value="percentage">Percent (%)</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                              <input
+                                                type="checkbox"
+                                                checked={appointment.costing?.vatEnabled || false}
+                                                onChange={(e) => toggleVat(appointment.id, e.target.checked)}
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                                              />
+                                              <span className="text-sm text-muted-foreground">Add 12% VAT</span>
+                                            </label>
+                                            {appointment.costing?.vatEnabled && (
+                                              <span className="font-mono text-sm text-foreground ml-auto">
+                                                +P{(appointment.costing?.vatAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                              </span>
+                                            )}
+                                            <div className="flex items-center justify-between pt-2 border-t border-green-500/30">
+                                              <span className="font-semibold text-foreground flex items-center gap-2">
+                                                <DollarSign className="w-4 h-4 text-green-500" />
+                                                Total {appointment.costing?.vatEnabled && <span className="text-xs font-normal text-muted-foreground">(VAT inclusive)</span>}
+                                              </span>
+                                              <span className="font-mono text-xl font-bold text-green-500">
+                                                P{(appointment.costing?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Advisor Names */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                          <div className="space-y-2">
+                                            <label className="text-sm font-medium text-foreground">Service Advisor Name</label>
+                                            <Input
+                                              value={appointment.costing?.serviceAdvisorName ?? "Ryan Christopher D. Quintos"}
+                                              onChange={(e) => updateCostingStringField(appointment.id, 'serviceAdvisorName', e.target.value)}
+                                              placeholder="e.g. Ryan Christopher D. Quintos"
                                               className="h-9 text-sm bg-background border-border"
                                             />
                                           </div>
                                           <div className="space-y-2">
-                                            <label className="text-[10px] font-medium text-primary uppercase tracking-widest flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Report/Doc Date Overlay</label>
-                                            <Popover>
-                                              <PopoverTrigger asChild>
-                                                <Button
-                                                  variant={"outline"}
-                                                  className={cn(
-                                                    "w-full justify-start text-left font-normal bg-primary/5 focus-visible:ring-primary border-primary/20",
-                                                    !appointment.costing?.documentDate && "text-muted-foreground"
-                                                  )}
-                                                  title="Leave blank to use the exact current calendar day"
-                                                >
-                                                  {appointment.costing?.documentDate ? (
-                                                    format(new Date(appointment.costing.documentDate), "MM/dd/yyyy")
-                                                  ) : (
-                                                    <span className="text-secondary-foreground text-xs opacity-70">Pick a date</span>
-                                                  )}
-                                                </Button>
-                                              </PopoverTrigger>
-                                              <PopoverContent className="w-auto p-0 z-[100]" align="start">
-                                                <CalendarUI
-                                                  mode="single"
-                                                  selected={appointment.costing?.documentDate ? new Date(appointment.costing.documentDate) : undefined}
-                                                  onSelect={(date) => {
-                                                    const formatted = date ? format(date, "yyyy-MM-dd") : "";
-                                                    updateCostingStringField(appointment.id, 'documentDate', formatted);
-                                                  }}
-                                                  initialFocus
-                                                />
-                                              </PopoverContent>
-                                            </Popover>
+                                            <label className="text-sm font-medium text-foreground">BRP Advisor Name</label>
+                                            <Input
+                                              value={appointment.costing?.brpAdvisorName || ""}
+                                              onChange={(e) => updateCostingStringField(appointment.id, 'brpAdvisorName', e.target.value)}
+                                              placeholder="e.g. John Doe (Leave blank if none)"
+                                              className="h-9 text-sm bg-background border-border"
+                                            />
                                           </div>
                                         </div>
 
-                                        {/* E-Signature Toggles */}
-                                        <div className="space-y-3">
-                                          {/* Paul D. Suazo Signature Toggle */}
-                                          {isAuthorizedAdminEmail(session?.user?.email) && (
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg gap-3">
-                                              <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                                                <ShieldCheck className="w-4 h-4" />
-                                                Include E-Signature for Paul D. Suazo?
-                                                {!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
-                                                  <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground ml-2">READ-ONLY</span>
-                                                )}
-                                              </div>
-                                              <div className="flex gap-2">
-                                                <Button
-                                                  size="sm"
-                                                  variant={appointment.costing?.includePaulSignature ? "default" : "outline"}
-                                                  onClick={() => setIncludePaulSignature(appointment.id, true)}
-                                                  className="h-7 px-3 text-[10px] flex-1 sm:flex-none"
-                                                  disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
-                                                >
-                                                  Yes
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant={appointment.costing?.includePaulSignature === false ? "destructive" : "outline"}
-                                                  onClick={() => setIncludePaulSignature(appointment.id, false)}
-                                                  className="h-7 px-3 text-[10px] flex-1 sm:flex-none"
-                                                  disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
-                                                >
-                                                  No
-                                                </Button>
-                                              </div>
+                                        {/* Delivery & Form Info */}
+                                        <div className="grid grid-cols-1 gap-4">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                              <label className="text-sm font-medium text-foreground uppercase tracking-widest text-[10px]">Delivery Date (Working Days)</label>
+                                              <Input
+                                                type="text"
+                                                value={appointment.costing?.deliveryDate || ""}
+                                                onChange={(e) => updateCostingStringField(appointment.id, 'deliveryDate', e.target.value)}
+                                                placeholder="e.g. 5-7"
+                                                className="h-9 text-sm bg-background border-border"
+                                              />
                                             </div>
-                                          )}
+                                            <div className="space-y-2">
+                                              <label className="text-[10px] font-medium text-primary uppercase tracking-widest flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Report/Doc Date Overlay</label>
+                                              <Popover>
+                                                <PopoverTrigger asChild>
+                                                  <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                      "w-full justify-start text-left font-normal bg-primary/5 focus-visible:ring-primary border-primary/20",
+                                                      !appointment.costing?.documentDate && "text-muted-foreground"
+                                                    )}
+                                                    title="Leave blank to use the exact current calendar day"
+                                                  >
+                                                    {appointment.costing?.documentDate ? (
+                                                      format(new Date(appointment.costing.documentDate), "MM/dd/yyyy")
+                                                    ) : (
+                                                      <span className="text-secondary-foreground text-xs opacity-70">Pick a date</span>
+                                                    )}
+                                                  </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                                                  <CalendarUI
+                                                    mode="single"
+                                                    selected={appointment.costing?.documentDate ? new Date(appointment.costing.documentDate) : undefined}
+                                                    onSelect={(date) => {
+                                                      const formatted = date ? format(date, "yyyy-MM-dd") : "";
+                                                      updateCostingStringField(appointment.id, 'documentDate', formatted);
+                                                    }}
+                                                    initialFocus
+                                                  />
+                                                </PopoverContent>
+                                              </Popover>
+                                            </div>
+                                          </div>
 
-                                          {/* Alfred N. Agbong Signature Toggle */}
-                                          {isAuthorizedAdminEmail(session?.user?.email) && (
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg gap-3">
-                                              <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                                                <ShieldCheck className="w-4 h-4" />
-                                                Include E-Signature for Alfred N. Agbong?
-                                                {!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
-                                                  <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground ml-2">READ-ONLY</span>
-                                                )}
+                                          {/* E-Signature Toggles */}
+                                          <div className="space-y-3">
+                                            {/* Paul D. Suazo Signature Toggle */}
+                                            {isAuthorizedAdminEmail(session?.user?.email) && (
+                                              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg gap-3">
+                                                <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                                                  <ShieldCheck className="w-4 h-4" />
+                                                  Include E-Signature for Paul D. Suazo?
+                                                  {!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+                                                    <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground ml-2">READ-ONLY</span>
+                                                  )}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                  <Button
+                                                    size="sm"
+                                                    variant={appointment.costing?.includePaulSignature ? "default" : "outline"}
+                                                    onClick={() => setIncludePaulSignature(appointment.id, true)}
+                                                    className="h-7 px-3 text-[10px] flex-1 sm:flex-none"
+                                                    disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                  >
+                                                    Yes
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant={appointment.costing?.includePaulSignature === false ? "destructive" : "outline"}
+                                                    onClick={() => setIncludePaulSignature(appointment.id, false)}
+                                                    className="h-7 px-3 text-[10px] flex-1 sm:flex-none"
+                                                    disabled={!(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                  >
+                                                    No
+                                                  </Button>
+                                                </div>
                                               </div>
-                                              <div className="flex gap-2">
-                                                <Button
-                                                  size="sm"
-                                                  variant={appointment.costing?.includeAlfredSignature ? "default" : "outline"}
-                                                  onClick={() => setIncludeAlfredSignature(appointment.id, true)}
-                                                  className="h-7 px-3 text-[10px]"
-                                                  disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
-                                                >
-                                                  Yes
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant={appointment.costing?.includeAlfredSignature === false ? "destructive" : "outline"}
-                                                  onClick={() => setIncludeAlfredSignature(appointment.id, false)}
-                                                  className="h-7 px-3 text-[10px]"
-                                                  disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
-                                                >
-                                                  No
-                                                </Button>
+                                            )}
+
+                                            {/* Alfred N. Agbong Signature Toggle */}
+                                            {isAuthorizedAdminEmail(session?.user?.email) && (
+                                              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg gap-3">
+                                                <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                                                  <ShieldCheck className="w-4 h-4" />
+                                                  Include E-Signature for Alfred N. Agbong?
+                                                  {!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+                                                    <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground ml-2">READ-ONLY</span>
+                                                  )}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                  <Button
+                                                    size="sm"
+                                                    variant={appointment.costing?.includeAlfredSignature ? "default" : "outline"}
+                                                    onClick={() => setIncludeAlfredSignature(appointment.id, true)}
+                                                    className="h-7 px-3 text-[10px]"
+                                                    disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                  >
+                                                    Yes
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant={appointment.costing?.includeAlfredSignature === false ? "destructive" : "outline"}
+                                                    onClick={() => setIncludeAlfredSignature(appointment.id, false)}
+                                                    className="h-7 px-3 text-[10px]"
+                                                    disabled={!(session?.user?.email === "alfred_autoworks@yahoo.com" || session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                                                  >
+                                                    No
+                                                  </Button>
+                                                </div>
                                               </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                        {/* Notes */}
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium text-foreground">Notes (visible to customer)</label>
-                                          <textarea
-                                            value={appointment.costing?.notes || ""}
-                                            onChange={(e) => updateCostingNotes(appointment.id, e.target.value)}
-                                            placeholder="Add any notes about the costing..."
-                                            className="w-full h-20 px-3 py-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                                          />
+                                            )}
+                                          </div>
+                                          {/* Notes */}
+                                          <div className="space-y-2">
+                                            <label className="text-sm font-medium text-foreground">Notes (visible to customer)</label>
+                                            <textarea
+                                              value={appointment.costing?.notes || ""}
+                                              onChange={(e) => updateCostingNotes(appointment.id, e.target.value)}
+                                              placeholder="Add any notes about the costing..."
+                                              className="w-full h-20 px-3 py-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                                            />
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  ) : (
-                                    <div className="p-6 bg-background rounded-lg border border-dashed border-border text-center">
-                                      <Receipt className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                                      <p className="text-sm text-muted-foreground">
-                                        No cost items added yet. Click the buttons above to add services, parts, labor, or custom items.
-                                      </p>
-                                    </div>
-                                  )}
+                                    ) : (
+                                      <div className="p-6 bg-background rounded-lg border border-dashed border-border text-center">
+                                        <Receipt className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                                        <p className="text-sm text-muted-foreground">
+                                          No cost items added yet. Click the buttons above to add services, parts, labor, or custom items.
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })})()}
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
 
                 {/* Active List Pagination Controls */}
                 {filteredAppointments.length > itemsPerPage && (
@@ -6297,7 +6298,7 @@ export default function AdminDashboard() {
                                     )}
                                     <Popover>
                                       <PopoverTrigger asChild>
-                                        <button 
+                                        <button
                                           className="flex items-center gap-3 py-1 px-2.5 bg-secondary/30 rounded-lg border border-border/40 group/submission hover:border-primary/20 transition-all text-left"
                                           title="Change Submission Date"
                                         >
@@ -7879,8 +7880,8 @@ export default function AdminDashboard() {
 
               <div className="space-y-4 p-5 bg-primary/5 rounded-lg border border-primary/10">
                 <Label className="text-[10px] font-black text-primary uppercase tracking-widest">Job Classification</Label>
-                <RadioGroup 
-                  value={jobOrderConfig.jobClassification} 
+                <RadioGroup
+                  value={jobOrderConfig.jobClassification}
                   onValueChange={(val) => setJobOrderConfig({ ...jobOrderConfig, jobClassification: val })}
                   className="flex flex-wrap gap-6"
                 >
@@ -7948,7 +7949,7 @@ export default function AdminDashboard() {
               <HistoryIcon className="w-4 h-4 text-muted-foreground" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Print History</span>
             </div>
-            
+
             {configAppointment?.costing?.jobOrderHistory && configAppointment.costing.jobOrderHistory.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
                 {configAppointment.costing.jobOrderHistory.slice().reverse().map((entry, idx) => (
