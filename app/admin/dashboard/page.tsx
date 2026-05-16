@@ -134,6 +134,58 @@ const parseNumberFromInput = (val: string) => {
   return val.replace(/,/g, "")
 }
 
+const getServiceCategoryLabel = (appointment: any) => {
+  if (!appointment.service) return "";
+  
+  const services = appointment.service.split(", ").filter((s: string) => s && s.trim() !== "");
+  if (services.length === 0) return "";
+
+  const shorten = (s: string) => {
+    // Handle custom "Other" services
+    if (s.startsWith("Other: ")) return s.replace("Other: ", "");
+    
+    const mapping: Record<string, string> = {
+      "Mechanical Services": "Mechanical",
+      "Preventive Maintenance": "Preventive Maintenance",
+      "Engine & Transmission": "Engine & Transmission",
+      "Under Chassis": "Under Chassis",
+      "AC & Electrical": "AC & Electrical",
+      "Body Repairs & Painting": "Body Repairs & Painting",
+      "General Body Repairs & Fabrication": "General Body Repairs & Fabrication",
+      "General Overhauling": "General Overhauling",
+      "Wash Over & Car Detailing": "Car Detailing",
+      "24/7 Towing Service": "Towing",
+      "Insurance Claim": "Insurance",
+      "Rent A Car": "Rent A Car",
+      "Glassworks": "Glassworks",
+      "Parts": "Parts",
+      "Machine Works": "Machine Works",
+      "Other": "Other"
+    };
+    return mapping[s] || s;
+  };
+
+  const labels = services.map(shorten);
+
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]}, ${labels[1]}`;
+  
+  return `${labels[0]}, ${labels[1]} +${labels.length - 2}`;
+};
+
+const getPlateCopyLabel = (appointment: any, allAppointments: any[]) => {
+  const plate = appointment.vehiclePlate?.trim().toUpperCase() || 'N/A';
+  if (plate === 'N/A') return "";
+  
+  const filtered = allAppointments.filter(a => (a.vehiclePlate?.trim().toUpperCase() || 'N/A') === plate);
+  const sorted = [...filtered].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const index = sorted.findIndex(a => a.id === appointment.id);
+  
+  if (index < 1) return "";
+  const currentIndex = index + 1;
+  return `${currentIndex}${currentIndex === 2 ? 'nd' : currentIndex === 3 ? 'rd' : 'th'} Copy`;
+};
+
 // Database response interface (snake_case from Supabase)
 interface AppointmentDB {
   id: string
@@ -2349,14 +2401,18 @@ export default function AdminDashboard() {
     overrides?: { serviceAdvisor?: string, deliveryDate?: string, documentDate?: string }
   ) => {
     // 1. Format professional filename for the document title
+    const categoryLabel = getServiceCategoryLabel(appointment);
+    const copyLabel = getPlateCopyLabel(appointment, appointments);
     const currentEstimateNumber = appointment.estimateNumber || "PENDING";
     const unitModel = `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim();
+    
     const parts = [
       currentEstimateNumber,
       appointment.vehiclePlate,
       unitModel,
-      appointment.insurance,
-      appointment.name
+      categoryLabel ? `[${categoryLabel}]` : "",
+      appointment.name,
+      copyLabel
     ].filter(part => part && part.toString().trim() !== "" && part.toString().toUpperCase() !== "N/A");
 
     const filename = parts.join(" ");
@@ -2582,14 +2638,19 @@ export default function AdminDashboard() {
     setIsSavingJobOrderConfig(false)
 
     // Format professional filename
+    const categoryLabel = getServiceCategoryLabel(appointment);
+    const copyLabel = getPlateCopyLabel(appointment, appointments);
     const currentEstimateNumber = appointment.estimateNumber || "PENDING";
     const unitModel = `${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}`.trim();
+
     const parts = [
       "JO",
       currentEstimateNumber,
       appointment.vehiclePlate,
       unitModel,
-      appointment.name
+      categoryLabel ? `[${categoryLabel}]` : "",
+      appointment.name,
+      copyLabel
     ].filter(part => part && part.toString().trim() !== "" && part.toString().toUpperCase() !== "N/A");
 
     const filename = parts.join(" ");
@@ -2655,7 +2716,8 @@ export default function AdminDashboard() {
       }
     }
 
-    const filename = `JO_HIST_${appointment.estimateNumber || appointment.trackingCode}_${format(new Date(entry.printedAt), "yyyyMMdd")}.pdf`
+    const categoryLabel = getServiceCategoryLabel(appointment);
+    const filename = `JO_HIST_${appointment.estimateNumber || appointment.trackingCode}_${categoryLabel ? `[${categoryLabel}]_` : ""}${format(new Date(entry.printedAt), "yyyyMMdd")}.pdf`
     
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
@@ -4124,7 +4186,8 @@ export default function AdminDashboard() {
                       plateRunningIndex[plate] = encountered + 1
 
                       if (currentIndex > 1) {
-                        duplicateLabel = `${currentIndex}${currentIndex === 2 ? 'nd' : currentIndex === 3 ? 'rd' : 'th'} Copy`
+                        duplicateLabel = `${currentIndex}${currentIndex === 2 ? 'nd' : currentIndex === 3 ? 'rd' : 'th'} Copy`;
+                        
                         duplicateColor = currentIndex === 2
                           ? "text-blue-600 border-blue-500/50 bg-blue-500/10"
                           : currentIndex === 3
@@ -4172,6 +4235,14 @@ export default function AdminDashboard() {
                               BACK-JOB
                             </Badge>
                           )}
+                          {(() => {
+                            const categoryLabel = getServiceCategoryLabel(appointment);
+                            return categoryLabel && (
+                              <Badge variant="outline" className="text-blue-600 border-blue-500/50 bg-blue-500/10 rounded-full text-[10px] font-bold py-0 h-5 uppercase">
+                                {categoryLabel}
+                              </Badge>
+                            );
+                          })()}
                           {duplicateLabel && (
                             <Badge variant="outline" className={cn("rounded-full text-[10px] font-bold py-0 h-5 animate-pulse", duplicateColor)}>
                               {duplicateLabel}
@@ -6064,6 +6135,20 @@ export default function AdminDashboard() {
                             <span className="font-medium text-foreground">
                               {record.name}
                             </span>
+                            {(() => {
+                              // Adapt history record to Appointment shape for helper
+                              const aptAdapter = {
+                                ...record,
+                                vehiclePlate: record.vehicle_plate,
+                                createdAt: record.original_created_at
+                              };
+                              const categoryLabel = getServiceCategoryLabel(aptAdapter);
+                              return categoryLabel && (
+                                <Badge variant="outline" className="text-blue-600 border-blue-500/50 bg-blue-500/10 rounded-full text-[10px] font-bold py-0 h-5 uppercase">
+                                  {categoryLabel}
+                                </Badge>
+                              );
+                            })()}
                           </div>
 
                           <div className="ml-auto flex items-center gap-2">

@@ -1182,7 +1182,7 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
     .header h1 { color: #c00; font-size: 18px; font-weight: bold; margin-bottom: 1px; }
     .header p { font-size: 8px; line-height: 1.3; color: #333; }
     
-    .title-banner { background: #e6e6e6 !important; color: #000 !important; text-align: center; padding: 8px; font-size: 20px; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 4px; border: 1px solid #000; }
+    .title-banner { background: #800000 !important; color: #fff !important; text-align: center; padding: 8px; font-size: 20px; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 4px; border: 1px solid #000; }
     
     .meta-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     .meta-box { border: 1px solid #000; padding: 6px; background: #f9f9f9 !important; }
@@ -1194,7 +1194,7 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
     .info-label { font-size: 7px; font-weight: bold; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 1px; }
     .info-value { font-size: 9px; font-weight: 600; padding-top: 1px; }
     
-    .section-header { background: #eee !important; padding: 4px 8px; font-weight: bold; border: 1px solid #000; border-bottom: none; font-size: 9px; text-transform: uppercase; display: flex; justify-content: space-between; }
+    .section-header { background: #eee !important; color: #000 !important; padding: 4px 8px; font-weight: bold; border: 1px solid #000; border-bottom: none; font-size: 9px; text-transform: uppercase; display: flex; justify-content: space-between; }
     
     .job-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border: 1px solid #000; }
     .job-table th, .job-table td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
