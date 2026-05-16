@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { 
-  Search, Plus, ArrowLeft, Package, 
-  Tag, Loader2, Edit2, Trash2, 
+import {
+  Search, Plus, ArrowLeft, Package,
+  Tag, Loader2, Edit2, Trash2,
   Filter, ChevronRight, Globe, Info,
   CarFront, Database, Save, X
 } from "lucide-react"
@@ -37,8 +37,8 @@ interface PartPrice {
   updated_by: string
 }
 
-const CATEGORIES = ["PMS", "Brakes", "Suspension", "Engine", "Electrical", "Body Parts", "General"]
- 
+const CATEGORIES = ["PMS", "Brakes", "Suspension", "Engine", "Electrical", "Body Parts", "General", "Genuine", "Surplus", "Custom"]
+
 const formatNumberWithCommas = (val: string) => {
   const numeric = val.replace(/[^0-9.]/g, "");
   const parts = numeric.split(".");
@@ -56,16 +56,17 @@ export default function PartsPricesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null)
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [editingPart, setEditingPart] = useState<PartPrice | null>(null)
-  
+
   const [formData, setFormData] = useState({
     brand: "",
     part_name: "",
-    category: "General",
+    category: "Genuine",
+    customCategory: "",
     price: "",
     specifications: ""
   })
@@ -104,7 +105,7 @@ export default function PartsPricesPage() {
     const brands = new Set(prices.map(p => p.brand))
     return Array.from(brands)
   }, [prices])
- 
+
   const brandCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     prices.forEach(p => {
@@ -141,8 +142,23 @@ export default function PartsPricesPage() {
     try {
       const method = editingPart ? "PUT" : "POST"
       const cleanPrice = Number(formData.price.replace(/,/g, ""))
-      const payload = editingPart ? { ...formData, id: editingPart.id, price: cleanPrice } : { ...formData, price: cleanPrice }
-      
+      const finalCategory = formData.category === "Custom" ? formData.customCategory : formData.category
+
+      if (formData.category === "Custom" && !formData.customCategory) {
+        toast({ title: "Required", description: "Please enter your custom category name.", variant: "destructive" })
+        setIsSaving(false)
+        return
+      }
+
+      const payload = {
+        brand: formData.brand,
+        part_name: formData.part_name,
+        category: finalCategory,
+        price: cleanPrice,
+        specifications: formData.specifications,
+        ...(editingPart && { id: editingPart.id })
+      }
+
       const res = await fetch("/api/parts/prices", {
         method,
         headers: { "Content-Type": "application/json" },
@@ -167,7 +183,7 @@ export default function PartsPricesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this price entry?")) return
-    
+
     try {
       const res = await fetch(`/api/parts/prices?id=${id}`, { method: "DELETE" })
       if (res.ok) {
@@ -184,7 +200,8 @@ export default function PartsPricesPage() {
     setFormData({
       brand: brand || (selectedBrand !== "All Brands" ? selectedBrand || "" : ""),
       part_name: "",
-      category: "General",
+      category: "Genuine",
+      customCategory: "",
       price: "",
       specifications: ""
     })
@@ -192,11 +209,13 @@ export default function PartsPricesPage() {
   }
 
   const openEditModal = (part: PartPrice) => {
+    const isStandard = ["PMS", "Brakes", "Suspension", "Engine", "Electrical", "Body Parts", "General", "Genuine", "Surplus"].includes(part.category)
     setEditingPart(part)
     setFormData({
       brand: part.brand,
       part_name: part.part_name,
-      category: part.category,
+      category: isStandard ? part.category : "Custom",
+      customCategory: isStandard ? "" : part.category,
       price: formatNumberWithCommas(String(part.price)),
       specifications: part.specifications || ""
     })
@@ -233,8 +252,8 @@ export default function PartsPricesPage() {
           <div className="flex items-center gap-2">
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input 
-                placeholder="Search parts or brands..." 
+              <Input
+                placeholder="Search parts or brands..."
                 className="pl-9 bg-slate-100/10 border-slate-700/50 focus:bg-slate-800/50 transition-all text-slate-100 placeholder:text-slate-500 font-medium"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -251,7 +270,7 @@ export default function PartsPricesPage() {
       <main className="max-w-7xl mx-auto px-4 py-8 md:px-8">
         {/* ─── Brand Selector ─── */}
         {!selectedBrand ? (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
@@ -292,7 +311,7 @@ export default function PartsPricesPage() {
               {VEHICLE_BRANDS.filter(b => b !== "Other").map((brand) => {
                 const hasPrices = brandsWithPrices.includes(brand)
                 const logoPath = `/carbrands/${brand.toLowerCase()}.png`
-                
+
                 return (
                   <motion.button
                     key={brand}
@@ -302,10 +321,10 @@ export default function PartsPricesPage() {
                     className="group relative aspect-square bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center justify-center gap-3 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300"
                   >
                     <div className="relative w-full h-full flex items-center justify-center grayscale group-hover:grayscale-0 transition-all duration-500 opacity-80 group-hover:opacity-100">
-                      <Image 
-                        src={logoPath} 
-                        alt={brand} 
-                        fill 
+                      <Image
+                        src={logoPath}
+                        alt={brand}
+                        fill
                         className="object-contain p-2"
                         onError={(e) => {
                           // If image fails, show a fallback
@@ -350,10 +369,10 @@ export default function PartsPricesPage() {
                 <div className="flex items-center gap-3">
                   {selectedBrand !== "All Brands" && (
                     <div className="relative w-10 h-10">
-                      <Image 
-                        src={`/carbrands/${selectedBrand.toLowerCase()}.png`} 
-                        alt={selectedBrand} 
-                        fill 
+                      <Image
+                        src={`/carbrands/${selectedBrand.toLowerCase()}.png`}
+                        alt={selectedBrand}
+                        fill
                         className="object-contain"
                       />
                     </div>
@@ -387,12 +406,12 @@ export default function PartsPricesPage() {
                     <AnimatePresence mode="popLayout">
                       {filteredPrices.length > 0 ? (
                         filteredPrices.map((item) => (
-                          <motion.tr 
+                          <motion.tr
                             layout
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            key={item.id} 
+                            key={item.id}
                             className="hover:bg-slate-50/50 transition-colors group"
                           >
                             <td className="px-6 py-4">
@@ -458,14 +477,14 @@ export default function PartsPricesPage() {
               Set the standard reference price for this part.
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleSave} className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2 sm:col-span-1">
                 <Label htmlFor="brand" className="text-xs font-black uppercase text-slate-400">Car Brand</Label>
-                <Select 
-                  value={formData.brand} 
-                  onValueChange={(val) => setFormData({...formData, brand: val})}
+                <Select
+                  value={formData.brand}
+                  onValueChange={(val) => setFormData({ ...formData, brand: val })}
                 >
                   <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-100 font-medium">
                     <SelectValue placeholder="Select Brand" />
@@ -479,9 +498,9 @@ export default function PartsPricesPage() {
               </div>
               <div className="space-y-2 col-span-2 sm:col-span-1">
                 <Label htmlFor="category" className="text-xs font-black uppercase text-slate-400">Category</Label>
-                <Select 
-                  value={formData.category} 
-                  onValueChange={(val) => setFormData({...formData, category: val})}
+                <Select
+                  value={formData.category}
+                  onValueChange={(val) => setFormData({ ...formData, category: val })}
                 >
                   <SelectTrigger className="bg-slate-800/50 border-slate-700 text-slate-100 font-medium">
                     <SelectValue placeholder="Category" />
@@ -495,13 +514,33 @@ export default function PartsPricesPage() {
               </div>
             </div>
 
+            <AnimatePresence>
+              {formData.category === "Custom" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2 overflow-hidden"
+                >
+                  <Label htmlFor="customCategory" className="text-xs font-black uppercase text-blue-400">Specify Custom Category</Label>
+                  <Input
+                    id="customCategory"
+                    placeholder="e.g. Replacement, Aftermarket"
+                    value={formData.customCategory}
+                    onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
+                    className="bg-blue-500/10 border-blue-500/30 text-slate-100 font-medium placeholder:text-slate-400"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <div className="space-y-2">
               <Label htmlFor="part_name" className="text-xs font-black uppercase text-slate-400">Part Name</Label>
-              <Input 
-                id="part_name" 
+              <Input
+                id="part_name"
                 placeholder="e.g. Oil Filter, Brake Pads"
                 value={formData.part_name}
-                onChange={(e) => setFormData({...formData, part_name: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, part_name: e.target.value })}
                 className="bg-slate-800/50 border-slate-700 text-slate-100 font-medium placeholder:text-slate-500"
               />
             </div>
@@ -510,12 +549,12 @@ export default function PartsPricesPage() {
               <Label htmlFor="price" className="text-xs font-black uppercase text-slate-400">Price (₱)</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</span>
-                <Input 
-                  id="price" 
+                <Input
+                  id="price"
                   type="text"
                   placeholder="0.00"
                   value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: formatNumberWithCommas(e.target.value)})}
+                  onChange={(e) => setFormData({ ...formData, price: formatNumberWithCommas(e.target.value) })}
                   className="pl-8 bg-slate-800/50 border-slate-700 font-bold text-slate-100 text-lg placeholder:text-slate-500"
                 />
               </div>
@@ -523,11 +562,11 @@ export default function PartsPricesPage() {
 
             <div className="space-y-2">
               <Label htmlFor="specifications" className="text-xs font-black uppercase text-slate-400">Specifications / Notes</Label>
-              <Input 
-                id="specifications" 
+              <Input
+                id="specifications"
                 placeholder="e.g. 1pc, 4L, or specific dimensions"
                 value={formData.specifications}
-                onChange={(e) => setFormData({...formData, specifications: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, specifications: e.target.value })}
                 className="bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
               />
             </div>
