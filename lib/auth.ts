@@ -16,7 +16,7 @@ const AUTHORIZED_EMAILS = [
 ]
 
 const DEVELOPER_EMAILS = [
-  "siliacay.javier@gmail.com",
+  //"siliacay.javier@gmail.com",
   "javiersiliacaysiliacay1234@gmail.com"
 ]
 
