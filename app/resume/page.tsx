@@ -192,7 +192,7 @@ export default async function ResumePage() {
                                         Sadbai AI <span className="text-[10px] font-medium text-slate-400">| GenAI, RAG Pipelines, LangChain</span>
                                     </h4>
                                     <p className="text-sm text-slate-600 mt-1 print:text-[10px]">
-                                        Engineered a fully functional AI-driven diagnostic platform in a <strong>24-hour speedrun development</strong>, integrating RAG pipelines for rapid data analysis.
+                                        A private emotional companion built in a <strong>24-hour speedrun development</strong> with no login and no judgment, designed to help users express emotions like stress, heartbreak, or overthinking while helping them better understand what they feel.
                                     </p>
                                 </div>
                                 <div>
