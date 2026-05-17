@@ -184,7 +184,7 @@ export default async function ResumePage() {
                                         TaraFix <span className="text-[10px] font-medium text-slate-400">| Next.js, Leaflet, React 19</span>
                                     </h4>
                                     <p className="text-sm text-slate-600 mt-1 print:text-[10px]">
-                                        Spearheaded development of a real-time mechanics locator serving the Philippines, integrating complex geospatial tracking and interactive mapping.
+                                        A real-time platform for freelance mechanics that helps connect them with users through geolocation and interactive mapping.
                                     </p>
                                 </div>
                                 <div>
