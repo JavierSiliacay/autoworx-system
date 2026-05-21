@@ -2201,12 +2201,13 @@ export default function AdminDashboard() {
           aircon: Number(costing.gatepass_breakdown.aircon) || 0,
           electrical: Number(costing.gatepass_breakdown.electrical) || 0,
           mechanical: Number(costing.gatepass_breakdown.mechanical) || 0,
-          total: Number(costing.gatepass_breakdown.total) || costing.total || 0
+          total: Number(costing.gatepass_breakdown.total) || costing.total || 0,
+          mop: costing.gatepass_breakdown.mop || ""
         };
       }
 
       // Priority 2: Calculate from items for the first time
-      let res = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0 };
+      let res = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, mop: "" };
       if (costing && costing.items) {
         costing.items.forEach((item: any) => {
           const cat = item.category || "";
@@ -2238,6 +2239,7 @@ export default function AdminDashboard() {
       aircon: breakdown.aircon,
       electrical: breakdown.electrical,
       mechanical: breakdown.mechanical,
+      mop: breakdown.mop || "",
       costing: appointment.costing,
       cashier: "",
       serviceAdvisor: appointment.costing?.serviceAdvisorName || appointment.serviceAdvisor || "Paul D. Suazo",
@@ -2275,7 +2277,8 @@ export default function AdminDashboard() {
         aircon: Number(gatepassData.aircon) || 0,
         electrical: Number(gatepassData.electrical) || 0,
         mechanical: Number(gatepassData.mechanical) || 0,
-        total: Number(gatepassData.amount) || 0
+        total: Number(gatepassData.amount) || 0,
+        mop: gatepassData.mop || ""
       }
     };
 
@@ -7700,6 +7703,35 @@ export default function AdminDashboard() {
                 value={gatepassData.orNo}
                 onChange={(e) => setGatepassData({ ...gatepassData, orNo: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gate-mop">MOP</Label>
+              <Select
+                value={(gatepassData.mop && !["Cash", "GCash", "Bank Transfer", "Check", "Charge/Terms", "Insurance"].includes(gatepassData.mop)) ? "Custom" : (gatepassData.mop || undefined)}
+                onValueChange={(value) => setGatepassData(prev => ({ ...prev, mop: value === "Custom" ? "Custom Value" : value }))}
+              >
+                <SelectTrigger id="gate-mop">
+                  <SelectValue placeholder="Mode of Payment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="GCash">GCash</SelectItem>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="Check">Check</SelectItem>
+                  <SelectItem value="Charge/Terms">Charge/Terms</SelectItem>
+                  <SelectItem value="Insurance">Insurance</SelectItem>
+                  <SelectItem value="Custom">Custom...</SelectItem>
+                </SelectContent>
+              </Select>
+              {(gatepassData.mop && !["Cash", "GCash", "Bank Transfer", "Check", "Charge/Terms", "Insurance"].includes(gatepassData.mop)) && (
+                <Input
+                  className="mt-2"
+                  placeholder="Enter custom MOP..."
+                  value={gatepassData.mop === "Custom Value" ? "" : gatepassData.mop}
+                  onChange={(e) => setGatepassData(prev => ({ ...prev, mop: e.target.value }))}
+                  autoFocus
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4 md:col-span-2 border-t border-border pt-4 mt-2">

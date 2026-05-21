@@ -672,6 +672,7 @@ export interface GatepassData {
   aircon?: number | string;
   electrical?: number | string;
   mechanical?: number | string;
+  mop?: string;
   costing?: any;
   cashier: string;
   serviceAdvisor: string;
@@ -901,7 +902,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         <td class="text-right">${costs.electrical > 0 ? costs.electrical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right">${costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
         <td class="text-right" style="font-weight: bold;">${costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : ""}</td>
-        <td>${r.current_repair_part || r.currentRepairPart || ""}</td>
+        <td>${costs.mop || r.current_repair_part || r.currentRepairPart || ""}</td>
         ${isSales ? `
         <td style="font-weight: bold;">
           ${(r.source === 'history' || r.completed_at || r.isArchived) ? "RELEASED" : "IN-PROGRESS"}
@@ -1025,7 +1026,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         <th style="font-size: 8px; width: 6%;">ELECTRICAL</th>
         <th style="font-size: 8px; width: 6%;">MECHANICAL</th>
         <th style="font-size: 8px; width: 7%;">TOTAL<br/><span style="font-size: 5px; font-weight: normal; letter-spacing: -0.5px;">(w/ VAT/DISCOUNT)</span></th>
-        <th style="font-size: 8px; width: 4%;">MOD</th>
+        <th style="font-size: 8px; width: 4%;">MOP</th>
         ${title.includes("SALES") ? `<th style="font-size: 8px; width: 6%;">STATUS</th>` : ""}
         ${!title.includes("SALES") ? `<th style="font-size: 8px; width: 7%;">DATE COMPLETE</th>` : ""}
         <th style="font-size: 8px; width: 7%;">${dateColumnLabel}</th>

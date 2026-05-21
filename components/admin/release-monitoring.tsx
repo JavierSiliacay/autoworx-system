@@ -211,7 +211,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
         : (reportPeriod === "all" || selectedYear === "all" ? "All Years" : `Full Year ${selectedYear}`)
 
     const getCategorizedCosts = (costing: any, recordId?: string) => {
-        let result = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 }
+        let result = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0, mop: "" }
         
         // Priority 0: Use edited data if available (for real-time UI updates)
         const edited = recordId ? (editedData[recordId] || {}) : {}
@@ -236,6 +236,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
             }
             
             result.total = edited.total !== undefined ? Number(edited.total) : (subtotal - discount + vat)
+            result.mop = edited.costing?.gatepass_breakdown?.mop !== undefined ? edited.costing.gatepass_breakdown.mop : (currentGB.mop || "")
             return result
         }
 
@@ -249,7 +250,8 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                 aircon: Number(gb.aircon) || 0,
                 electrical: Number(gb.electrical) || 0,
                 mechanical: Number(gb.mechanical) || 0,
-                total: Number(gb.total) || costing.total || 0
+                total: Number(gb.total) || costing.total || 0,
+                mop: gb.mop || ""
             }
         }
 
@@ -915,7 +917,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                             <th className="p-2 border border-border text-center font-bold text-[10px]">ELECTRICAL</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px]">MECHANICAL</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px]">TOTAL</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-12">MOD</th>
+                            <th className="p-2 border border-border text-center font-bold text-[10px] w-12">MOP</th>
                             {!isSales && <th className="p-2 border border-border text-center font-bold text-[10px]">DATE COMPLETE</th>}
                             <th className="p-2 border border-border text-center font-bold text-[10px]">DATE RELEASED</th>
                             <th className="p-2 border border-border text-center font-bold text-[10px] w-32">REMARKS</th>
@@ -1087,8 +1089,16 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                         </td>
                                         <td className="p-2 border border-border text-center">
                                             {isEditing ? (
-                                                <Input className="h-7 px-2 text-[10px] w-full" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} />
-                                            ) : (modVal)}
+                                                <Input className="h-7 px-2 text-[10px] w-full" value={editedData[r.id]?.costing?.gatepass_breakdown?.mop !== undefined ? editedData[r.id].costing.gatepass_breakdown.mop : costs.mop} onChange={(e) => {
+                                                    const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
+                                                    const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
+                                                    const newGB = { ...currentGB, mop: e.target.value }
+                                                    setEditedData(prev => ({
+                                                        ...prev,
+                                                        [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB } }
+                                                    }))
+                                                }} />
+                                            ) : (costs.mop || modVal)}
                                         </td>
                                         {!isSales && (
                                             <td className="p-2 border border-border text-center">
