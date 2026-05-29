@@ -153,6 +153,9 @@ export default function AdminLoginPage() {
               alfredagbong76@gmail.com
             </li>
             <li className="text-xs font-mono text-foreground">
+              alfredagbong2@gmail.com
+            </li>
+            <li className="text-xs font-mono text-foreground">
               javiersiliacaysiliacay1234@gmail.com
             </li>
           </ul>
