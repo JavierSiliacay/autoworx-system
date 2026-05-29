@@ -240,7 +240,7 @@ function TrackingContent() {
 
   // Auto-search if code is in URL
   useEffect(() => {
-    const code = searchParams.get("code")
+    const code = searchParams?.get("code")
     if (code && !appointment && !isSearching) {
       setTrackingCode(code.toUpperCase())
       performSearch(code.toUpperCase())
