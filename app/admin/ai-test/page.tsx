@@ -40,7 +40,7 @@ export default function AITestPage() {
             });
 
             const data = await res.json();
-            
+
             if (!res.ok) {
                 throw new Error(data.error || "Failed to fetch from AI");
             }
@@ -59,7 +59,7 @@ export default function AITestPage() {
                 <h1 className="text-3xl font-bold tracking-tight">AI Model Tester</h1>
                 <p className="text-muted-foreground mt-2">Test HuggingFace Router models directly from within the application.</p>
             </div>
-            
+
             <Card>
                 <CardHeader>
                     <CardTitle>Test Configuration</CardTitle>
@@ -68,26 +68,26 @@ export default function AITestPage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Model ID</label>
-                        <Input 
-                            value={model} 
-                            onChange={(e) => setModel(e.target.value)} 
+                        <Input
+                            value={model}
+                            onChange={(e) => setModel(e.target.value)}
                             placeholder="e.g. google/gemma-4-31B-it:novita"
                         />
                     </div>
-                    
+
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Test Prompt</label>
-                        <Textarea 
+                        <Textarea
                             rows={4}
-                            value={prompt} 
-                            onChange={(e) => setPrompt(e.target.value)} 
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
                             placeholder="Type a message to test..."
                         />
                     </div>
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Image / Video Upload (Optional)</label>
-                        <Input 
+                        <Input
                             type="file"
                             accept="image/*,video/*"
                             onChange={handleFileChange}
@@ -98,7 +98,7 @@ export default function AITestPage() {
                             </p>
                         )}
                     </div>
-                    
+
                     <Button onClick={handleTest} disabled={loading || (!prompt && !mediaData)} className="w-40">
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {loading ? "Generating..." : "Run AI Test"}

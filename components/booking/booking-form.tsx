@@ -218,8 +218,8 @@ export function BookingForm() {
         body: JSON.stringify({
           trackingCode: trackingCodeGenerated,
           ...formData,
-          service: Array.isArray(formData.service) 
-            ? formData.service.map(s => s === "Other" ? (formData.customService ? `Other: ${formData.customService}` : "Other") : s).join(", ") 
+          service: Array.isArray(formData.service)
+            ? formData.service.map(s => s === "Other" ? (formData.customService ? `Other: ${formData.customService}` : "Other") : s).join(", ")
             : formData.service,
           damageImages: uploadedImageUrls,
           orcrImage: uploadedOrcrUrl,
@@ -240,14 +240,14 @@ export function BookingForm() {
       setIsSubmitting(false)
       setSubmittedData(formData)
       setTrackingCode(trackingCodeGenerated)
-      
+
       // Play submission sound with volume boost
       import("@/lib/audio-utils").then(({ playAmplifiedAudio }) => {
         playAmplifiedAudio("/appointment.mp3", 2.5);
       }).catch(err => {
         console.warn("Could not load audio utility:", err);
       });
-      
+
       setIsSubmitted(true)
     } catch (error) {
       console.error("Error submitting appointment:", error)
@@ -1072,7 +1072,7 @@ export function BookingForm() {
         </div>
         {/* Human/Face Verification */}
         <div className={`p-1 rounded-2xl border-2 transition-all ${errors.captcha ? 'bg-red-50/50 border-red-500/50' : 'bg-transparent border-transparent'}`}>
-          <FaceVerification 
+          <FaceVerification
             onVerified={(verified) => {
               setCaptchaVerified(verified)
               if (verified) {
@@ -1082,7 +1082,7 @@ export function BookingForm() {
                   return newErrs
                 })
               }
-            }} 
+            }}
           />
           {errors.captcha && (
             <p className="text-[10px] text-red-600 font-bold text-center mt-2 uppercase tracking-tighter animate-pulse">
