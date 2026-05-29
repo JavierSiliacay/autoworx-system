@@ -46,6 +46,7 @@ export interface BookingFormData {
   vehicleColor: string
   chassisNumber: string
   engineNumber: string
+  odoMileage?: string
   assigneeDriver: string
   service: string | string[]
   customService?: string
@@ -74,6 +75,7 @@ export function BookingForm() {
     vehicleColor: "",
     chassisNumber: "",
     engineNumber: "",
+    odoMileage: "",
     assigneeDriver: "",
     service: [],
     customService: "",
@@ -525,6 +527,7 @@ export function BookingForm() {
                 vehicleColor: "",
                 chassisNumber: "",
                 engineNumber: "",
+                odoMileage: "",
                 assigneeDriver: "",
                 service: [],
                 customService: "",
@@ -696,7 +699,7 @@ export function BookingForm() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div className="space-y-2 group">
-              <Label htmlFor="vehiclePlate" className={`transition-colors ${errors.vehiclePlate ? 'text-red-500' : 'group-hover:text-primary'}`}>Vehicle Plate Number <span className="text-red-500">*</span> (MUST ALL BIG LETTERS)</Label>
+              <Label htmlFor="vehiclePlate" className={`transition-colors ${errors.vehiclePlate ? 'text-red-500' : 'group-hover:text-primary'}`}>Vehicle Plate Number <span className="text-red-500">*</span></Label>
               <Input
                 id="vehiclePlate"
                 value={formData.vehiclePlate}
@@ -740,6 +743,21 @@ export function BookingForm() {
                 value={formData.engineNumber}
                 onChange={(e) => updateField("engineNumber", e.target.value)}
                 placeholder="Enter Engine #"
+                className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
+              />
+            </div>
+            <div className="space-y-2 group">
+              <Label htmlFor="odoMileage" className="group-hover:text-primary transition-colors">ODO/Mileage (KM) (Optional)</Label>
+              <Input
+                id="odoMileage"
+                type="text"
+                value={formData.odoMileage || ""}
+                onChange={(e) => {
+                  const rawValue = e.target.value.replace(/\D/g, "");
+                  const formattedValue = rawValue ? parseInt(rawValue, 10).toLocaleString() : "";
+                  updateField("odoMileage", formattedValue);
+                }}
+                placeholder="Enter KM"
                 className="group-focus-within:border-primary/50 group-focus-within:ring-2 group-focus-within:ring-primary/20 transition-all"
               />
             </div>

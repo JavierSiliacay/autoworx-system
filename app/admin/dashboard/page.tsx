@@ -200,6 +200,7 @@ interface AppointmentDB {
   vehicle_color: string
   chassis_number: string
   engine_number: string
+  odo_mileage?: string
   assignee_driver: string
   service: string
   preferred_date: string
@@ -239,6 +240,7 @@ interface Appointment {
   vehicleColor: string
   chassisNumber: string
   engineNumber: string
+  odoMileage?: string
   assigneeDriver: string
   service: string
   preferredDate?: string
@@ -360,6 +362,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     vehicleColor: apt.vehicle_color,
     chassisNumber: apt.chassis_number,
     engineNumber: apt.engine_number,
+    odoMileage: apt.odo_mileage,
     assigneeDriver: apt.assignee_driver,
     service: apt.service,
     preferredDate: apt.preferred_date,
@@ -635,6 +638,7 @@ export default function AdminDashboard() {
     vehicleColor: "",
     chassisNumber: "",
     engineNumber: "",
+    odoMileage: "",
     assigneeDriver: "",
     service: "",
     message: "",
@@ -2087,6 +2091,7 @@ export default function AdminDashboard() {
         vehicle_color: editingAppointment.vehicleColor,
         chassis_number: editingAppointment.chassisNumber,
         engine_number: editingAppointment.engineNumber,
+        odo_mileage: editingAppointment.odoMileage,
         assignee_driver: (editingAppointment as any).assignee_driver || editingAppointment.assigneeDriver,
         service: finalService,
         message: editingAppointment.message,
@@ -2108,6 +2113,7 @@ export default function AdminDashboard() {
         vehicleColor: editingAppointment.vehicleColor,
         chassisNumber: editingAppointment.chassisNumber,
         engineNumber: editingAppointment.engineNumber,
+        odoMileage: editingAppointment.odoMileage,
         assigneeDriver: editingAppointment.assigneeDriver,
         service: finalService,
         message: editingAppointment.message,
@@ -2137,6 +2143,7 @@ export default function AdminDashboard() {
             vehicle_color: editingAppointment.vehicleColor,
             chassis_number: editingAppointment.chassisNumber,
             engine_number: editingAppointment.engineNumber,
+            odo_mileage: editingAppointment.odoMileage,
             assignee_driver: editingAppointment.assigneeDriver,
             service: finalService,
             message: editingAppointment.message,
@@ -2854,6 +2861,7 @@ export default function AdminDashboard() {
       vehicleColor: appointment.vehicleColor || "",
       chassisNumber: appointment.chassisNumber || "",
       engineNumber: appointment.engineNumber || "",
+      odoMileage: appointment.odoMileage || "",
       assigneeDriver: appointment.assigneeDriver || "",
       service: appointment.service || "",
       message: appointment.message || "",
@@ -4416,7 +4424,7 @@ export default function AdminDashboard() {
                                     </div>
                                   </div>
 
-                                  {(appointment.chassisNumber || appointment.engineNumber || appointment.assigneeDriver) && (
+                                  {(appointment.chassisNumber || appointment.engineNumber || appointment.odoMileage || appointment.assigneeDriver) && (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-4 text-xs border-l-2 border-primary/20 pl-3">
                                       {appointment.chassisNumber && (
                                         <div className="flex items-center gap-1.5">
@@ -4428,6 +4436,12 @@ export default function AdminDashboard() {
                                         <div className="flex items-center gap-1.5">
                                           <span className="text-muted-foreground">Engine:</span>
                                           <span className="font-medium">{appointment.engineNumber}</span>
+                                        </div>
+                                      )}
+                                      {appointment.odoMileage && (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-muted-foreground">ODO/Mileage:</span>
+                                          <span className="font-medium">{appointment.odoMileage} KM</span>
                                         </div>
                                       )}
                                       {appointment.assigneeDriver && (
@@ -7047,6 +7061,19 @@ export default function AdminDashboard() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="edit-odo">ODO/Mileage (KM)</Label>
+                <Input
+                  id="edit-odo"
+                  type="text"
+                  value={editingAppointment.odoMileage || ""}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/\D/g, "");
+                    const formattedValue = rawValue ? parseInt(rawValue, 10).toLocaleString() : "";
+                    setEditingAppointment({ ...editingAppointment, odoMileage: formattedValue });
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="edit-assignee">Assignee/Driver</Label>
                 <Input
                   id="edit-assignee"
@@ -7355,6 +7382,19 @@ export default function AdminDashboard() {
                   id="copy-engine"
                   value={copyFormData.engineNumber}
                   onChange={(e) => setCopyFormData({ ...copyFormData, engineNumber: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="copy-odo">ODO/Mileage (KM)</Label>
+                <Input
+                  id="copy-odo"
+                  type="text"
+                  value={copyFormData.odoMileage || ""}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/\D/g, "");
+                    const formattedValue = rawValue ? parseInt(rawValue, 10).toLocaleString() : "";
+                    setCopyFormData({ ...copyFormData, odoMileage: formattedValue });
+                  }}
                 />
               </div>
               <div className="space-y-2">

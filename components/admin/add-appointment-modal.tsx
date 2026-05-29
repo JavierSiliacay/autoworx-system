@@ -55,6 +55,7 @@ export function AddAppointmentModal({
     vehicleColor: "",
     chassisNumber: "",
     engineNumber: "",
+    odoMileage: "",
     insurance: "",
     serviceAdvisor: "",
     assigneeDriver: "",
@@ -123,6 +124,7 @@ export function AddAppointmentModal({
           vehicleColor: formData.vehicleColor,
           chassisNumber: formData.chassisNumber,
           engineNumber: formData.engineNumber,
+          odoMileage: formData.odoMileage,
           insurance: formData.insurance,
           serviceAdvisor: formData.serviceAdvisor,
           assigneeDriver: formData.assigneeDriver,
@@ -160,6 +162,7 @@ export function AddAppointmentModal({
         vehicleColor: "",
         chassisNumber: "",
         engineNumber: "",
+        odoMileage: "",
         insurance: "",
         serviceAdvisor: "",
         assigneeDriver: "",
@@ -331,6 +334,21 @@ export function AddAppointmentModal({
                 value={formData.engineNumber}
                 onChange={handleChange}
                 placeholder="Enter Engine #"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="odoMileage">ODO/Mileage (KM)</Label>
+              <Input
+                id="odoMileage"
+                name="odoMileage"
+                type="text"
+                value={formData.odoMileage}
+                onChange={(e) => {
+                  const rawValue = e.target.value.replace(/\D/g, "");
+                  const formattedValue = rawValue ? parseInt(rawValue, 10).toLocaleString() : "";
+                  setFormData({ ...formData, odoMileage: formattedValue });
+                }}
+                placeholder="Enter KM"
               />
             </div>
             <div className="space-y-2">

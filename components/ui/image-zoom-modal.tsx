@@ -21,6 +21,35 @@ export function ImageZoomModal({ images, initialIndex, isOpen, onClose }: ImageZ
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
 
+  const resetTransform = useCallback(() => {
+    setScale(1)
+    setRotation(0)
+    setPosition({ x: 0, y: 0 })
+  }, [])
+
+  const zoomIn = useCallback(() => {
+    setScale((prev) => Math.min(prev + 0.5, 5))
+  }, [])
+
+  const zoomOut = useCallback(() => {
+    setScale((prev) => Math.max(prev - 0.5, 0.5))
+  }, [])
+
+  const rotate = useCallback(() => {
+    setRotation((prev) => (prev + 90) % 360)
+  }, [])
+
+  const goToPrevious = useCallback(() => {
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
+    resetTransform()
+  }, [images.length, resetTransform])
+
+  const goToNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
+    resetTransform()
+  }, [images.length, resetTransform])
+
+
   useEffect(() => {
     setCurrentIndex(initialIndex)
     resetTransform()
@@ -53,34 +82,6 @@ export function ImageZoomModal({ images, initialIndex, isOpen, onClose }: ImageZ
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [isOpen, currentIndex, images.length])
-
-  const resetTransform = () => {
-    setScale(1)
-    setRotation(0)
-    setPosition({ x: 0, y: 0 })
-  }
-
-  const zoomIn = () => {
-    setScale((prev) => Math.min(prev + 0.5, 5))
-  }
-
-  const zoomOut = () => {
-    setScale((prev) => Math.max(prev - 0.5, 0.5))
-  }
-
-  const rotate = () => {
-    setRotation((prev) => (prev + 90) % 360)
-  }
-
-  const goToPrevious = useCallback(() => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
-    resetTransform()
-  }, [images.length])
-
-  const goToNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
-    resetTransform()
-  }, [images.length])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (scale > 1) {

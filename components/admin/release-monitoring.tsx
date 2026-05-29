@@ -57,16 +57,6 @@ const parseCommaNumber = (value: string) => {
 export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     const { data: session } = useSession()
 
-    if (!isAuthorizedForReport(session?.user?.email)) {
-        return (
-            <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border">
-                <X className="w-12 h-12 mx-auto mb-4 text-red-500" />
-                <h3 className="text-lg font-bold">Unauthorized</h3>
-                <p>You are not authorized to view this confidential report.</p>
-            </div>
-        )
-    }
-
     // Extract unique months and years from completed_at / created_at date strings
     const monthsMap = new Map<string, string>()
     const yearsSet = new Set<string>()
@@ -452,6 +442,18 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
     }
 
     const isSales = false;
+
+    if (!isAuthorizedForReport(session?.user?.email)) {
+        return (
+            <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border border-border">
+                <X className="w-12 h-12 mx-auto mb-4 text-red-500" />
+                <h3 className="text-lg font-bold">Unauthorized</h3>
+                <p>You are not authorized to view this confidential report.</p>
+            </div>
+        )
+    }
+
+
     return (
         <div className="space-y-4 bg-card rounded-xl border border-border overflow-hidden">
             <div className="p-4 border-b border-border bg-muted/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

@@ -1,0 +1,303 @@
+
+C:\Users\User\Desktop\websites codebase\autoworx system\app\(public)\track\page.tsx
+  661:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  699:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  724:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\app\admin\ai-test\page.tsx
+  66:113  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\User\Desktop\websites codebase\autoworx system\app\admin\dashboard\page.tsx
+   593:6   warning  React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array                                                                                                                                                                                 react-hooks/exhaustive-deps
+   852:6   warning  React Hook useCallback has an unnecessary dependency: 'loadAppointments'. Either exclude it or remove the dependency array                                                                                                                                                               react-hooks/exhaustive-deps
+  3721:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  4553:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  4586:56  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+  4586:66  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+  4638:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  4713:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  6380:47  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  6413:47  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  7490:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  7507:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  7545:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  7547:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  7581:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  7583:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  8065:86  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+
+C:\Users\User\Desktop\websites codebase\autoworx system\app\admin\image-test\page.tsx
+  95:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\app\admin\page.tsx
+  55:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  90:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\app\admin\parts\page.tsx
+  823:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\app\admin\systemarchitecture\page.tsx
+  88:63  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\User\Desktop\websites codebase\autoworx system\app\resume\page.tsx
+  287:80   error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  287:131  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\admin\invoice-printer-overlay.tsx
+  123:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\admin\release-monitoring.tsx
+   72:11  warning  The 'yearsSet' object construction makes the dependencies of useEffect Hook (at line 122) change on every render. To fix this, wrap the initialization of 'yearsSet' in its own useMemo() Hook     react-hooks/exhaustive-deps
+   96:45  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                        react-hooks/rules-of-hooks
+  102:45  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                        react-hooks/rules-of-hooks
+  106:47  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  111:5   error    React Hook "React.useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  118:5   error    React Hook "React.useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  124:39  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  125:37  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  126:41  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  127:43  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  128:51  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  129:55  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  130:43  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  145:23  error    React Hook "useToast" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  153:26  error    React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  274:29  error    React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  311:8   warning  React Hook useMemo has a missing dependency: 'getCategorizedCosts'. Either include it or remove the dependency array                                                                               react-hooks/exhaustive-deps
+  313:30  error    React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  318:8   warning  React Hook useMemo has a missing dependency: 'getCategorizedCosts'. Either include it or remove the dependency array                                                                               react-hooks/exhaustive-deps
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\admin\sales-monitoring.tsx
+   80:11  warning  The 'yearsSet' object construction makes the dependencies of useEffect Hook (at line 131) change on every render. To fix this, wrap the initialization of 'yearsSet' in its own useMemo() Hook     react-hooks/exhaustive-deps
+  105:45  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                        react-hooks/rules-of-hooks
+  111:45  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                        react-hooks/rules-of-hooks
+  115:47  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  119:5   error    React Hook "React.useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  127:5   error    React Hook "React.useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  133:39  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  134:37  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  135:41  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  136:43  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  137:51  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  138:55  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  139:53  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  140:43  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  141:43  error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?         react-hooks/rules-of-hooks
+  162:26  error    React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  297:29  error    React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  332:8   warning  React Hook useMemo has a missing dependency: 'getCategorizedCosts'. Either include it or remove the dependency array                                                                               react-hooks/exhaustive-deps
+  334:25  error    React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?          react-hooks/rules-of-hooks
+  345:8   warning  React Hook useMemo has a missing dependency: 'getCategorizedCosts'. Either include it or remove the dependency array                                                                               react-hooks/exhaustive-deps
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\admin\what-is-new-modal.tsx
+  155:28  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ai\mini-chatbot.tsx
+  167:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  190:53  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  199:49  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  217:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  234:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  281:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\booking\booking-form.tsx
+   882:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+   957:61  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+   970:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  1024:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\booking\face-verification.tsx
+    8:1  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  104:6  warning  React Hook useEffect has a missing dependency: 'handleFaceResults'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  320:6  warning  React Hook useEffect has a missing dependency: 'stopCamera'. Either include it or remove the dependency array         react-hooks/exhaustive-deps
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\home\cta-section.tsx
+  41:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\home\testimonials-section.tsx
+  16:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  29:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\home\trust-section.tsx
+  49:30  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\layout\footer.tsx
+  32:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\layout\header.tsx
+  27:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\layout\header.tsx:27:5
+  25 |     const appointments = JSON.parse(localStorage.getItem("appointments") || "[]")
+  26 |     const pending = appointments.filter((apt: any) => apt.status === "pending").length
+> 27 |     setPendingCount(pending)
+     |     ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  28 |   }, [])
+  29 |
+  30 |   useEffect(() => {  react-hooks/set-state-in-effect
+  77:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\maintenance\maintenance-mode.tsx
+  40:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx
+   26:5   error    Error: Cannot access variable before it is declared
+
+`resetTransform` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:26:5
+  24 |   useEffect(() => {
+  25 |     setCurrentIndex(initialIndex)
+> 26 |     resetTransform()
+     |     ^^^^^^^^^^^^^^ `resetTransform` accessed before it is declared
+  27 |   }, [initialIndex, isOpen])
+  28 |
+  29 |   useEffect(() => {
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:57:3
+  55 |   }, [isOpen, currentIndex, images.length])
+  56 |
+> 57 |   const resetTransform = () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 58 |     setScale(1)
+     | ^^^^^^^^^^^^^^^
+> 59 |     setRotation(0)
+     | ^^^^^^^^^^^^^^^
+> 60 |     setPosition({ x: 0, y: 0 })
+     | ^^^^^^^^^^^^^^^
+> 61 |   }
+     | ^^^^ `resetTransform` is declared here
+  62 |
+  63 |   const zoomIn = () => {
+  64 |     setScale((prev) => Math.min(prev + 0.5, 5))                                                                                                                                                                              react-hooks/immutability
+   38:11  error    Error: Cannot access variable before it is declared
+
+`goToPrevious` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:38:11
+  36 |           break
+  37 |         case "ArrowLeft":
+> 38 |           goToPrevious()
+     |           ^^^^^^^^^^^^ `goToPrevious` accessed before it is declared
+  39 |           break
+  40 |         case "ArrowRight":
+  41 |           goToNext()
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:75:3
+  73 |   }
+  74 |
+> 75 |   const goToPrevious = useCallback(() => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 76 |     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 77 |     resetTransform()
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 78 |   }, [images.length])
+     | ^^^^^^^^^^^^^^^^^^^^^^ `goToPrevious` is declared here
+  79 |
+  80 |   const goToNext = useCallback(() => {
+  81 |     setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))  react-hooks/immutability
+   41:11  error    Error: Cannot access variable before it is declared
+
+`goToNext` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:41:11
+  39 |           break
+  40 |         case "ArrowRight":
+> 41 |           goToNext()
+     |           ^^^^^^^^ `goToNext` accessed before it is declared
+  42 |           break
+  43 |         case "+":
+  44 |         case "=":
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:80:3
+  78 |   }, [images.length])
+  79 |
+> 80 |   const goToNext = useCallback(() => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 81 |     setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 82 |     resetTransform()
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 83 |   }, [images.length])
+     | ^^^^^^^^^^^^^^^^^^^^^^ `goToNext` is declared here
+  84 |
+  85 |   const handleMouseDown = (e: React.MouseEvent) => {
+  86 |     if (scale > 1) {                                                             react-hooks/immutability
+   45:11  error    Error: Cannot access variable before it is declared
+
+`zoomIn` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:45:11
+  43 |         case "+":
+  44 |         case "=":
+> 45 |           zoomIn()
+     |           ^^^^^^ `zoomIn` accessed before it is declared
+  46 |           break
+  47 |         case "-":
+  48 |           zoomOut()
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:63:3
+  61 |   }
+  62 |
+> 63 |   const zoomIn = () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^
+> 64 |     setScale((prev) => Math.min(prev + 0.5, 5))
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 65 |   }
+     | ^^^^ `zoomIn` is declared here
+  66 |
+  67 |   const zoomOut = () => {
+  68 |     setScale((prev) => Math.max(prev - 0.5, 0.5))                                                                                                                                                                                                                                                                                                                          react-hooks/immutability
+   48:11  error    Error: Cannot access variable before it is declared
+
+`zoomOut` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:48:11
+  46 |           break
+  47 |         case "-":
+> 48 |           zoomOut()
+     |           ^^^^^^^ `zoomOut` accessed before it is declared
+  49 |           break
+  50 |       }
+  51 |     }
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\image-zoom-modal.tsx:67:3
+  65 |   }
+  66 |
+> 67 |   const zoomOut = () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^
+> 68 |     setScale((prev) => Math.max(prev - 0.5, 0.5))
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 69 |   }
+     | ^^^^ `zoomOut` is declared here
+  70 |
+  71 |   const rotate = () => {
+  72 |     setRotation((prev) => (prev + 90) % 360)                                                                                                                                                                                                                                                                                                                                               react-hooks/immutability
+   55:6   warning  React Hook useEffect has missing dependencies: 'goToNext', 'goToPrevious', and 'onClose'. Either include them or remove the dependency array. If 'onClose' changes too often, find the parent component that defines it and wrap that definition in useCallback                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+  178:9   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @next/next/no-img-element
+  229:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @next/next/no-img-element
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\sidebar.tsx
+  611:26  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\User\Desktop\websites codebase\autoworx system\components\ui\sidebar.tsx:611:26
+  609 |   // Random width between 50 to 90%.
+  610 |   const width = React.useMemo(() => {
+> 611 |     return `${Math.floor(Math.random() * 40) + 50}%`
+      |                          ^^^^^^^^^^^^^ Cannot call impure function
+  612 |   }, [])
+  613 |
+  614 |   return (  react-hooks/purity
+
+✖ 99 problems (50 errors, 49 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

@@ -219,6 +219,7 @@ export async function POST(request: Request) {
         vehicle_color: body.vehicleColor || null,
         chassis_number: body.chassisNumber || null,
         engine_number: body.engineNumber || null,
+        odo_mileage: body.odoMileage || null,
         assignee_driver: body.assigneeDriver || null,
         service: body.service,
         message: body.message,
@@ -339,6 +340,7 @@ export async function PUT(request: Request) {
   if (updates.vehicleColor !== undefined || updates.vehicle_color !== undefined) dbUpdates.vehicle_color = updates.vehicleColor ?? updates.vehicle_color
   if (updates.chassisNumber !== undefined || updates.chassis_number !== undefined) dbUpdates.chassis_number = updates.chassisNumber ?? updates.chassis_number
   if (updates.engineNumber !== undefined || updates.engine_number !== undefined) dbUpdates.engine_number = updates.engineNumber ?? updates.engine_number
+  if (updates.odoMileage !== undefined || updates.odo_mileage !== undefined) dbUpdates.odo_mileage = updates.odoMileage ?? updates.odo_mileage
   if (updates.assigneeDriver !== undefined || updates.assignee_driver !== undefined) dbUpdates.assignee_driver = updates.assigneeDriver ?? updates.assignee_driver
   if (updates.service !== undefined) dbUpdates.service = updates.service
   if (updates.message !== undefined) dbUpdates.message = updates.message

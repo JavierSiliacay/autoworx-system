@@ -39,7 +39,7 @@ export function Mermaid({ chart, className = "" }: MermaidProps) {
       try {
         if (!chart.trim()) return
         const { svg } = await mermaid.render(id, chart)
-        
+
         // Inject CSS for "Live" line animations and interactive glows
         const animatedSvg = svg.replace(
           '</style>',
@@ -123,11 +123,11 @@ export function Mermaid({ chart, className = "" }: MermaidProps) {
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.98, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      ref={containerRef} 
+      ref={containerRef}
       className={`mermaid-container flex justify-center w-full overflow-auto p-8 rounded-2xl shadow-2xl border border-white/10 bg-background/50 backdrop-blur-md ${className}`}
       dangerouslySetInnerHTML={{ __html: svgContent }}
     />

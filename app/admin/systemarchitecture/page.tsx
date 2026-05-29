@@ -68,9 +68,9 @@ export default function SystemArchitecturePage() {
 
   return (
     <div className="min-h-screen bg-background/95 p-6 md:p-10 space-y-8">
-      
+
       {/* Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
@@ -85,11 +85,11 @@ export default function SystemArchitecturePage() {
             System Architecture
           </h1>
           <p className="text-muted-foreground">
-            A dynamic, live flowchart of the Autoworx platform's modules, data flow, and database schema.
+            A dynamic, live flowchart of the Autoworx platform&apos;s modules, data flow, and database schema.
           </p>
         </div>
 
-        <button 
+        <button
           onClick={handleRefresh}
           className="flex items-center gap-2 bg-secondary/50 hover:bg-secondary text-secondary-foreground px-4 py-2 rounded-lg transition-all active:scale-95 text-sm font-medium border border-border"
         >
@@ -99,7 +99,7 @@ export default function SystemArchitecturePage() {
       </motion.div>
 
       {/* Legend & Stats */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}

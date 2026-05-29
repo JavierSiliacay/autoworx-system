@@ -152,7 +152,7 @@ export function WhatIsNewModal() {
                 className="w-full sm:w-[200px] bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-blue-600/20 transition-all hover:scale-105 active:scale-95 gap-2"
             >
                 <CheckCircle2 className="w-5 h-5" />
-                Got it, let's go!
+                Got it, let&apos;s go!
             </Button>
         </DialogFooter>
       </DialogContent>

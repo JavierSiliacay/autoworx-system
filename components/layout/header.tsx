@@ -21,10 +21,13 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
-    // Get pending appointments count from localStorage
-    const appointments = JSON.parse(localStorage.getItem("appointments") || "[]")
-    const pending = appointments.filter((apt: any) => apt.status === "pending").length
-    setPendingCount(pending)
+    // Get pending appointments count from localStorage safely
+    const timer = setTimeout(() => {
+      const appointments = JSON.parse(localStorage.getItem("appointments") || "[]")
+      const pending = appointments.filter((apt: any) => apt.status === "pending").length
+      setPendingCount(pending)
+    }, 0)
+    return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {

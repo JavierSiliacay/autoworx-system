@@ -19,6 +19,7 @@ interface TrackingAppointment {
   vehicleColor?: string
   chassisNumber?: string
   engineNumber?: string
+  odoMileage?: string
   assigneeDriver?: string
   assignedTechnician?: string
   service: string
@@ -161,6 +162,12 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       <tr>
         <td class="label-cell">CHASSIS:</td>
         <td class="value-cell">${appointmentData.chassisNumber || "N/A"}</td>
+        <td class="label-cell">S/A:</td>
+        <td class="value-cell" style="text-transform: uppercase;">${appointmentData.serviceAdvisor || "N/A"}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">ENGINE:</td>
+        <td class="value-cell">${appointmentData.engineNumber || "N/A"}</td>
         <td class="label-cell" rowspan="2" style="text-align: center; font-size: 8px; vertical-align: middle; text-transform: uppercase;">SCAN TO TRACK:</td>
         <td class="value-cell" rowspan="2" style="text-align: center; padding: 5px;">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/track?code=${trackingCode}`)}" style="width: 65px; height: 65px;" />
@@ -168,10 +175,8 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
         </td>
       </tr>
       <tr>
-        <td class="label-cell">ENGINE:</td>
-        <td class="value-cell">${appointmentData.engineNumber || "N/A"}</td>
-        <td class="label-cell">S/A:</td>
-        <td class="value-cell" style="text-transform: uppercase;">${appointmentData.serviceAdvisor || "N/A"}</td>
+        <td class="label-cell">ODO/MILEAGE:</td>
+        <td class="value-cell">${appointmentData.odoMileage ? appointmentData.odoMileage + ' KM' : "N/A"}</td>
       </tr>
     </table>
 
@@ -470,8 +475,8 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <tr>
         <td class="label-cell">CHASSIS NO:</td>
         <td class="value-cell">${appointment.chassisNumber || "N/A"}</td>
-        <td class="label-cell" rowspan="2" style="text-align: center; font-size: 9px; vertical-align: middle; text-transform: uppercase;">SCAN TO TRACK:</td>
-        <td class="value-cell" rowspan="2" style="text-align: center; padding: 5px;">
+        <td class="label-cell" rowspan="3" style="text-align: center; font-size: 9px; vertical-align: middle; text-transform: uppercase;">SCAN TO TRACK:</td>
+        <td class="value-cell" rowspan="3" style="text-align: center; padding: 5px;">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${baseUrl}/track?code=${appointment.trackingCode}`)}" style="width: 60px; height: 60px; display: inline-block;" />
           <p style="font-size: 7px; margin-top: 4px; color: #666; font-weight: bold;">Scan to track status</p>
         </td>
@@ -479,6 +484,10 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       <tr>
         <td class="label-cell">ENGINE NO:</td>
         <td class="value-cell">${appointment.engineNumber || "N/A"}</td>
+      </tr>
+      <tr>
+        <td class="label-cell">ODO/MILEAGE:</td>
+        <td class="value-cell">${appointment.odoMileage ? appointment.odoMileage + ' KM' : "N/A"}</td>
       </tr>
     </table>
     
