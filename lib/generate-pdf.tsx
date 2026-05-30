@@ -44,6 +44,13 @@ interface TrackingAppointment {
   scopeOfWorks?: string
 }
 
+function toTitleCase(str: string): string {
+  if (!str) return "";
+  return str.replace(/\w\S*/g, (txt) => {
+    return txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase();
+  });
+}
+
 export async function generateConfirmationPDF(options: PDFGeneratorOptions): Promise<string> {
   const { trackingCode, appointmentData } = options
 
@@ -537,12 +544,12 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     return `
               <tr>
                 <td colspan="5" style="background: #fdfdfd; font-weight: bold; font-size: 1.1em; border-bottom: 1px solid #000; padding-top: 2px;">
-                  ${cat}
+                  ${cat.toUpperCase()}
                 </td>
               </tr>
               ${items.length > 0 ? items.map((item: CostItem) => `
                 <tr>
-                  <td style="padding-left: 12px; white-space: pre-wrap; vertical-align: top;">${item.description}</td>
+                  <td style="padding-left: 12px; white-space: pre-wrap; vertical-align: top;">${toTitleCase(item.description)}</td>
                   <td style="vertical-align: top;">${item.quantity}</td>
                   <td style="vertical-align: top;">${item.unit || ""}</td>
                   <td class="amount" style="vertical-align: top;">₱${item.unitPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
@@ -1091,6 +1098,24 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
   const today = new Date();
   const formattedDate = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
 
+  const targetDateRaw = appointment.costing?.jobOrderHistory?.slice(-1)[0]?.targetDate;
+  let targetDateFormatted = "_______";
+  if (targetDateRaw) {
+    const parts = targetDateRaw.split("-");
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const MONTH_NAMES = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      if (monthIdx >= 0 && monthIdx < 12) {
+        targetDateFormatted = `${MONTH_NAMES[monthIdx]} ${day}, ${year}`;
+      }
+    }
+  }
+
   const parseScopeText = (text: string) => {
     if (!text) return `<div style="color: #999; font-style: italic; margin-top: 5px;">No scope of works specified.</div>`;
     const lines = text.split('\n');
@@ -1107,7 +1132,8 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
           html += '<ul style="margin-top: 2px; padding-left: 18px; margin-bottom: 0;">'; 
           inList = true; 
         }
-        html += `<li style="margin-bottom: 2px;">${trimmed.substring(1).trim()}</li>`;
+        const bulletText = trimmed.substring(1).trim();
+        html += `<li style="margin-bottom: 2px;">${toTitleCase(bulletText)}</li>`;
       } else {
         // Close previous list if open
         if (inList) { 
@@ -1119,8 +1145,9 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
           html += '</div>';
         }
         // Start new section
+        const formattedCategory = trimmed.toUpperCase();
         html += `<div style="break-inside: avoid; margin-bottom: 8px;">
-                   <div style="margin-bottom: 2px;"><strong style="color: #000; font-size: 10.5px;">${trimmed}</strong></div>`;
+                   <div style="margin-bottom: 2px;"><strong style="color: #000; font-size: 10.5px;">${formattedCategory}</strong></div>`;
         inSection = true;
       }
     }
@@ -1140,7 +1167,7 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
       const trimmed = line.trim();
       if (!trimmed) continue;
       const content = (trimmed.startsWith('-') || trimmed.startsWith('•')) ? trimmed.substring(1).trim() : trimmed;
-      html += `<li style="margin-bottom: 2px;">${content}</li>`;
+      html += `<li style="margin-bottom: 2px;">${toTitleCase(content)}</li>`;
     }
     html += '</ul>';
     return html;
@@ -1148,6 +1175,17 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
 
   const scopeOfWorksHtml = parseScopeText(appointment.costing?.scopeOfWorks || appointment.scopeOfWorks || "");
   const partsHtml = parsePartsText(appointment.costing?.partsText || "");
+
+  const insuranceRaw = appointment.insurance || '';
+  const insuranceUpper = insuranceRaw.toUpperCase();
+  const isNone = !insuranceRaw || insuranceUpper === 'N/A' || insuranceUpper === 'NONE' || insuranceUpper === 'BLANK';
+  const hasPersonal = insuranceUpper.includes('PERSONAL');
+  const hasCompany = insuranceUpper.includes('COMPANY');
+  
+  const isPersonal = isNone || hasPersonal;
+  const isCompany = !isPersonal && hasCompany;
+  const isInsuranceSelected = !isPersonal && !isCompany;
+  const insuranceNameDisplay = isInsuranceSelected && insuranceUpper !== 'INSURANCE' ? insuranceRaw : '';
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -1171,7 +1209,7 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
       size: A4; 
       margin: 0.1in; 
     }
-    .container { width: 100%; margin: 0 auto; border: 2px solid #000; padding: 10px; max-height: 10.6in; overflow: hidden; position: relative; }
+    .container { width: 100%; margin: 0 auto; border: 2px solid #000; padding: 10px; position: relative; }
     
     .page-marker {
       text-align: center;
@@ -1262,11 +1300,21 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
     <div class="section-header">Customer & Service Overview</div>
     <div class="info-grid" style="grid-template-columns: 1fr 1fr; padding: 8px; gap: 12px;">
       <div class="info-item" style="grid-column: span 2; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 5px;">
-        <p class="info-label">VEHICLE UNIT (PRIMARY IDENTIFIER)</p>
-        <p class="info-value" style="font-size: 22px; font-weight: 900; color: #000; text-transform: uppercase;">
-          ${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}
-        </p>
-        <p style="font-size: 14px; font-weight: bold; color: #c00; margin-top: 5px;">PLATE: ${appointment.vehiclePlate}</p>
+        <div style="display: table; width: 100%; table-layout: fixed;">
+          <div style="display: table-cell; vertical-align: bottom; width: 70%;">
+            <p class="info-label" style="margin: 0 0 2px 0;">VEHICLE UNIT (PRIMARY IDENTIFIER)</p>
+            <p class="info-value" style="font-size: 22px; font-weight: 900; color: #000; text-transform: uppercase; margin: 0;">
+              ${appointment.vehicleYear} ${appointment.vehicleMake} ${appointment.vehicleModel}
+            </p>
+            <p style="font-size: 14px; font-weight: bold; color: #c00; margin: 5px 0 0 0;">PLATE: ${appointment.vehiclePlate}</p>
+          </div>
+          <div style="display: table-cell; vertical-align: top; width: 30%; text-align: right; padding-right: 10px; padding-top: 4px;">
+            <p style="font-size: 9px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 3px 0;">TARGET DATE</p>
+            <p style="font-size: 13px; font-weight: bold; color: #000; margin: 0; border-bottom: 1.5px solid #000; padding-bottom: 3px; display: inline-block; min-width: 120px; text-align: center;">
+              ${targetDateFormatted === "_______" ? "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" : targetDateFormatted}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div class="info-item">
@@ -1282,15 +1330,15 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
         <p class="info-label">CLAIM TYPE</p>
         <div style="display: flex; gap: 25px; margin-top: 8px; font-size: 11px; font-weight: bold; color: #000; padding-left: 5px;">
           <div style="display: flex; align-items: center; gap: 6px;">
-            <div style="width: 14px; height: 14px; border: 1.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px;">${appointment.insurance === 'PERSONAL' ? '✓' : ''}</div>
+            <div style="width: 14px; height: 14px; border: 1.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px;">${isPersonal ? '✓' : ''}</div>
             <span>PERSONAL</span>
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
-            <div style="width: 14px; height: 14px; border: 1.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px;">${appointment.insurance === 'INSURANCE' ? '✓' : ''}</div>
-            <span>INSURANCE</span>
+            <div style="width: 14px; height: 14px; border: 1.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px;">${isInsuranceSelected ? '✓' : ''}</div>
+            <span>INSURANCE${insuranceNameDisplay ? `: <span style="color: #c00; text-transform: uppercase;">${insuranceNameDisplay}</span>` : ''}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
-            <div style="width: 14px; height: 14px; border: 1.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px;">${appointment.insurance === 'COMPANY' ? '✓' : ''}</div>
+            <div style="width: 14px; height: 14px; border: 1.5px solid #000; display: flex; align-items: center; justify-content: center; font-size: 12px;">${isCompany ? '✓' : ''}</div>
             <span>COMPANY</span>
           </div>
         </div>
@@ -1300,16 +1348,16 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
       <span>Job Details & Instructions</span>
     </div>
 
-    <div style="display: flex; flex-grow: 1; min-height: 0; gap: 10px; margin-bottom: 15px;">
-      <div style="flex: 1; padding: 10px; border: 1px solid #000; font-size: 9px; min-height: 150px; background: #fff; overflow: hidden; display: flex; flex-direction: column;">
+    <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; page-break-inside: auto;">
+      <div style="flex: 1; padding: 10px; border: 1px solid #000; font-size: 9px; min-height: 150px; background: #fff; display: block;">
         <strong style="text-decoration: underline; color: #c00; font-size: 10.5px; display: block; margin-bottom: 8px;">SCOPE OF WORKS:</strong>
-        <div style="column-width: 160px; column-gap: 15px; flex-grow: 1; overflow: hidden;">
+        <div style="column-width: 150px; column-gap: 15px; column-fill: balance;">
           ${scopeOfWorksHtml}
         </div>
       </div>
-      <div style="flex: 1; padding: 10px; border: 1px solid #000; font-size: 9px; min-height: 150px; background: #fff; overflow: hidden; display: flex; flex-direction: column;">
+      <div style="flex: 1; padding: 10px; border: 1px solid #000; font-size: 9px; min-height: 150px; background: #fff; display: block;">
         <strong style="text-decoration: underline; color: #c00; font-size: 10.5px; display: block; margin-bottom: 8px;">PARTS:</strong>
-        <div style="flex-grow: 1; display: flex; flex-direction: column; column-width: 160px; column-gap: 15px; overflow: hidden;">
+        <div style="column-width: 150px; column-gap: 15px; column-fill: balance;">
           ${partsHtml}
         </div>
       </div>

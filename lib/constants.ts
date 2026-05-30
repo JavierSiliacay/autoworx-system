@@ -114,6 +114,8 @@ export interface JobOrderHistoryEntry {
   scopeOfWorks: string
   partsText: string
   serviceAdvisor: string
+  targetDate?: string
+  insuranceName?: string
 }
 
 export interface CostingData {
