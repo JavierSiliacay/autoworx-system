@@ -1119,7 +1119,7 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
   const parseScopeText = (text: string) => {
     if (!text) return `<div style="color: #999; font-style: italic; margin-top: 5px;">No scope of works specified.</div>`;
     const lines = text.split('\n');
-    let html = '';
+    let html = '<div style="column-width: 150px; column-gap: 15px; column-fill: balance;">';
     let inList = false;
     let inSection = false;
 
@@ -1153,6 +1153,7 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
     }
     if (inList) html += '</ul>';
     if (inSection) html += '</div>';
+    html += '</div>';
     return html;
   };
 
@@ -1162,14 +1163,14 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
        </div>`;
     
     const lines = text.split('\n');
-    let html = '<ul style="margin-top: 2px; padding-left: 18px; margin-bottom: 0;">';
+    let html = '<div style="column-width: 150px; column-gap: 15px; column-fill: balance;"><ul style="margin-top: 2px; padding-left: 18px; margin-bottom: 0;">';
     for (let line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
       const content = (trimmed.startsWith('-') || trimmed.startsWith('•')) ? trimmed.substring(1).trim() : trimmed;
       html += `<li style="margin-bottom: 2px;">${toTitleCase(content)}</li>`;
     }
-    html += '</ul>';
+    html += '</ul></div>';
     return html;
   };
 
@@ -1351,13 +1352,13 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
     <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; page-break-inside: auto;">
       <div style="flex: 1; padding: 10px; border: 1px solid #000; font-size: 9px; min-height: 150px; background: #fff; display: block;">
         <strong style="text-decoration: underline; color: #c00; font-size: 10.5px; display: block; margin-bottom: 8px;">SCOPE OF WORKS:</strong>
-        <div style="column-width: 150px; column-gap: 15px; column-fill: balance;">
+        <div>
           ${scopeOfWorksHtml}
         </div>
       </div>
-      <div style="flex: 1; padding: 10px; border: 1px solid #000; font-size: 9px; min-height: 150px; background: #fff; display: block;">
+      <div style="flex: 1; padding: 10px; border: 1px solid #000; font-size: 9px; min-height: 150px; background: #fff; display: flex; flex-direction: column;">
         <strong style="text-decoration: underline; color: #c00; font-size: 10.5px; display: block; margin-bottom: 8px;">PARTS:</strong>
-        <div style="column-width: 150px; column-gap: 15px; column-fill: balance;">
+        <div style="flex: 1; display: flex; flex-direction: column;">
           ${partsHtml}
         </div>
       </div>
