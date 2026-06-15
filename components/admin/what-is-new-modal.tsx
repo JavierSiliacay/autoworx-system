@@ -21,6 +21,7 @@ import {
   PartyPopper
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 interface SystemUpdate {
   id: string;
@@ -65,6 +66,16 @@ export function WhatIsNewModal() {
     }
 
     checkUpdate();
+
+    const supabase = createClient();
+    const channel = supabase.channel('system_updates_realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'system_updates' }, () => {
+        // Automatically check and open the modal if a new update is published!
+        checkUpdate();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const handleClose = () => {
