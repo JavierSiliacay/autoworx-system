@@ -490,6 +490,7 @@ const statusConfig = {
 
 const dateRanges = [
   { label: "All Time", value: "all" },
+  { label: "Today", value: "today" },
   { label: "This Week", value: "week" },
   { label: "This Month", value: "month" },
   { label: "This Year", value: "year" },
@@ -3388,6 +3389,10 @@ export default function AdminDashboard() {
     const diffDays = diffTime / (1000 * 60 * 60 * 24)
 
     switch (range) {
+      case "today":
+        return date.getDate() === now.getDate() && 
+               date.getMonth() === now.getMonth() && 
+               date.getFullYear() === now.getFullYear()
       case "week":
         return diffDays <= 7
       case "month":
