@@ -661,8 +661,8 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             <Input type="text" value={formatWithCommas(manualEntry.brpad)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    const val = parseFloat(rawValue) || 0;
-                                                    setManualEntry({ ...manualEntry, brpad: val, total_amount: val + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                                    const valStr = rawValue;
+                                                    setManualEntry({ ...manualEntry, brpad: valStr as any, total_amount: (parseFloat(valStr) || 0) + (parseFloat(manualEntry.aircon as any) || 0) + (parseFloat(manualEntry.electrical as any) || 0) + (parseFloat(manualEntry.mechanical as any) || 0) });
                                                 }
                                             }} className="h-8" />
                                         </div>
@@ -671,8 +671,8 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             <Input type="text" value={formatWithCommas(manualEntry.aircon)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    const val = parseFloat(rawValue) || 0;
-                                                    setManualEntry({ ...manualEntry, aircon: val, total_amount: (manualEntry.brpad || 0) + val + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0) });
+                                                    const valStr = rawValue;
+                                                    setManualEntry({ ...manualEntry, aircon: valStr as any, total_amount: (parseFloat(manualEntry.brpad as any) || 0) + (parseFloat(valStr) || 0) + (parseFloat(manualEntry.electrical as any) || 0) + (parseFloat(manualEntry.mechanical as any) || 0) });
                                                 }
                                             }} className="h-8" />
                                         </div>
@@ -681,8 +681,8 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             <Input type="text" value={formatWithCommas(manualEntry.electrical)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    const val = parseFloat(rawValue) || 0;
-                                                    setManualEntry({ ...manualEntry, electrical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + val + (manualEntry.mechanical || 0) });
+                                                    const valStr = rawValue;
+                                                    setManualEntry({ ...manualEntry, electrical: valStr as any, total_amount: (parseFloat(manualEntry.brpad as any) || 0) + (parseFloat(manualEntry.aircon as any) || 0) + (parseFloat(valStr) || 0) + (parseFloat(manualEntry.mechanical as any) || 0) });
                                                 }
                                             }} className="h-8" />
                                         </div>
@@ -691,8 +691,8 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             <Input type="text" value={formatWithCommas(manualEntry.mechanical)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    const val = parseFloat(rawValue) || 0;
-                                                    setManualEntry({ ...manualEntry, mechanical: val, total_amount: (manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + val });
+                                                    const valStr = rawValue;
+                                                    setManualEntry({ ...manualEntry, mechanical: valStr as any, total_amount: (parseFloat(manualEntry.brpad as any) || 0) + (parseFloat(manualEntry.aircon as any) || 0) + (parseFloat(manualEntry.electrical as any) || 0) + (parseFloat(valStr) || 0) });
                                                 }
                                             }} className="h-8" />
                                         </div>
@@ -707,16 +707,16 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                    setManualEntry({ ...manualEntry, total_amount: parseFloat(rawValue) || 0 });
+                                                    setManualEntry({ ...manualEntry, total_amount: rawValue as any });
                                                 }
                                             }}
                                             className="font-bold text-red-600 border-red-200 focus:border-red-500 h-9"
                                             placeholder="Enter final total amount"
                                         />
                                         <p className="text-[9px] text-muted-foreground mt-1 italic flex justify-between items-center">
-                                            <span>Calculated sum: ₱{((manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                                            {manualEntry.total_amount !== ((manualEntry.brpad || 0) + (manualEntry.aircon || 0) + (manualEntry.electrical || 0) + (manualEntry.mechanical || 0)) && (
-                                                <span className="text-red-600 font-bold bg-red-50 px-1 rounded">Entered Total: ₱{manualEntry.total_amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                                            <span>Calculated sum: ₱{((parseFloat(manualEntry.brpad as any) || 0) + (parseFloat(manualEntry.aircon as any) || 0) + (parseFloat(manualEntry.electrical as any) || 0) + (parseFloat(manualEntry.mechanical as any) || 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                                            {parseFloat(manualEntry.total_amount as any) !== ((parseFloat(manualEntry.brpad as any) || 0) + (parseFloat(manualEntry.aircon as any) || 0) + (parseFloat(manualEntry.electrical as any) || 0) + (parseFloat(manualEntry.mechanical as any) || 0)) && (
+                                                <span className="text-red-600 font-bold bg-red-50 px-1 rounded">Entered Total: ₱{(parseFloat(manualEntry.total_amount as any) || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
                                             )}
                                         </p>
                                     </div>
@@ -744,13 +744,13 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                         return dateWithTime.toISOString();
                                                     })(),
                                                     costing: { 
-                                                        total: manualEntry.total_amount, 
+                                                        total: parseFloat(manualEntry.total_amount as any) || 0, 
                                                         gatepass_breakdown: { 
-                                                            brpad: manualEntry.brpad || 0, 
-                                                            aircon: manualEntry.aircon || 0, 
-                                                            electrical: manualEntry.electrical || 0, 
-                                                            mechanical: manualEntry.mechanical || 0, 
-                                                            total: manualEntry.total_amount 
+                                                            brpad: parseFloat(manualEntry.brpad as any) || 0, 
+                                                            aircon: parseFloat(manualEntry.aircon as any) || 0, 
+                                                            electrical: parseFloat(manualEntry.electrical as any) || 0, 
+                                                            mechanical: parseFloat(manualEntry.mechanical as any) || 0, 
+                                                            total: parseFloat(manualEntry.total_amount as any) || 0 
                                                         } 
                                                     }
                                                 }
@@ -984,18 +984,13 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 <Input
                                                     className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
                                                     type="text"
-                                                    value={formatWithCommas(editedData[r.id]?.costing?.gatepass_breakdown?.brpad ?? costs.brpad)}
+                                                    value={formatWithCommas(editedData[r.id]?.brpad ?? costs.brpad)}
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
                                                         if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                            const val = parseFloat(rawValue) || 0;
-                                                            const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
-                                                            const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
-                                                            const newGB = { ...currentGB, brpad: val }
-                                                            newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
                                                             setEditedData(prev => ({
                                                                 ...prev,
-                                                                [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                                [r.id]: { ...(prev[r.id] || {}), brpad: rawValue }
                                                             }))
                                                         }
                                                     }}
@@ -1007,18 +1002,13 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 <Input
                                                     className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
                                                     type="text"
-                                                    value={formatWithCommas(editedData[r.id]?.costing?.gatepass_breakdown?.aircon ?? costs.aircon)}
+                                                    value={formatWithCommas(editedData[r.id]?.aircon ?? costs.aircon)}
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
                                                         if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                            const val = parseFloat(rawValue) || 0;
-                                                            const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
-                                                            const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
-                                                            const newGB = { ...currentGB, aircon: val }
-                                                            newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
                                                             setEditedData(prev => ({
                                                                 ...prev,
-                                                                [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                                [r.id]: { ...(prev[r.id] || {}), aircon: rawValue }
                                                             }))
                                                         }
                                                     }}
@@ -1030,18 +1020,13 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 <Input
                                                     className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
                                                     type="text"
-                                                    value={formatWithCommas(editedData[r.id]?.costing?.gatepass_breakdown?.electrical ?? costs.electrical)}
+                                                    value={formatWithCommas(editedData[r.id]?.electrical ?? costs.electrical)}
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
                                                         if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                            const val = parseFloat(rawValue) || 0;
-                                                            const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
-                                                            const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
-                                                            const newGB = { ...currentGB, electrical: val }
-                                                            newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
                                                             setEditedData(prev => ({
                                                                 ...prev,
-                                                                [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                                [r.id]: { ...(prev[r.id] || {}), electrical: rawValue }
                                                             }))
                                                         }
                                                     }}
@@ -1053,18 +1038,13 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 <Input
                                                     className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
                                                     type="text"
-                                                    value={formatWithCommas(editedData[r.id]?.costing?.gatepass_breakdown?.mechanical ?? costs.mechanical)}
+                                                    value={formatWithCommas(editedData[r.id]?.mechanical ?? costs.mechanical)}
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
                                                         if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                            const val = parseFloat(rawValue) || 0;
-                                                            const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
-                                                            const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
-                                                            const newGB = { ...currentGB, mechanical: val }
-                                                            newGB.total = newGB.brpad + newGB.aircon + newGB.electrical + newGB.mechanical
                                                             setEditedData(prev => ({
                                                                 ...prev,
-                                                                [r.id]: { ...(prev[r.id] || {}), costing: { ...currentCosting, gatepass_breakdown: newGB, total: newGB.total } }
+                                                                [r.id]: { ...(prev[r.id] || {}), mechanical: rawValue }
                                                             }))
                                                         }
                                                     }}
@@ -1082,7 +1062,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                         if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
                                                             setEditedData(prev => ({ 
                                                                 ...prev, 
-                                                                [r.id]: { ...(prev[r.id] || {}), total: parseFloat(rawValue) || 0 } 
+                                                                [r.id]: { ...(prev[r.id] || {}), total: rawValue } 
                                                             }))
                                                         }
                                                     }}
