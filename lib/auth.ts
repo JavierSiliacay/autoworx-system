@@ -62,6 +62,35 @@ export function isAuthorizedForSales(email?: string | null) {
   return !!email && AUTHORIZED_SALES_EMAILS.some(e => e.trim().toLowerCase() === email.trim().toLowerCase())
 }
 
+export function getUserIdentity(email: string | null | undefined): { name: string; role: string } {
+  if (!email) return { name: "Unknown", role: "User" };
+  const e = email.trim().toLowerCase();
+  
+  let role = "Admin";
+  if (isDeveloperEmail(e)) {
+    role = "Developer";
+  }
+
+  // Known mappings based on the emails in auth.ts
+  const nameMap: Record<string, string> = {
+    "paulsuazo64@gmail.com": "Paul",
+    "alfredagbong123@gmail.com": "Alfred",
+    "alfredagbong76@gmail.com": "Alfred",
+    "alfredagbong2@gmail.com": "Alfred",
+    "alfred_autoworks@yahoo.com": "Alfred",
+    "siliacay.javier@gmail.com": "Javier",
+    "javiersiliacaysiliacay1234@gmail.com": "Javier",
+    "ryan.quintos0459@gmail.com": "Ryan",
+    "emelybingat37@gmail.com": "Emely",
+    "autoworxcagayan2025@gmail.com": "System"
+  };
+
+  const name = nameMap[e] || e.split("@")[0].replace(/[^a-zA-Z0-9]/g, ' ').split(' ')[0];
+  const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+
+  return { name: capitalizedName, role };
+}
+
 type SignInCallbackParams = { user: { email?: string | null } }
 type JwtCallbackParams = { token: JWT; user?: { email?: string | null } | null }
 type SessionCallbackParams = {

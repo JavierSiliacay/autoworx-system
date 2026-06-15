@@ -96,7 +96,6 @@ import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
 import { ReleaseMonitoring } from "@/components/admin/release-monitoring"
 import { AddAppointmentModal } from "@/components/admin/add-appointment-modal"
-import { DeveloperTasksModal } from "@/components/admin/developer-tasks-modal"
 import { SalesMonitoring } from "@/components/admin/sales-monitoring"
 import { WhatIsNewModal } from "@/components/admin/what-is-new-modal"
 import {
@@ -120,6 +119,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarUI } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { AdminAnnouncementCard } from "./AdminAnnouncementCard"
+
 // Helper functions for numeric input with commas
 const formatNumberForInput = (val: number | string | undefined | null) => {
   if (val === undefined || val === null || val === "") return ""
@@ -627,7 +628,6 @@ export default function AdminDashboard() {
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
   const [isSubmittingCopy, setIsSubmittingCopy] = useState(false)
-  const [isDeveloperTasksModalOpen, setIsDeveloperTasksModalOpen] = useState(false)
   const [copyFormData, setCopyFormData] = useState<any>({
     name: "",
     email: "",
@@ -3825,7 +3825,7 @@ export default function AdminDashboard() {
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-2 border-blue-500/30 text-blue-500 hover:bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all h-9"
-                onClick={() => setIsDeveloperTasksModalOpen(true)}
+                onClick={() => router.push('/admin/developer-tasks')}
               >
                 <Code2 className="w-4 h-4" />
                 <span className="hidden lg:inline font-bold">Developer Tasks</span>
@@ -3894,36 +3894,17 @@ export default function AdminDashboard() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {announcements.map((ann) => (
-                <div
+                <AdminAnnouncementCard
                   key={ann.id}
-                  className="p-4 bg-primary/5 border border-primary/10 rounded-xl relative overflow-hidden group"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/30" />
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary/60">
-                      From: {ann.author_name}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {formatDate(ann.created_at)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-foreground line-clamp-3 leading-relaxed">
-                    {ann.content}
-                  </p>
-                  {(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
-                    <button
-                      onClick={async () => {
-                        if (confirm("Delete this announcement?")) {
-                          await fetch(`/api/announcements?id=${ann.id}`, { method: "DELETE" })
-                          loadAnnouncements()
-                        }
-                      }}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-red-500 hover:bg-red-500/10 rounded"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
+                  announcement={ann}
+                  userEmail={session?.user?.email}
+                  canDelete={(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                  onDelete={async (id) => {
+                    await fetch(`/api/announcements?id=${id}`, { method: "DELETE" })
+                    loadAnnouncements()
+                  }}
+                  onUpdate={loadAnnouncements}
+                />
               ))}
             </div>
           </div>
@@ -7940,12 +7921,6 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <DeveloperTasksModal
-        isOpen={isDeveloperTasksModalOpen}
-        onClose={() => setIsDeveloperTasksModalOpen(false)}
-        userEmail={session?.user?.email || ""}
-        isDeveloper={isDeveloperUser}
-      />
       {/* Job Order Configuration Modal */}
       <Dialog open={isJobOrderConfigModalOpen} onOpenChange={setIsJobOrderConfigModalOpen}>
         <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">

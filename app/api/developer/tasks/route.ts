@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const body = await request.json()
     
-    const { title, description, type } = body
+    const { title, description, type, category, priority } = body
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 })
@@ -50,6 +50,8 @@ export async function POST(request: Request) {
         title,
         description,
         type: type || 'Other',
+        category: category || 'System Enhancements',
+        priority: priority || 'Medium',
         status: 'Pending',
         created_by: token?.email
       })
@@ -78,7 +80,7 @@ export async function PUT(request: Request) {
 
     const supabase = await createClient()
     const body = await request.json()
-    const { id, status, title, description, type } = body
+    const { id, status, title, description, type, category, priority } = body
 
     if (!id) {
       return NextResponse.json({ error: "ID is required" }, { status: 400 })
@@ -87,16 +89,23 @@ export async function PUT(request: Request) {
     const updates: any = {}
     if (status !== undefined) {
       updates.status = status
-      if (status === 'Ongoing') updates.started_at = new Date().toISOString()
-      if (status === 'Done') updates.completed_at = new Date().toISOString()
+      // Mapping the old 'Ongoing' / 'Done' just in case, but using new statuses natively
+      if (status === 'Ongoing' || status === 'Ongoing Fix') updates.started_at = new Date().toISOString()
+      if (status === 'For Testing') updates.testing_at = new Date().toISOString()
+      if (status === 'Done' || status === 'Completed') updates.completed_at = new Date().toISOString()
+      if (status === 'Archived') updates.archived_at = new Date().toISOString()
       if (status === 'Pending') {
           updates.started_at = null
+          updates.testing_at = null
           updates.completed_at = null
+          updates.archived_at = null
       }
     }
     if (title !== undefined) updates.title = title
     if (description !== undefined) updates.description = description
     if (type !== undefined) updates.type = type
+    if (category !== undefined) updates.category = category
+    if (priority !== undefined) updates.priority = priority
 
     const { data, error } = await supabase
       .from("developer_tasks")
