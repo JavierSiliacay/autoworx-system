@@ -27,10 +27,6 @@ export async function POST(request: Request) {
 
     if (fetchError) throw fetchError
 
-    if (!doneTasks || doneTasks.length === 0) {
-      return NextResponse.json({ error: "No completed tasks to publish." }, { status: 400 })
-    }
-
     // 2. Create the system update record
     const { data: updateRecord, error: updateError } = await supabase
       .from("system_updates")
@@ -38,7 +34,7 @@ export async function POST(request: Request) {
         version,
         title,
         summary,
-        change_details: doneTasks,
+        change_details: doneTasks || [],
         published_by: token?.email
       })
       .select()
@@ -47,20 +43,22 @@ export async function POST(request: Request) {
     if (updateError) throw updateError
 
     // 3. Link tasks to this update
-    const { error: linkError } = await supabase
-      .from("developer_tasks")
-      .update({ 
-        update_id: updateRecord.id,
-        published_at: new Date().toISOString()
-      })
-      .in("id", doneTasks.map(t => t.id))
+    if (doneTasks && doneTasks.length > 0) {
+      const { error: linkError } = await supabase
+        .from("developer_tasks")
+        .update({ 
+          update_id: updateRecord.id,
+          published_at: new Date().toISOString()
+        })
+        .in("id", doneTasks.map(t => t.id))
 
-    if (linkError) throw linkError
+      if (linkError) throw linkError
+    }
 
     return NextResponse.json({ 
       success: true, 
       update: updateRecord,
-      tasksPublished: doneTasks.length 
+      tasksPublished: doneTasks ? doneTasks.length : 0 
     })
 
   } catch (error: any) {
