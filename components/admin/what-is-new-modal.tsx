@@ -1,24 +1,20 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { 
-  Sparkles, 
-  CheckCircle2, 
-  ChevronRight, 
   Rocket, 
   Zap, 
   Bug, 
   Wrench,
-  PartyPopper
+  CheckCircle2,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -32,6 +28,21 @@ interface SystemUpdate {
   published_at: string;
 }
 
+const getChangeIcon = (type: string) => {
+  switch (type) {
+    case "Bug Fix":
+      return { icon: <Bug className="w-4 h-4" />, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" };
+    case "New Feature":
+      return { icon: <Rocket className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" };
+    case "Improvement":
+      return { icon: <Zap className="w-4 h-4" />, color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" };
+    case "Utility":
+      return { icon: <Wrench className="w-4 h-4" />, color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/20" };
+    default:
+      return { icon: <ChevronRight className="w-4 h-4" />, color: "text-slate-400", bg: "bg-slate-500/10", border: "border-slate-500/20" };
+  }
+};
+
 export function WhatIsNewModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [update, setUpdate] = useState<SystemUpdate | null>(null);
@@ -40,7 +51,7 @@ export function WhatIsNewModal() {
   useEffect(() => {
     async function checkUpdate() {
       try {
-        const response = await fetch("/api/admin/system-updates/latest", { cache: 'no-store' });
+        const response = await fetch("/api/admin/system-updates/latest", { cache: "no-store" });
         if (response.ok) {
           const latestUpdate = await response.json();
           if (latestUpdate) {
@@ -48,13 +59,10 @@ export function WhatIsNewModal() {
             if (lastSeenId !== latestUpdate.id) {
               const publishedAt = new Date(latestUpdate.published_at || new Date());
               const daysOld = (new Date().getTime() - publishedAt.getTime()) / (1000 * 3600 * 24);
-
-              // If it's a new user/browser, only hide the modal if the update is more than 7 days old
               if (!lastSeenId && daysOld > 7) {
                 localStorage.setItem("last_seen_update_id", latestUpdate.id);
                 localStorage.setItem("update_notified_id", latestUpdate.id);
               } else {
-                // Show the modal!
                 setUpdate(latestUpdate);
                 setIsOpen(true);
               }
@@ -71,14 +79,16 @@ export function WhatIsNewModal() {
     checkUpdate();
 
     const supabase = createClient();
-    const channel = supabase.channel('system_updates_realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'system_updates' }, () => {
-        // Automatically check and open the modal if a new update is published!
+    const channel = supabase
+      .channel("system_updates_realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "system_updates" }, () => {
         checkUpdate();
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleClose = () => {
@@ -88,87 +98,190 @@ export function WhatIsNewModal() {
     setIsOpen(false);
   };
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "Bug Fix": return <Bug className="w-3.5 h-3.5 text-red-400" />;
-      case "New Feature": return <Rocket className="w-3.5 h-3.5 text-blue-400" />;
-      case "Improvement": return <Zap className="w-3.5 h-3.5 text-purple-400" />;
-      case "Utility": return <Wrench className="w-3.5 h-3.5 text-orange-400" />;
-      default: return <ChevronRight className="w-3.5 h-3.5 text-slate-400" />;
-    }
-  };
-
   if (!update) return null;
+
+  const hasChanges = update.change_details && update.change_details.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[550px] bg-slate-950 border-white/10 text-white p-0 overflow-hidden shadow-2xl">
-        {/* Animated Banner */}
-        <div className="h-32 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 relative overflow-hidden flex items-center justify-center">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
-            <div className="absolute -top-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
-            
-            <div className="relative z-10 flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-xl">
-                    <PartyPopper className="w-8 h-8 text-white animate-bounce" />
-                </div>
-                <div className="px-3 py-1 rounded-full bg-black/20 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-[0.2em]">
-                    Version {update.version}
-                </div>
-            </div>
-        </div>
+      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl bg-transparent [&>button]:hidden">
+        {/* Outer card */}
+        <div
+          className="relative rounded-2xl overflow-hidden"
+          style={{
+            background: "oklch(0.13 0.01 250)",
+            border: "1px solid rgba(255,255,255,0.09)",
+            boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(29,78,216,0.15)",
+          }}
+        >
+          {/* Top racing stripe */}
+          <div
+            className="absolute top-0 left-0 right-0 h-[3px] z-20"
+            style={{ background: "linear-gradient(90deg, #f97316 0%, #1d4ed8 50%, #f97316 100%)" }}
+          />
 
-        <div className="p-8 space-y-6">
-            <DialogHeader>
-                <DialogTitle className="text-3xl font-black tracking-tight text-center bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-                    {update.title}
-                </DialogTitle>
-                <DialogDescription className="text-slate-400 text-center text-base font-medium">
-                    {update.summary || "Major system improvements and new features are here!"}
-                </DialogDescription>
-            </DialogHeader>
+          {/* ── HEADER ── */}
+          <div
+            className="relative flex flex-col items-center justify-center pt-10 pb-7 px-8 overflow-hidden"
+            style={{ background: "linear-gradient(160deg, oklch(0.19 0.025 260) 0%, oklch(0.15 0.01 250) 100%)" }}
+          >
+            {/* Grid texture */}
+            <div
+              className="absolute inset-0 opacity-[0.04]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+                backgroundSize: "28px 28px",
+              }}
+            />
+            {/* Glow blobs */}
+            <div className="absolute -bottom-10 -left-10 w-36 h-36 rounded-full opacity-15 blur-3xl" style={{ background: "#f97316" }} />
+            <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full opacity-15 blur-3xl" style={{ background: "#1d4ed8" }} />
 
-            <div className="space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest px-1">
-                    <Sparkles className="w-3 h-3" /> 
-                    Changes in this version
-                </div>
-                
-                <div className="max-h-[250px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-                    {update.change_details?.map((task: any, idx: number) => (
-                        <div 
-                            key={idx} 
-                            className="group p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all"
-                        >
-                            <div className="flex items-start gap-3">
-                                <div className="mt-1">
-                                    {getIcon(task.type)}
-                                </div>
-                                <div className="space-y-1">
-                                    <div className="text-sm font-bold text-slate-200 leading-tight">
-                                        {task.title || task.description}
-                                    </div>
-                                    <div className="text-[10px] text-slate-500 font-medium">
-                                        {task.type} • Verified by Developer
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-
-        <DialogFooter className="p-6 bg-slate-900/50 border-t border-white/5 sm:justify-center">
-            <Button 
-                onClick={handleClose}
-                className="w-full sm:w-[200px] bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-blue-600/20 transition-all hover:scale-105 active:scale-95 gap-2"
+            {/* Logo container */}
+            <div
+              className="relative z-10 flex items-center justify-center w-[72px] h-[72px] rounded-2xl mb-4 shadow-xl"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+              }}
             >
-                <CheckCircle2 className="w-5 h-5" />
-                Got it, let&apos;s go!
+              <Image
+                src="/autoworxlogo.webp"
+                alt="Autoworx"
+                width={52}
+                height={52}
+                className="object-contain"
+              />
+            </div>
+
+            {/* Version badge */}
+            <div
+              className="relative z-10 inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-3"
+              style={{
+                background: "rgba(29, 78, 216, 0.2)",
+                border: "1px solid rgba(29, 78, 216, 0.35)",
+              }}
+            >
+              <Sparkles className="w-3 h-3 text-blue-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300">
+                System Update · {update.version}
+              </span>
+            </div>
+
+            {/* Title */}
+            <h2 className="relative z-10 text-[1.25rem] font-black text-white text-center leading-snug max-w-[380px]">
+              {update.title}
+            </h2>
+          </div>
+
+          {/* Separator */}
+          <div className="flex items-center px-8">
+            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+            <div className="w-2 h-2 rounded-full mx-3 shrink-0" style={{ background: "#f97316", boxShadow: "0 0 8px #f97316" }} />
+            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+          </div>
+
+          {/* ── BODY ── */}
+          <div className="px-8 py-6 space-y-5">
+
+            {/* Summary — smart bullet parser */}
+            {update.summary && (() => {
+              // Split on bullet char or newline, then clean up empty entries
+              const bullets = update.summary
+                .split(/\n|•/)
+                .map((s: string) => s.trim())
+                .filter((s: string) => s.length > 0);
+
+              // If only one segment (no bullets found) just show as a paragraph
+              if (bullets.length <= 1) {
+                return (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 flex items-center gap-1.5 mb-2">
+                      <Sparkles className="w-3 h-3" /> Release Notes
+                    </p>
+                    <p className="text-sm text-slate-300 leading-relaxed">{update.summary}</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 flex items-center gap-1.5 mb-3">
+                    <Sparkles className="w-3 h-3" /> Release Notes
+                  </p>
+                  <ul className="space-y-2">
+                    {bullets.map((point: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2.5">
+                        <span
+                          className="mt-[6px] shrink-0 w-1.5 h-1.5 rounded-full"
+                          style={{ background: "#f97316", boxShadow: "0 0 6px #f97316aa" }}
+                        />
+                        <span className="text-sm text-slate-300 leading-relaxed">{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
+
+            {/* Changes */}
+            {hasChanges && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 flex items-center gap-1.5 mb-3">
+                  <Sparkles className="w-3 h-3" />
+                  Changes in this release
+                </p>
+                <div className="max-h-[180px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  {update.change_details.map((task: any, idx: number) => {
+                    const { icon, color, bg, border } = getChangeIcon(task.type);
+                    return (
+                      <div
+                        key={idx}
+                        className={cn("flex items-start gap-3 p-3 rounded-xl border transition-colors hover:brightness-110", bg, border)}
+                      >
+                        <div className={cn("mt-0.5 shrink-0", color)}>{icon}</div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-200 leading-snug">
+                            {task.title || task.description}
+                          </p>
+                          {task.type && (
+                            <p className={cn("text-[10px] mt-0.5 font-medium", color)}>{task.type}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── FOOTER ── */}
+          <div className="px-8 pb-8 pt-1 flex flex-col items-center gap-3">
+            <Button
+              onClick={handleClose}
+              className="w-full h-11 font-bold rounded-xl text-sm gap-2 text-white border-0 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: "linear-gradient(135deg, #1e40af, #2563eb)",
+                boxShadow: "0 4px 20px rgba(37,99,235,0.4)",
+              }}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Got it, let&apos;s go!
             </Button>
-        </DialogFooter>
+            <p className="text-[10px] text-slate-700 font-medium tracking-wide">
+              Autoworx Repairs &amp; Gen. Merchandise
+            </p>
+          </div>
+
+          {/* Bottom racing stripe */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-[2px]"
+            style={{ background: "linear-gradient(90deg, transparent, #f97316, #1d4ed8, transparent)" }}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
