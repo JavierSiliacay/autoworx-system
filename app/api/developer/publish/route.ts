@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const { data: doneTasks, error: fetchError } = await supabase
       .from("developer_tasks")
       .select("*")
-      .eq("status", "Done")
+      .eq("status", "Completed")
       .is("update_id", null)
 
     if (fetchError) throw fetchError
