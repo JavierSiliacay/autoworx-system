@@ -7,10 +7,10 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { 
-  Rocket, 
-  Zap, 
-  Bug, 
+import {
+  Rocket,
+  Zap,
+  Bug,
   Wrench,
   CheckCircle2,
   ChevronRight,
