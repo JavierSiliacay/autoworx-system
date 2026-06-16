@@ -104,10 +104,10 @@ export function WhatIsNewModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl bg-transparent [&>button]:hidden">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[500px] p-0 border-0 shadow-2xl bg-transparent [&>button]:hidden max-h-[95dvh] flex flex-col rounded-2xl">
         {/* Outer card */}
         <div
-          className="relative rounded-2xl overflow-hidden"
+          className="relative flex flex-col h-full max-h-[95dvh] rounded-2xl overflow-hidden"
           style={{
             background: "oklch(0.13 0.01 250)",
             border: "1px solid rgba(255,255,255,0.09)",
@@ -122,7 +122,7 @@ export function WhatIsNewModal() {
 
           {/* ── HEADER ── */}
           <div
-            className="relative flex flex-col items-center justify-center pt-10 pb-7 px-8 overflow-hidden"
+            className="relative shrink-0 flex flex-col items-center justify-center pt-8 sm:pt-10 pb-6 sm:pb-7 px-4 sm:px-8 overflow-hidden"
             style={{ background: "linear-gradient(160deg, oklch(0.19 0.025 260) 0%, oklch(0.15 0.01 250) 100%)" }}
           >
             {/* Grid texture */}
@@ -177,14 +177,14 @@ export function WhatIsNewModal() {
           </div>
 
           {/* Separator */}
-          <div className="flex items-center px-8">
+          <div className="shrink-0 flex items-center px-4 sm:px-8">
             <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
             <div className="w-2 h-2 rounded-full mx-3 shrink-0" style={{ background: "#f97316", boxShadow: "0 0 8px #f97316" }} />
             <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
           </div>
 
           {/* ── BODY ── */}
-          <div className="px-8 py-6 space-y-5">
+          <div className="flex-1 px-4 sm:px-8 py-5 sm:py-6 space-y-5 overflow-y-auto custom-scrollbar">
 
             {/* Summary — smart bullet parser */}
             {update.summary && (() => {
@@ -233,7 +233,7 @@ export function WhatIsNewModal() {
                   <Sparkles className="w-3 h-3" />
                   Changes in this release
                 </p>
-                <div className="max-h-[180px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                <div className="space-y-2 pr-1">
                   {update.change_details.map((task: any, idx: number) => {
                     const { icon, color, bg, border } = getChangeIcon(task.type);
                     return (
@@ -259,7 +259,8 @@ export function WhatIsNewModal() {
           </div>
 
           {/* ── FOOTER ── */}
-          <div className="px-8 pb-8 pt-1 flex flex-col items-center gap-3">
+          <div className="shrink-0 px-4 sm:px-8 pb-6 sm:pb-8 pt-4 flex flex-col items-center gap-3 relative z-10" style={{ background: "oklch(0.13 0.01 250)" }}>
+            <div className="absolute top-0 left-0 right-0 h-4 -translate-y-full bg-gradient-to-t from-[oklch(0.13_0.01_250)] to-transparent pointer-events-none" />
             <Button
               onClick={handleClose}
               className="w-full h-11 font-bold rounded-xl text-sm gap-2 text-white border-0 transition-all hover:scale-[1.02] active:scale-[0.98]"
