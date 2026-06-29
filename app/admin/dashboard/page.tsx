@@ -3461,6 +3461,8 @@ export default function AdminDashboard() {
         if (!apt.repairStatus || !waitingStatuses.includes(apt.repairStatus)) return false
       } else if (filter === "insurance_approved") {
         if (apt.repairStatus !== "insurance_approved") return false
+      } else if (filter === "on_going_repairs") {
+        if (!apt.isSynced) return false
       } else if (["pending", "contacted", "completed"].includes(filter)) {
         // Standard Appointment Status
         if (apt.status !== filter) return false
@@ -3590,6 +3592,7 @@ export default function AdminDashboard() {
     pendingInspection: appointments.filter((apt) => apt.repairStatus === "pending_inspection" || !apt.repairStatus).length,
     waitingForApproval: appointments.filter((apt) => apt.repairStatus === "waiting_for_insurance" || apt.repairStatus === "waiting_for_client_approval").length,
     insuranceApproved: appointments.filter((apt) => apt.repairStatus === "insurance_approved").length,
+    onGoingRepairs: appointments.filter((apt) => apt.isSynced).length,
   }
 
   // History filtering and sorting
@@ -3886,7 +3889,7 @@ export default function AdminDashboard() {
 
       <main className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-4 mb-8">
           <div className="p-4 bg-card rounded-xl border border-border">
             <div className="text-2xl font-bold text-foreground">{dashboardStats.total}</div>
             <div className="text-sm text-muted-foreground font-medium">Total Requests</div>
@@ -3914,6 +3917,10 @@ export default function AdminDashboard() {
           <div className="p-4 bg-card rounded-xl border border-emerald-500/30">
             <div className="text-2xl font-bold text-emerald-500">{dashboardStats.insuranceApproved}</div>
             <div className="text-sm text-muted-foreground font-medium">Approved by Insurance</div>
+          </div>
+          <div className="p-4 bg-card rounded-xl border border-purple-500/30">
+            <div className="text-2xl font-bold text-purple-500">{dashboardStats.onGoingRepairs}</div>
+            <div className="text-sm text-muted-foreground font-medium">On-Going Repairs</div>
           </div>
         </div>
 
@@ -4158,6 +4165,7 @@ export default function AdminDashboard() {
                     <SelectItem value="pending_inspection">Pending Inspection</SelectItem>
                     <SelectItem value="waiting_for_approval">Waiting for Approval</SelectItem>
                     <SelectItem value="insurance_approved">Approved by Insurance</SelectItem>
+                    <SelectItem value="on_going_repairs">On-Going Repairs</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
