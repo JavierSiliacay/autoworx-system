@@ -860,7 +860,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
             )}
 
             <div className="p-4 overflow-x-auto">
-                <table className="w-full min-w-[1200px] border-collapse text-xs">
+                <table className="w-full border-collapse text-[9px]">
                     <thead>
                         <tr>
                             <th colSpan={10} className="text-left pb-4 border-none">
@@ -907,23 +907,23 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                             </th>
                         </tr>
                         <tr className="bg-[#FFD966] text-black border-y border-border">
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-10">NO.</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">UNIT</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">PLATE</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">COLOR</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">OWNER</th>
-                            <th className="p-2 border border-border text-center font-bold text-[8px] leading-tight w-20">CLAIM TYPE<br />INSURANCE/PERSONAL</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">JO/ ES/ PO #</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">BRPAD</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">AIRCON</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">ELECTRICAL</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">MECHANICAL</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">TOTAL</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-12">MOP</th>
-                            {!isSales && <th className="p-2 border border-border text-center font-bold text-[10px]">DATE COMPLETE</th>}
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">DATE RELEASED</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-32">REMARKS</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-16 no-print">DOCS</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-8">NO.</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">UNIT</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">PLATE</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">COLOR</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">OWNER</th>
+                            <th className="p-1 border border-border text-center font-bold text-[8px] leading-tight w-16">CLAIM TYPE<br />INSURANCE/PERSONAL</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">JO/ ES/ PO #</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">BRPAD</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">AIRCON</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">ELECTRICAL</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">MECHANICAL</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">TOTAL</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-10">MOP</th>
+                            {!isSales && <th className="p-1 border border-border text-center font-bold text-[9px]">DATE COMPLETE</th>}
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">DATE RELEASED</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-24">REMARKS</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-12 no-print">DOCS</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -942,7 +942,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
 
                                 return (
                                     <tr key={r.id} className={`border-b border-border ${isEditing ? 'bg-muted/30' : 'hover:bg-muted/10'} text-foreground`}>
-                                        <td className="p-2 border border-border text-center relative group/row">
+                                        <td className="p-1 border border-border text-center relative group/row text-[10px]">
                                             {isEditing ? (
                                                 <button
                                                     onClick={() => handleDeleteRecord(r.id, r.name)}
@@ -953,36 +953,36 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 </button>
                                             ) : (idx + 1)}
                                         </td>
-                                        <td className="p-2 border border-border text-left truncate max-w-[150px]" title={unitStr}>{unitStr}</td>
-                                        <td className="p-2 border border-border text-center font-mono">
+                                        <td className="p-1 border border-border text-left truncate max-w-[120px] text-[10px]" title={unitStr}>{unitStr}</td>
+                                        <td className="p-1 border border-border text-center font-mono text-[10px]">
                                             {isEditing ? (
-                                                <Input className="h-7 px-2 text-xs w-full min-w-[80px]" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_plate: e.target.value } }))} />
+                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_plate: e.target.value } }))} />
                                             ) : (r.vehicle_plate)}
                                         </td>
-                                        <td className="p-2 border border-border text-center">
+                                        <td className="p-1 border border-border text-center text-[10px]">
                                             {isEditing ? (
-                                                <Input className="h-7 px-2 text-xs w-[60px]" value={currentVal("vehicle_color")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_color: e.target.value } }))} />
+                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0 text-center" value={currentVal("vehicle_color")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_color: e.target.value } }))} />
                                             ) : (r.vehicle_color || "")}
                                         </td>
-                                        <td className="p-2 border border-border text-left truncate max-w-[150px]" title={r.name}>
+                                        <td className="p-1 border border-border text-left truncate max-w-[120px] text-[10px]" title={r.name}>
                                             {isEditing ? (
-                                                <Input className="h-7 px-2 text-xs w-full" value={currentVal("name")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), name: e.target.value } }))} />
+                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("name")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), name: e.target.value } }))} />
                                             ) : (r.name)}
                                         </td>
-                                        <td className="p-2 border border-border text-center text-[10px]">
+                                        <td className="p-1 border border-border text-center text-[9px]">
                                             {isEditing ? (
-                                                <Input className="h-7 px-2 text-[10px] w-full" value={currentVal("insurance")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), insurance: e.target.value } }))} />
+                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("insurance")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), insurance: e.target.value } }))} />
                                             ) : (claimType)}
                                         </td>
-                                        <td className="p-2 border border-border text-left">
+                                        <td className="p-1 border border-border text-left text-[10px]">
                                             {isEditing ? (
-                                                <Input className="h-7 px-2 text-xs w-full" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} />
+                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} />
                                             ) : (r.estimate_number || "")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono">
+                                        <td className="p-1 border border-border text-right font-mono text-[10px]">
                                             {isEditing ? (
                                                 <Input
-                                                    className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
+                                                    className="h-5 px-0 text-[9px] text-right w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0"
                                                     type="text"
                                                     value={formatWithCommas(editedData[r.id]?.brpad ?? costs.brpad)}
                                                     onChange={(e) => {
@@ -997,10 +997,10 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 />
                                             ) : (costs.brpad > 0 ? costs.brpad.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono">
+                                        <td className="p-1 border border-border text-right font-mono text-[10px]">
                                             {isEditing ? (
                                                 <Input
-                                                    className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
+                                                    className="h-5 px-0 text-[9px] text-right w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0"
                                                     type="text"
                                                     value={formatWithCommas(editedData[r.id]?.aircon ?? costs.aircon)}
                                                     onChange={(e) => {
@@ -1015,10 +1015,10 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 />
                                             ) : (costs.aircon > 0 ? costs.aircon.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono">
+                                        <td className="p-1 border border-border text-right font-mono text-[10px]">
                                             {isEditing ? (
                                                 <Input
-                                                    className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
+                                                    className="h-5 px-0 text-[9px] text-right w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0"
                                                     type="text"
                                                     value={formatWithCommas(editedData[r.id]?.electrical ?? costs.electrical)}
                                                     onChange={(e) => {
@@ -1033,10 +1033,10 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 />
                                             ) : (costs.electrical > 0 ? costs.electrical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono">
+                                        <td className="p-1 border border-border text-right font-mono text-[10px]">
                                             {isEditing ? (
                                                 <Input
-                                                    className="h-7 px-2 text-xs text-right w-full min-w-[70px]"
+                                                    className="h-5 px-0 text-[9px] text-right w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0"
                                                     type="text"
                                                     value={formatWithCommas(editedData[r.id]?.mechanical ?? costs.mechanical)}
                                                     onChange={(e) => {
@@ -1051,27 +1051,27 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 />
                                             ) : (costs.mechanical > 0 ? costs.mechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono font-bold text-red-600">
+                                        <td className="p-1 border border-border text-right font-mono font-bold text-red-600 text-[10px]">
                                             {isEditing ? (
                                                 <Input
-                                                    className="h-7 px-2 text-xs text-right w-full min-w-[80px] font-bold text-red-600"
+                                                    className="h-5 px-0 text-[9px] text-right w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0 font-bold text-red-600"
                                                     type="text"
                                                     value={formatWithCommas(editedData[r.id]?.total ?? costs.total)}
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
                                                         if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
-                                                            setEditedData(prev => ({ 
-                                                                ...prev, 
-                                                                [r.id]: { ...(prev[r.id] || {}), total: rawValue } 
+                                                            setEditedData(prev => ({
+                                                                ...prev,
+                                                                [r.id]: { ...(prev[r.id] || {}), total: rawValue }
                                                             }))
                                                         }
                                                     }}
                                                 />
                                             ) : (costs.total > 0 ? costs.total.toLocaleString("en-PH", { minimumFractionDigits: 2 }) : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-center">
+                                        <td className="p-1 border border-border text-center text-[9px]">
                                             {isEditing ? (
-                                                <Input className="h-7 px-2 text-[10px] w-full" value={editedData[r.id]?.costing?.gatepass_breakdown?.mop !== undefined ? editedData[r.id].costing.gatepass_breakdown.mop : costs.mop} onChange={(e) => {
+                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0 text-center" value={editedData[r.id]?.costing?.gatepass_breakdown?.mop !== undefined ? editedData[r.id].costing.gatepass_breakdown.mop : costs.mop} onChange={(e) => {
                                                     const currentCosting = editedData[r.id]?.costing || r.costing || { items: [] }
                                                     const currentGB = currentCosting.gatepass_breakdown || getCategorizedCosts(currentCosting)
                                                     const newGB = { ...currentGB, mop: e.target.value }
@@ -1106,7 +1106,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                         </td>
                                         <td className="p-2 border border-border text-left truncate max-w-[120px]" title={r.paul_notes || ""}>
                                             {isEditing ? (
-                                                <Input className="h-7 px-2 text-xs w-full" value={currentVal("paul_notes")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), paul_notes: e.target.value } }))} />
+                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("paul_notes")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), paul_notes: e.target.value } }))} />
                                             ) : (r.paul_notes || "")}
                                         </td>
                                         <td className="p-2 border border-border text-center no-print">
