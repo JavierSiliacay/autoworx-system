@@ -131,16 +131,42 @@ export async function PUT(request: Request) {
                 .maybeSingle()
             
             if (!existingTask) {
-                await supabase.from("developer_tasks").insert({
+                const { data: newTask, error: insertError } = await supabase.from("developer_tasks").insert({
                     title: `Announcement: From ${data.author_name}`,
                     description: data.content,
                     type: "Other",
                     category: data.category || "System Enhancements",
                     priority: "Low",
                     status: "Archived",
-                    requested_by: data.author_email,
+                    created_by: data.author_email,
                     archived_at: new Date().toISOString()
-                })
+                }).select().single()
+
+                if (newTask) {
+                    // Copy comments
+                    const { data: comments } = await supabase.from("announcement_comments").select("*").eq("announcement_id", data.id)
+                    if (comments && comments.length > 0) {
+                        const newComments = comments.map((c: any) => ({
+                            task_id: newTask.id,
+                            content: c.content,
+                            author_email: c.author_email,
+                            created_at: c.created_at
+                        }))
+                        await supabase.from("task_comments").insert(newComments)
+                    }
+
+                    // Copy reactions
+                    const { data: reactions } = await supabase.from("announcement_reactions").select("*").eq("announcement_id", data.id)
+                    if (reactions && reactions.length > 0) {
+                        const newReactions = reactions.map((r: any) => ({
+                            task_id: newTask.id,
+                            reaction_type: r.reaction_type,
+                            user_email: r.user_email,
+                            created_at: r.created_at
+                        }))
+                        await supabase.from("task_reactions").insert(newReactions)
+                    }
+                }
             }
         }
 

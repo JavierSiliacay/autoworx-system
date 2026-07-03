@@ -167,6 +167,27 @@ export default function DeveloperTasksPage() {
     title: "",
     summary: ""
   });
+  const [releaseHistory, setReleaseHistory] = useState<any[]>([]);
+
+  const loadSystemUpdates = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/system-updates");
+      if (response.ok) {
+        const data = await response.json();
+        setReleaseHistory(data);
+        if (data && data.length > 0 && data[0].version) {
+          const latestVersion = data[0].version;
+          const match = latestVersion.match(/v(\d+)\.(\d+)\.(\d+)/);
+          if (match) {
+            const nextVersion = `v${match[1]}.${match[2]}.${parseInt(match[3]) + 1}`;
+            setPublishForm(prev => ({ ...prev, version: nextVersion }));
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading system updates:", error);
+    }
+  }, []);
 
   const loadTasks = useCallback(async () => {
     try {
@@ -187,6 +208,7 @@ export default function DeveloperTasksPage() {
       router.push("/admin");
     } else if (sessionStatus === "authenticated") {
       loadTasks();
+      loadSystemUpdates();
       
       const supabase = createClient();
       const channel = supabase
@@ -198,7 +220,7 @@ export default function DeveloperTasksPage() {
 
       return () => { supabase.removeChannel(channel); };
     }
-  }, [sessionStatus, router, loadTasks, selectedTask]);
+  }, [sessionStatus, router, loadTasks, loadSystemUpdates, selectedTask]);
 
   const loadComments = async (taskId: string) => {
     try {
@@ -234,7 +256,7 @@ export default function DeveloperTasksPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: newTask.description.slice(0, 100) + (newTask.description.length > 100 ? "..." : ""),
+          title: newTask.description.length > 200 ? newTask.description.slice(0, 200) + "..." : newTask.description,
           description: newTask.description,
           type: taskType,
           category: newTask.category,
@@ -426,19 +448,40 @@ export default function DeveloperTasksPage() {
           </div>
 
           {isDeveloper && (
-            <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
-              <h3 className="text-sm font-semibold text-purple-400 uppercase flex items-center gap-2">
-                <Rocket className="w-4 h-4" /> Publish Release
-              </h3>
-              <form onSubmit={handlePublish} className="space-y-3">
-                <Input placeholder="Version (e.g. v1.2.0)" value={publishForm.version} onChange={e => setPublishForm({...publishForm, version: e.target.value})} className="bg-black/50 border-white/10 text-xs h-8" required />
-                <Input placeholder="Release Title" value={publishForm.title} onChange={e => setPublishForm({...publishForm, title: e.target.value})} className="bg-black/50 border-white/10 text-xs h-8" required />
-                <Textarea placeholder="Release Summary..." value={publishForm.summary} onChange={e => setPublishForm({...publishForm, summary: e.target.value})} className="bg-black/50 border-white/10 text-xs resize-none" required />
-                <Button type="submit" disabled={isPublishing} className="w-full bg-purple-600 hover:bg-purple-700 h-8 text-xs">
-                  {isPublishing ? <Loader2 className="w-3 h-3 animate-spin" /> : "Publish to Admins"}
-                </Button>
-              </form>
-            </div>
+            <>
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <h3 className="text-sm font-semibold text-purple-400 uppercase flex items-center gap-2">
+                  <Rocket className="w-4 h-4" /> Publish Release
+                </h3>
+                <form onSubmit={handlePublish} className="space-y-3">
+                  <Input placeholder="Version (e.g. v1.2.0)" value={publishForm.version} onChange={e => setPublishForm({...publishForm, version: e.target.value})} className="bg-black/50 border-white/10 text-xs h-8" required />
+                  <Input placeholder="Release Title" value={publishForm.title} onChange={e => setPublishForm({...publishForm, title: e.target.value})} className="bg-black/50 border-white/10 text-xs h-8" required />
+                  <Textarea placeholder="Release Summary..." value={publishForm.summary} onChange={e => setPublishForm({...publishForm, summary: e.target.value})} className="bg-black/50 border-white/10 text-xs resize-none" required />
+                  <Button type="submit" disabled={isPublishing} className="w-full bg-purple-600 hover:bg-purple-700 h-8 text-xs">
+                    {isPublishing ? <Loader2 className="w-3 h-3 animate-spin" /> : "Publish to Admins"}
+                  </Button>
+                </form>
+              </div>
+
+              {releaseHistory.length > 0 && (
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-300 uppercase flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> Recent Releases
+                  </h3>
+                  <div className="space-y-3">
+                    {releaseHistory.slice(0, 5).map((release) => (
+                      <div key={release.id} className="border-l-2 border-purple-500 pl-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-purple-400">{release.version}</span>
+                          <span className="text-[10px] text-slate-500">{formatDistanceToNow(new Date(release.published_at), { addSuffix: true })}</span>
+                        </div>
+                        <p className="text-xs font-medium text-white mt-1 truncate">{release.title}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex-1 overflow-y-auto max-h-[60vh] custom-scrollbar space-y-2 pr-2">
@@ -460,7 +503,7 @@ export default function DeveloperTasksPage() {
                     task.priority === 'Medium' ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400"
                   )}>{task.priority}</span>
                 </div>
-                <h4 className="text-sm text-slate-200 font-medium line-clamp-2">{task.title}</h4>
+                <h4 className="text-sm text-slate-200 font-medium whitespace-pre-wrap">{task.description}</h4>
                 <div className="flex items-center justify-between mt-3 text-[10px] text-slate-500">
                   <StatusBadge status={task.status} size="xs" />
                   <span>{formatDistanceToNow(new Date(task.created_at))} ago</span>

@@ -506,7 +506,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                             </div>
                         ) : reportPeriod === "yearly" ? (
                             <Select value={selectedYear} onValueChange={setSelectedYear} disabled={isEditing || isSaving}>
-                                <SelectTrigger className="w-[120px]">
+                                <SelectTrigger className="w-[90px]">
                                     <SelectValue placeholder="Select Year" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -702,7 +702,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                             <Button 
                                                                 variant="ghost" 
                                                                 size="sm" 
-                                                                className="text-[10px] h-7 px-2 font-bold hover:bg-primary/10 hover:text-primary transition-colors"
+                                                                className="text-[9px] h-7 px-2 font-bold hover:bg-primary/10 hover:text-primary transition-colors"
                                                                 onClick={() => setManualEntry({ ...manualEntry, created_at: format(new Date(), "yyyy-MM-dd") })}
                                                             >
                                                                 TODAY
@@ -710,7 +710,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                             <Button 
                                                                 variant="ghost" 
                                                                 size="sm" 
-                                                                className="text-[10px] h-7 px-2 font-bold hover:bg-primary/10 hover:text-primary transition-colors"
+                                                                className="text-[9px] h-7 px-2 font-bold hover:bg-primary/10 hover:text-primary transition-colors"
                                                                 onClick={() => {
                                                                     const yesterday = new Date();
                                                                     yesterday.setDate(yesterday.getDate() - 1);
@@ -731,7 +731,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                     <Label className="text-right">Breakdown</Label>
                                     <div className="col-span-3 grid grid-cols-2 gap-2">
                                         <div className="space-y-1">
-                                            <Label className="text-[10px]">BRPAD</Label>
+                                            <Label className="text-[9px]">BRPAD</Label>
                                             <Input type="text" value={formatWithCommas(manualEntry.brpad)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
@@ -745,7 +745,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             }} className="h-8" />
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-[10px]">Aircon</Label>
+                                            <Label className="text-[9px]">Aircon</Label>
                                             <Input type="text" value={formatWithCommas(manualEntry.aircon)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
@@ -759,7 +759,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             }} className="h-8" />
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-[10px]">Electrical</Label>
+                                            <Label className="text-[9px]">Electrical</Label>
                                             <Input type="text" value={formatWithCommas(manualEntry.electrical)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
@@ -773,7 +773,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                             }} className="h-8" />
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-[10px]">Mechanical</Label>
+                                            <Label className="text-[9px]">Mechanical</Label>
                                             <Input type="text" value={formatWithCommas(manualEntry.mechanical)} onChange={(e) => {
                                                 const rawValue = parseCommaNumber(e.target.value);
                                                 if (rawValue === "" || /^\d*\.?\d*$/.test(rawValue)) {
@@ -995,8 +995,8 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                 </div>
             )}
 
-            <div className="p-4 overflow-x-auto">
-                <table className="w-full min-w-[1200px] border-collapse text-xs">
+            <div className="p-2 overflow-x-auto">
+                <table className="w-full border-collapse text-[9px]">
                     <thead>
                         <tr>
                             <th colSpan={10} className="text-left pb-4 border-none">
@@ -1015,24 +1015,24 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                             </th>
                         </tr>
                         <tr className="bg-[#FFD966] text-black border-y border-border">
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-10">NO.</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">UNIT</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">PLATE</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">COLOR</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">OWNER</th>
-                            <th className="p-2 border border-border text-center font-bold text-[8px] leading-tight w-20 uppercase">Claim Type</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">JO/ ES/ PO #</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">BRPAD</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">AIRCON</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">ELECTRICAL</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">MECHANICAL</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">TOTAL<br /><span className="text-[7px] font-normal leading-tight opacity-80">(w/ VAT/DISCOUNT)</span></th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-12">MOD</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px]">DATE ENTERED</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-14">AGE (DAYS)</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-14">AGE (MONTHS)</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-32">REMARKS</th>
-                            <th className="p-2 border border-border text-center font-bold text-[10px] w-16 no-print">STATUS</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-10">NO.</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">UNIT</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">PLATE</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">COLOR</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">OWNER</th>
+                            <th className="p-1 border border-border text-center font-bold text-[8px] leading-tight w-20 uppercase">Claim Type</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">JO/ ES/ PO #</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">BRPAD</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">AIRCON</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">ELECTRICAL</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">MECHANICAL</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">TOTAL<br /><span className="text-[7px] font-normal leading-tight opacity-80">(w/ VAT/DISCOUNT)</span></th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-12">MOD</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">DATE ENTERED</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-14">AGE (DAYS)</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-14">AGE (MONTHS)</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-32">REMARKS</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-16 no-print">STATUS</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1076,12 +1076,12 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
 
                                 return (
                                     <tr key={r.id} className={`border-b border-border ${isEditing ? 'bg-muted/30' : 'hover:bg-muted/10'}`}>
-                                        <td className="p-2 border border-border text-center">
+                                        <td className="p-1 border border-border text-center">
                                             {isEditing ? (
                                                 <button onClick={() => handleDeleteRecord(r.id, r.name)} className="text-red-500"><Trash2 className="w-3 h-3" /></button>
                                             ) : (idx + 1)}
                                         </td>
-                                        <td className="p-2 border border-border">
+                                        <td className={`p-1 border border-border text-left ${!isEditing ? "truncate max-w-[90px]" : "min-w-[150px]"}`} title={unitStr}>
                                             {isEditing ? (
                                                 <div className="flex gap-1">
                                                     <Input className="h-6 text-[9px] w-12 px-1" placeholder="Year" value={currentVal("vehicle_year")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_year: e.target.value } }))} />
@@ -1090,26 +1090,26 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 </div>
                                             ) : unitStr}
                                         </td>
-                                        <td className="p-2 border border-border text-center">
-                                            {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_plate: e.target.value } }))} /> : (r.vehicle_plate || r.vehiclePlate)}
+                                        <td className="p-1 border border-border text-center">
+                                            {isEditing ? <Input className="h-6 text-[9px] px-1 text-center min-w-[90px]" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_plate: e.target.value } }))} /> : (r.vehicle_plate || r.vehiclePlate)}
                                         </td>
-                                        <td className="p-2 border border-border text-center">
-                                            {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("vehicle_color")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_color: e.target.value } }))} /> : (r.vehicle_color || r.vehicleColor)}
+                                        <td className="p-1 border border-border text-center">
+                                            {isEditing ? <Input className="h-6 text-[9px] px-1 text-center min-w-[90px]" value={currentVal("vehicle_color")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_color: e.target.value } }))} /> : (r.vehicle_color || r.vehicleColor)}
                                         </td>
-                                        <td className="p-2 border border-border">
-                                            {isEditing ? <Input className="h-6 text-[10px] px-1" value={currentVal("name")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), name: e.target.value } }))} /> : r.name}
+                                        <td className={`p-1 border border-border text-left ${!isEditing ? "truncate max-w-[90px]" : "min-w-[180px]"}`} title={r.name}>
+                                            {isEditing ? <Input className="h-6 text-[9px] px-1 w-full" value={currentVal("name")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), name: e.target.value } }))} /> : r.name}
                                         </td>
-                                        <td className="p-2 border border-border text-center uppercase text-[9px]">
-                                            {isEditing ? <Input className="h-6 text-[9px] px-1 text-center" value={currentVal("insurance")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), insurance: e.target.value } }))} /> : (r.insurance)}
+                                        <td className="p-1 border border-border text-center uppercase text-[9px]">
+                                            {isEditing ? <Input className="h-6 text-[9px] px-1 text-center min-w-[100px]" value={currentVal("insurance")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), insurance: e.target.value } }))} /> : (r.insurance)}
                                         </td>
-                                        <td className="p-2 border border-border text-center">
-                                            {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} /> : (r.estimate_number || r.estimateNumber || r.trackingCode || "")}
+                                        <td className="p-1 border border-border text-center">
+                                            {isEditing ? <Input className="h-6 text-[9px] px-1 text-center min-w-[120px]" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} /> : (r.estimate_number || r.estimateNumber || r.trackingCode || "")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono">
+                                        <td className="p-1 border border-border text-right font-mono">
                                             {isEditing ? (
                                                 <Input 
                                                     type="text" 
-                                                    className="h-6 text-[10px] px-1 text-right w-full" 
+                                                    className="h-6 text-[9px] px-1 text-right w-full" 
                                                     value={formatWithCommas(currentVal("brpad") || (costs.brpad > 0 ? costs.brpad : ""))} 
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
@@ -1120,11 +1120,11 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 />
                                             ) : (costs.brpad > 0 ? costs.brpad.toLocaleString() : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono">
+                                        <td className="p-1 border border-border text-right font-mono">
                                             {isEditing ? (
                                                 <Input 
                                                     type="text" 
-                                                    className="h-6 text-[10px] px-1 text-right w-full" 
+                                                    className="h-6 text-[9px] px-1 text-right w-full" 
                                                     value={formatWithCommas(currentVal("aircon") || (costs.aircon > 0 ? costs.aircon : ""))} 
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
@@ -1135,11 +1135,11 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 />
                                             ) : (costs.aircon > 0 ? costs.aircon.toLocaleString() : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono">
+                                        <td className="p-1 border border-border text-right font-mono">
                                             {isEditing ? (
                                                 <Input 
                                                     type="text" 
-                                                    className="h-6 text-[10px] px-1 text-right w-full" 
+                                                    className="h-6 text-[9px] px-1 text-right w-full" 
                                                     value={formatWithCommas(currentVal("electrical") || (costs.electrical > 0 ? costs.electrical : ""))} 
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
@@ -1150,11 +1150,11 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 />
                                             ) : (costs.electrical > 0 ? costs.electrical.toLocaleString() : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono">
+                                        <td className="p-1 border border-border text-right font-mono">
                                             {isEditing ? (
                                                 <Input 
                                                     type="text" 
-                                                    className="h-6 text-[10px] px-1 text-right w-full" 
+                                                    className="h-6 text-[9px] px-1 text-right w-full" 
                                                     value={formatWithCommas(currentVal("mechanical") || (costs.mechanical > 0 ? costs.mechanical : ""))} 
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
@@ -1165,11 +1165,11 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 />
                                             ) : (costs.mechanical > 0 ? costs.mechanical.toLocaleString() : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-right font-mono font-bold">
+                                        <td className="p-1 border border-border text-right font-mono font-bold">
                                             {isEditing ? (
                                                 <Input 
                                                     type="text" 
-                                                    className="h-6 text-[10px] px-1 text-right w-full font-bold" 
+                                                    className="h-6 text-[9px] px-1 text-right w-full font-bold" 
                                                     value={formatWithCommas(editedData[r.id]?.total ?? (costs.total > 0 ? costs.total : ""))} 
                                                     onChange={(e) => {
                                                         const rawValue = parseCommaNumber(e.target.value);
@@ -1183,10 +1183,10 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 />
                                             ) : (costs.total > 0 ? costs.total.toLocaleString() : "-")}
                                         </td>
-                                        <td className="p-2 border border-border text-center">
-                                            {isEditing ? <Input className="h-6 text-[10px] px-1 text-center" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} /> : (r.current_repair_part || r.currentRepairPart || "")}
+                                        <td className="p-1 border border-border text-center">
+                                            {isEditing ? <Input className="h-6 text-[9px] px-1 text-center" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} /> : (r.current_repair_part || r.currentRepairPart || "")}
                                         </td>
-                                        <td className="p-2 border border-border text-center font-mono text-[9px] uppercase">
+                                        <td className="p-1 border border-border text-center font-mono text-[9px] uppercase">
                                             {isEditing ? (
                                                 <Input 
                                                     type="date" 
@@ -1196,22 +1196,22 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                 />
                                             ) : dateStr}
                                         </td>
-                                        <td className="p-2 border border-border text-center font-mono text-[10px]">
+                                        <td className="p-1 border border-border text-center font-mono text-[9px]">
                                             {ageDays}d
                                         </td>
-                                        <td className="p-2 border border-border text-center font-mono text-[10px]">
+                                        <td className="p-1 border border-border text-center font-mono text-[9px]">
                                             {ageMonths}m
                                         </td>
-                                        <td className="p-2 border border-border">
+                                        <td className={`p-1 border border-border text-left ${!isEditing ? "truncate max-w-[110px]" : "min-w-[200px]"}`} title={r.paul_notes || r.paulNotes || r.remarks || ""}>
                                             {isEditing ? (
                                                 <Input 
-                                                    className="h-6 text-[10px] px-1" 
+                                                    className="h-6 text-[10px] px-1 w-full" 
                                                     value={currentVal("paul_notes")} 
                                                     onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), paul_notes: e.target.value } }))} 
                                                 />
                                             ) : (r.paul_notes || r.paulNotes || r.remarks)}
                                         </td>
-                                        <td className="p-2 border border-border text-center no-print">
+                                        <td className="p-1 border border-border text-center no-print">
                                             {r.archived_reason === "Manual Entry" ? (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
@@ -1254,13 +1254,13 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                     {tableRecords.length > 0 && (
                         <tfoot>
                             <tr className="bg-[#FFD966]/20 font-bold border-t-2 border-border">
-                                <td colSpan={7} className="p-2 border border-border text-right uppercase text-[10px]">Total Sales for {reportPeriodLabel}</td>
-                                <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.brpad > 0 ? tableTotals.brpad.toLocaleString() : "-"}</td>
-                                <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.aircon > 0 ? tableTotals.aircon.toLocaleString() : "-"}</td>
-                                <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.electrical > 0 ? tableTotals.electrical.toLocaleString() : "-"}</td>
-                                <td className="p-2 border border-border text-right font-mono text-[10px]">{tableTotals.mechanical > 0 ? tableTotals.mechanical.toLocaleString() : "-"}</td>
-                                <td className="p-2 border border-border text-right font-mono text-blue-600 dark:text-blue-400 text-[12px] font-black">₱{tableTotals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                <td colSpan={6} className="p-2 border border-border"></td>
+                                <td colSpan={7} className="p-1 border border-border text-right uppercase text-[9px]">Total Sales for {reportPeriodLabel}</td>
+                                <td className="p-1 border border-border text-right font-mono text-[9px]">{tableTotals.brpad > 0 ? tableTotals.brpad.toLocaleString() : "-"}</td>
+                                <td className="p-1 border border-border text-right font-mono text-[9px]">{tableTotals.aircon > 0 ? tableTotals.aircon.toLocaleString() : "-"}</td>
+                                <td className="p-1 border border-border text-right font-mono text-[9px]">{tableTotals.electrical > 0 ? tableTotals.electrical.toLocaleString() : "-"}</td>
+                                <td className="p-1 border border-border text-right font-mono text-[9px]">{tableTotals.mechanical > 0 ? tableTotals.mechanical.toLocaleString() : "-"}</td>
+                                <td className="p-1 border border-border text-right font-mono text-blue-600 dark:text-blue-400 text-[12px] font-black">₱{tableTotals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                <td colSpan={6} className="p-1 border border-border"></td>
                             </tr>
                         </tfoot>
                     )}

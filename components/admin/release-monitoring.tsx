@@ -956,27 +956,27 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                         <td className="p-1 border border-border text-left truncate max-w-[120px] text-[10px]" title={unitStr}>{unitStr}</td>
                                         <td className="p-1 border border-border text-center font-mono text-[10px]">
                                             {isEditing ? (
-                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_plate: e.target.value } }))} />
+                                                <Input className="h-5 px-1 text-[10px] w-full min-w-[90px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("vehicle_plate")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_plate: e.target.value } }))} />
                                             ) : (r.vehicle_plate)}
                                         </td>
                                         <td className="p-1 border border-border text-center text-[10px]">
                                             {isEditing ? (
-                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0 text-center" value={currentVal("vehicle_color")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_color: e.target.value } }))} />
+                                                <Input className="h-5 px-1 text-[10px] w-full min-w-[90px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0 text-center" value={currentVal("vehicle_color")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), vehicle_color: e.target.value } }))} />
                                             ) : (r.vehicle_color || "")}
                                         </td>
                                         <td className="p-1 border border-border text-left truncate max-w-[120px] text-[10px]" title={r.name}>
                                             {isEditing ? (
-                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("name")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), name: e.target.value } }))} />
+                                                <Input className="h-5 px-1 text-[10px] w-full min-w-[180px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("name")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), name: e.target.value } }))} />
                                             ) : (r.name)}
                                         </td>
                                         <td className="p-1 border border-border text-center text-[9px]">
                                             {isEditing ? (
-                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("insurance")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), insurance: e.target.value } }))} />
+                                                <Input className="h-5 px-1 text-[10px] w-full min-w-[100px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("insurance")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), insurance: e.target.value } }))} />
                                             ) : (claimType)}
                                         </td>
                                         <td className="p-1 border border-border text-left text-[10px]">
                                             {isEditing ? (
-                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} />
+                                                <Input className="h-5 px-1 text-[10px] w-full min-w-[120px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} />
                                             ) : (r.estimate_number || "")}
                                         </td>
                                         <td className="p-1 border border-border text-right font-mono text-[10px]">
@@ -1087,7 +1087,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 {isEditing ? (
                                                     <Input
                                                         type="date"
-                                                        className="h-7 px-2 text-[10px] w-full"
+                                                        className="h-7 px-1 text-[9px] w-[90px]"
                                                         value={currentVal("status_updated_at") ? new Date(currentVal("status_updated_at")).toISOString().split('T')[0] : ""}
                                                         onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), status_updated_at: new Date(e.target.value).toISOString() } }))}
                                                     />
@@ -1098,7 +1098,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                             {isEditing ? (
                                                 <Input
                                                     type="date"
-                                                    className="h-7 px-2 text-[10px] w-full"
+                                                    className="h-7 px-1 text-[9px] w-[90px]"
                                                     value={currentVal("completed_at") ? new Date(currentVal("completed_at")).toISOString().split('T')[0] : ""}
                                                     onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), completed_at: new Date(e.target.value).toISOString() } }))}
                                                 />
@@ -1164,7 +1164,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                 <td className="p-2 border border-border text-right">
                                     {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing, r.id).mechanical, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="p-2 border border-border text-right font-bold">
+                                <td className="p-2 border border-border text-right font-bold text-blue-500 text-[11px]">
                                     {tableRecords.reduce((sum, r) => sum + getCategorizedCosts(r.costing, r.id).total, 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                 </td>
                                 <td colSpan={3} className="border border-border"></td>
