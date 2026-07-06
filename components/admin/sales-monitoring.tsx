@@ -1027,8 +1027,9 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                             <th className="p-1 border border-border text-center font-bold text-[9px]">ELECTRICAL</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px]">MECHANICAL</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px]">TOTAL<br /><span className="text-[7px] font-normal leading-tight opacity-80">(w/ VAT/DISCOUNT)</span></th>
-                            <th className="p-1 border border-border text-center font-bold text-[9px] w-12">MOD</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">MOD</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px]">DATE ENTERED</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px]">TARGET DATE</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px] w-14">AGE (DAYS)</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px] w-14">AGE (MONTHS)</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px] w-32">REMARKS</th>
@@ -1072,6 +1073,18 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         ageMonths--;
                                     }
                                     ageMonths = Math.max(0, ageMonths);
+                                }
+
+                                // Target Date logic
+                                const jobOrderHistory = r.costing?.jobOrderHistory || [];
+                                const latestHistory = jobOrderHistory.length > 0 ? jobOrderHistory[jobOrderHistory.length - 1] : null;
+                                const targetDateRaw = latestHistory?.targetDate || r.target_date || r.targetDate;
+                                let formattedTargetDate = "";
+                                if (targetDateRaw) {
+                                    const [y, m, d] = targetDateRaw.split("-").map(Number);
+                                    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                                        formattedTargetDate = new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                                    }
                                 }
 
                                 return (
@@ -1195,6 +1208,9 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                                     onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), synced_at: e.target.value } }))} 
                                                 />
                                             ) : dateStr}
+                                        </td>
+                                        <td className="p-1 border border-border text-center font-mono text-[9px] text-amber-500 font-bold">
+                                            {formattedTargetDate || "-"}
                                         </td>
                                         <td className="p-1 border border-border text-center font-mono text-[9px]">
                                             {ageDays}d

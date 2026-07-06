@@ -27,6 +27,7 @@ import {
   Download,
   Star,
   FileCheck,
+  Loader2,
 } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -62,6 +63,7 @@ interface AppointmentDB {
   repair_status?: RepairStatus
   current_repair_part?: string
   status_updated_at?: string
+  synced_at?: string
   costing?: CostingData
   damage_images?: string[]
   orcr_image?: string
@@ -112,6 +114,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     status: apt.status,
     createdAt: apt.created_at,
     repairStatus: apt.repair_status,
+    syncedAt: apt.synced_at || (apt as any).syncedAt,
     currentRepairPart: apt.current_repair_part,
     statusUpdatedAt: apt.status_updated_at,
     costing: apt.costing,
@@ -145,6 +148,7 @@ interface Appointment {
   repairStatus?: RepairStatus
   currentRepairPart?: string
   statusUpdatedAt?: string
+  syncedAt?: string
   // Costing data
   costing?: CostingData
   // Damage images
@@ -326,7 +330,7 @@ function TrackingContent() {
   }
 
   const repairStatusInfo = appointment
-    ? getRepairStatusInfo(appointment.isArchived ? "completed_ready" : appointment.repairStatus)
+    ? getRepairStatusInfo(appointment.isArchived ? "completed_ready" : appointment.repairStatus, !!appointment.syncedAt)
     : null
 
   const handleDownloadPDF = async () => {
@@ -462,7 +466,14 @@ function TrackingContent() {
                   <div
                     className={`flex items-center justify-center w-12 h-12 rounded-full ${repairStatusInfo.bgColor} ${repairStatusInfo.color}`}
                   >
-                    <Settings2 className="w-6 h-6" />
+                    {repairStatusInfo.label === "On-Going Repair" ? (
+                      <div className="relative flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 animate-spin text-amber-500/30 absolute" />
+                        <Wrench className="w-4 h-4" />
+                      </div>
+                    ) : (
+                      <Settings2 className="w-6 h-6" />
+                    )}
                   </div>
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground mb-1">Current Repair Status</p>
@@ -486,44 +497,6 @@ function TrackingContent() {
                   </div>
                 </div>
 
-                {/* Progress Steps */}
-                <div className="mt-6 pt-6 border-t border-border/50">
-                  <p className="text-xs text-muted-foreground mb-3">Repair Progress</p>
-                  <div className="flex items-center gap-2">
-                    {REPAIR_STATUS_OPTIONS.map((option, index) => {
-                      const currentStep = repairStatusInfo.step
-                      const optionStep = index + 1
-                      const isCompleted = appointment.isArchived || currentStep >= optionStep
-                      const isCurrent = !appointment.isArchived && appointment.repairStatus === option.value
-
-                      return (
-                        <React.Fragment key={option.value}>
-                          <div
-                            className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors ${isCurrent
-                              ? `${repairStatusInfo.bgColor} ${repairStatusInfo.color} ring-2 ring-offset-2 ring-offset-background ${repairStatusInfo.borderColor.replace("border-", "ring-")}`
-                              : isCompleted
-                                ? "bg-green-500/20 text-green-500"
-                                : "bg-muted text-muted-foreground"
-                              }`}
-                            title={option.label}
-                          >
-                            {isCompleted && !isCurrent ? (
-                              <CheckCircle className="w-4 h-4" />
-                            ) : (
-                              optionStep
-                            )}
-                          </div>
-                          {index < REPAIR_STATUS_OPTIONS.length - 1 && (
-                            <div
-                              className={`flex-1 h-1 rounded ${currentStep > optionStep ? "bg-green-500/50" : "bg-muted"
-                                }`}
-                            />
-                          )}
-                        </React.Fragment>
-                      )
-                    })}
-                  </div>
-                </div>
               </div>
             )}
 

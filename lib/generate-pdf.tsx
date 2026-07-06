@@ -37,6 +37,8 @@ interface TrackingAppointment {
   loaAttachment2?: string
   loaAttachments?: string[]
   isArchived?: boolean
+  syncedAt?: string
+  synced_at?: string
   damageImages?: string[]
   orcrImage?: string
   orcrImage2?: string
@@ -255,7 +257,12 @@ export interface PDFOptions {
 export async function generateTrackingPDF(appointment: TrackingAppointment, role: 'admin' | 'user' = 'user', reportTitle?: string, options: PDFOptions = {}): Promise<string> {
   const isAdmin = role === 'admin'
   const isReleased = appointment.isArchived
-  const repairStatus = getRepairStatusLabel(isReleased ? "completed_ready" : appointment.repairStatus)
+  let repairStatus = getRepairStatusLabel(isReleased ? "completed_ready" : appointment.repairStatus)
+  
+  if (repairStatus === "Not Started" && (appointment.syncedAt || appointment.synced_at)) {
+    repairStatus = "On-Going Repair"
+  }
+
   const appointmentStatus = isReleased ? "Released / History" : getAppointmentStatusLabel(appointment.status)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : PRODUCTION_URL
   const displayTitle = reportTitle || (appointment.status === 'pending' ? "Appointment Confirmation" : (isReleased ? "Final Status Report (Released)" : (isAdmin ? "Repair Estimate" : "Repair Status Report")))
@@ -894,6 +901,17 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       ageMonthsText = `${Math.max(0, months)}m`;
     }
 
+    const jobOrderHistory = r.costing?.jobOrderHistory || [];
+    const latestHistory = jobOrderHistory.length > 0 ? jobOrderHistory[jobOrderHistory.length - 1] : null;
+    const targetDateRaw = latestHistory?.targetDate || r.target_date || r.targetDate;
+    let formattedTargetDate = "-";
+    if (targetDateRaw) {
+      const [y, m, d] = targetDateRaw.split("-").map(Number);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        formattedTargetDate = new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      }
+    }
+
     const costs = getCategorizedCosts(r.costing, r.id);
 
     totalBRPAD += costs.brpad;
@@ -926,6 +944,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         ` : ""}
         ${showCompleteDate ? `<td>${completeDateStr}</td>` : ""}
         <td>${effectiveDateColumnValue}</td>
+        ${isSales ? `<td style="color: #d97706; font-weight: bold;">${formattedTargetDate}</td>` : ""}
         <td>${ageDaysText}</td>
         <td>${ageMonthsText}</td>
         <td class="text-left">${r.paul_notes || r.paulNotes || r.remarks || ""}</td>
@@ -941,7 +960,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
       <td class="text-right" style="border-top: 2px solid #000;">${totalElectrical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000;">${totalMechanical.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
       <td class="text-right" style="border-top: 2px solid #000; color: #c00;">${grandTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
-      <td colspan="6" style="border-top: 2px solid #000;"></td>
+      <td colspan="${title.includes("SALES") ? 7 : 6}" style="border-top: 2px solid #000;"></td>
     </tr>
   ` : "";
 
@@ -1046,6 +1065,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         ${title.includes("SALES") ? `<th style="font-size: 8px; width: 6%;">STATUS</th>` : ""}
         ${!title.includes("SALES") ? `<th style="font-size: 8px; width: 7%;">DATE COMPLETE</th>` : ""}
         <th style="font-size: 8px; width: 7%;">${dateColumnLabel}</th>
+        ${title.includes("SALES") ? `<th style="font-size: 8px; width: 7%;">TARGET DATE</th>` : ""}
         <th style="font-size: 8px; width: 4%;">AGE (D)</th>
         <th style="font-size: 8px; width: 4%;">AGE (M)</th>
         <th style="font-size: 8px; width: 10%;">REMARKS</th>
@@ -1063,7 +1083,12 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
 export async function generateJobOrderPDF(appointment: TrackingAppointment): Promise<string> {
   const displayTitle = "JOB ORDER"
   const isReleased = appointment.isArchived
-  const repairStatus = getRepairStatusLabel(isReleased ? "completed_ready" : appointment.repairStatus)
+  let repairStatus = getRepairStatusLabel(isReleased ? "completed_ready" : appointment.repairStatus)
+
+  if (repairStatus === "Not Started" && (appointment.syncedAt || appointment.synced_at)) {
+    repairStatus = "On-Going Repair"
+  }
+
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : PRODUCTION_URL
 
   const categoryOrder = ["Parts", "Tinsmith/Alignment", "Mechanical Works", "Electrical", "Aircon", "Painting", "Detailing", "Glassworks", "Remove and Install", "Others"];

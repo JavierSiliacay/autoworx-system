@@ -43,7 +43,7 @@ export function getStatusInfo(status: "pending" | "contacted" | "completed" | "c
 }
 
 // Get repair status display info
-export function getRepairStatusInfo(status: RepairStatus | undefined) {
+export function getRepairStatusInfo(status: RepairStatus | undefined, isSynced?: boolean) {
   const statusMap: Record<RepairStatus, {
     label: string
     description: string
@@ -135,6 +135,16 @@ export function getRepairStatusInfo(status: RepairStatus | undefined) {
   }
 
   if (!status) {
+    if (isSynced) {
+      return {
+        label: "On-Going Repair",
+        description: "Your vehicle is currently undergoing repair procedures",
+        color: "text-amber-500",
+        bgColor: "bg-amber-500/10",
+        borderColor: "border-amber-500/30",
+        step: 1,
+      }
+    }
     return {
       label: "Not Started",
       description: "Repair status not yet assigned",
