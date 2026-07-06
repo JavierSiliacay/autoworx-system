@@ -714,6 +714,7 @@ export default function AdminDashboard() {
   })
   const [isSavingJobOrderConfig, setIsSavingJobOrderConfig] = useState(false)
   const [jobOrderAdvisorError, setJobOrderAdvisorError] = useState(false)
+  const [jobOrderTargetDateError, setJobOrderTargetDateError] = useState(false)
 
   // Refs for stabilizing typing and real-time updates
   const costingDebounceRef = useRef<Record<string, any>>({})
@@ -2566,6 +2567,7 @@ export default function AdminDashboard() {
       targetDate: targetDateVal
     })
     setJobOrderAdvisorError(false)
+    setJobOrderTargetDateError(false)
     setIsJobOrderConfigModalOpen(true)
   }
 
@@ -2603,6 +2605,16 @@ export default function AdminDashboard() {
 
   const handleFinalizeAndPrintJobOrder = async () => {
     if (!configAppointment) return
+
+    if (!jobOrderConfig.targetDate || jobOrderConfig.targetDate.trim() === "") {
+      setJobOrderTargetDateError(true);
+      toast({
+        title: "Validation Error",
+        description: "Target Date is required before printing the Job Order.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!jobOrderConfig.serviceAdvisor || jobOrderConfig.serviceAdvisor.trim() === "") {
       setJobOrderAdvisorError(true);
@@ -7998,14 +8010,15 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="space-y-2 col-span-2 sm:col-span-1">
-                  <Label htmlFor="jo-target-date" className="text-xs font-bold text-primary uppercase tracking-wider">Target Date</Label>
+                  <Label htmlFor="jo-target-date" className="text-xs font-bold text-primary uppercase tracking-wider">Target Date <span className="text-red-500">*</span></Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         id="jo-target-date"
                         variant="outline"
                         className={cn(
-                          "w-full justify-start font-normal border-primary/30 hover:border-primary bg-background h-10 px-3",
+                          "w-full justify-start font-normal bg-background h-10 px-3",
+                          jobOrderTargetDateError ? "border-red-500 hover:border-red-500" : "border-primary/30 hover:border-primary",
                           !jobOrderConfig.targetDate && "text-muted-foreground"
                         )}
                       >
@@ -8047,6 +8060,7 @@ export default function AdminDashboard() {
                             ...jobOrderConfig,
                             targetDate: date ? format(date, "yyyy-MM-dd") : ""
                           });
+                          if (jobOrderTargetDateError) setJobOrderTargetDateError(false);
                         }}
                         initialFocus
                       />
@@ -8088,7 +8102,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="jo-advisor" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Prepared By (Service Advisor)</Label>
+                <Label htmlFor="jo-advisor" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Prepared By (Service Advisor) <span className="text-red-500">*</span></Label>
                 <Input
                   id="jo-advisor"
                   value={jobOrderConfig.serviceAdvisor}
