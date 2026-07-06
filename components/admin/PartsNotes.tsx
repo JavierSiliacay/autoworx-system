@@ -31,6 +31,8 @@ export function PartsNotes() {
   const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const ITEMS_PER_PAGE = 10
   
   const supabase = createClient()
@@ -109,12 +111,14 @@ export function PartsNotes() {
 
   const executeDelete = async () => {
     if (!deleteNoteId) return
+    setIsDeleting(true)
     
     const { error } = await supabase
       .from('parts_notes')
       .delete()
       .eq('id', deleteNoteId)
       
+    setIsDeleting(false)
     if (error) {
       toast({ title: "Failed to delete note", variant: "destructive" })
       return
@@ -138,7 +142,7 @@ export function PartsNotes() {
   const executeSave = async () => {
     if (!draftNote) return
     
-    setIsLoading(true)
+    setIsSaving(true)
     let error = null
     let returnedData = null
 
@@ -173,7 +177,7 @@ export function PartsNotes() {
     if (error || !returnedData) {
       console.error("Error saving note:", error)
       toast({ title: "Failed to save note", variant: "destructive" })
-      setIsLoading(false)
+      setIsSaving(false)
       return
     }
 
@@ -196,7 +200,7 @@ export function PartsNotes() {
     setNotes(newNotes)
     setDraftNote(null)
     setShowSaveConfirm(false)
-    setIsLoading(false)
+    setIsSaving(false)
     toast({ title: "Note saved successfully", className: "bg-emerald-500 text-white border-emerald-600" })
   }
 
@@ -248,10 +252,12 @@ export function PartsNotes() {
           />
           <Button 
             size="sm" 
+            disabled={isSaving}
             onClick={handleSaveClick} 
             className="bg-emerald-500 hover:bg-emerald-600 text-white shrink-0 ml-2 gap-1.5 h-8 font-bold shadow-sm"
           >
-            <Save className="w-3.5 h-3.5" /> Save
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} 
+            Save
           </Button>
         </div>
         <Textarea
@@ -270,7 +276,8 @@ export function PartsNotes() {
                 <Button variant="outline" onClick={() => setShowSaveConfirm(false)} className="font-bold border-slate-200 text-slate-600">
                   Cancel
                 </Button>
-                <Button autoFocus onClick={executeSave} className="font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button disabled={isSaving} autoFocus onClick={executeSave} className="font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                   Save
                 </Button>
               </div>
@@ -390,7 +397,8 @@ export function PartsNotes() {
                 <Button variant="outline" onClick={(e) => { e.stopPropagation(); setDeleteNoteId(null) }} className="font-bold border-slate-200 text-slate-600">
                   Cancel
                 </Button>
-                <Button autoFocus onClick={(e) => { e.stopPropagation(); executeDelete() }} className="font-bold bg-red-600 hover:bg-red-700 text-white">
+                <Button disabled={isDeleting} autoFocus onClick={(e) => { e.stopPropagation(); executeDelete() }} className="font-bold bg-red-600 hover:bg-red-700 text-white">
+                  {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                   Delete
                 </Button>
               </div>
