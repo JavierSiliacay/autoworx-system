@@ -8,7 +8,7 @@ import {
   ArrowUpCircle, ArrowDownCircle, LayoutDashboard,
   TrendingUp, TrendingDown, Boxes,
   CheckCircle2, Settings2, Check, Save,
-  Folder, ChevronDown, ChevronRight, LogOut, RotateCcw
+  Folder, ChevronDown, ChevronRight, LogOut, RotateCcw, StickyNote
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,11 +17,15 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
 import Link from "next/link"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger
 } from "@/components/ui/dialog"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select"
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger
+} from "@/components/ui/sheet"
+import { PartsNotes } from "@/components/admin/PartsNotes"
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
 type TransactionType = "STOCK_IN" | "STOCK_OUT" | "EDIT" | null
@@ -827,6 +831,28 @@ export default function PartsLedgerPage() {
                 <div className="text-red-400 font-bold text-[10px] uppercase tracking-widest">Parts & Accessories Inventory</div>
               </div>
             </Link>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="ghost" className="text-amber-400 hover:bg-slate-800 hover:text-amber-300 gap-2 ml-4">
+                  <StickyNote className="w-4 h-4" /> Notes
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[800px] h-[600px] p-0 flex flex-col overflow-hidden bg-slate-50">
+                <div className="p-6 pb-4 bg-[#0f172a] border-b border-slate-800">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-black flex items-center gap-2">
+                      <StickyNote className="w-5 h-5 text-amber-500" />
+                      <span className="text-red-600">Parts</span>
+                      <span className="text-white">Room Notes</span>
+                    </DialogTitle>
+                  </DialogHeader>
+                </div>
+                <div className="flex-1 p-4 overflow-hidden">
+                  <PartsNotes />
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="flex items-center gap-3">
@@ -838,6 +864,7 @@ export default function PartsLedgerPage() {
                 <LayoutDashboard className="w-4 h-4" /> Dashboard
               </Button>
             </Link>
+
             <Button size="sm" onClick={fetchLedger} variant="ghost" className="text-slate-400 hover:text-white hover:bg-slate-800">
               <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
             </Button>
