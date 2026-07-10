@@ -97,6 +97,7 @@ import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
 import { ReleaseMonitoring } from "@/components/admin/release-monitoring"
 import { AddAppointmentModal } from "@/components/admin/add-appointment-modal"
 import { SalesMonitoring } from "@/components/admin/sales-monitoring"
+import { ActiveRepairsMonitoring } from "@/components/admin/active-repairs-monitoring"
 import { WhatIsNewModal } from "@/components/admin/what-is-new-modal"
 import {
   Dialog,
@@ -542,7 +543,7 @@ export default function AdminDashboard() {
   const [zoomModalOpen, setZoomModalOpen] = useState(false)
   const [zoomImages, setZoomImages] = useState<string[]>([])
   const [zoomInitialIndex, setZoomInitialIndex] = useState(0)
-  const [activeTab, setActiveTab] = useState<"appointments" | "history" | "sales" | "recommendations">("appointments")
+  const [activeTab, setActiveTab] = useState<"appointments" | "history" | "sales" | "active-repairs" | "recommendations">("appointments")
   const [historyRecords, setHistoryRecords] = useState<HistoryRecord[]>([])
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
@@ -4043,6 +4044,19 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => {
+              setActiveTab("active-repairs")
+            }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "active-repairs"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            <Activity className="w-4 h-4 inline-block mr-2" />
+            Active On-Going Repairs
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setActiveTab("history")
               setShowDeletedHistory(true)
               loadDeletedAppointments()
@@ -6069,6 +6083,21 @@ export default function AdminDashboard() {
                 onUpdate={() => {
                   loadAppointments()
                   loadHistory()
+                }}
+              />
+            </div>
+          )
+        }
+
+        {
+          activeTab === "active-repairs" && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <ActiveRepairsMonitoring
+                records={[
+                  ...appointments.filter(a => a.isSynced).map(a => ({ ...a, source: 'active' }))
+                ]}
+                onUpdate={() => {
+                  loadAppointments()
                 }}
               />
             </div>

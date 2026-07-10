@@ -1080,6 +1080,171 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
 </html>`;
 }
 
+export function generateActiveRepairsDoc(records: any[], monthLabel: string, title: string = "ACTIVE ON-GOING REPAIRS", dateColumnLabel: string = "DATE ENTERED"): string {
+  const rowsHtml = records.map((r: any, idx: number) => {
+    const claimType = r.insurance ? r.insurance.toUpperCase() : "";
+    const unitStr = `${r.vehicle_year || r.vehicleYear || ""} ${r.vehicle_make || r.vehicleMake || ""} ${r.vehicle_model || r.vehicleModel || ""}`.trim();
+
+    const entryDateStr = (r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at)
+      ? new Date(r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at).toLocaleDateString("en-US")
+      : "-";
+
+    const entryDateObj = (r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at)
+      ? new Date(r.syncedAt || r.synced_at || r.createdAt || r.original_created_at || r.created_at)
+      : null;
+    const now = new Date();
+    let ageDaysText = "-";
+    let ageMonthsText = "-";
+    if (entryDateObj && !isNaN(entryDateObj.getTime())) {
+      const diffTime = Math.abs(now.getTime() - entryDateObj.getTime());
+      ageDaysText = `${Math.floor(diffTime / (1000 * 60 * 60 * 24))}d`;
+
+      let months = (now.getFullYear() - entryDateObj.getFullYear()) * 12 + (now.getMonth() - entryDateObj.getMonth());
+      if (now.getDate() < entryDateObj.getDate()) {
+        months--;
+      }
+      ageMonthsText = `${Math.max(0, months)}m`;
+    }
+
+    const jobOrderHistory = r.costing?.jobOrderHistory || [];
+    const latestHistory = jobOrderHistory.length > 0 ? jobOrderHistory[jobOrderHistory.length - 1] : null;
+    const targetDateRaw = latestHistory?.targetDate || r.target_date || r.targetDate;
+    let formattedTargetDate = "-";
+    if (targetDateRaw) {
+      const [y, m, d] = targetDateRaw.split("-").map(Number);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        formattedTargetDate = new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      }
+    }
+
+    return `
+      <tr>
+        <td>${idx + 1}</td>
+        <td class="text-left">${unitStr}</td>
+        <td>${r.vehicle_plate || r.vehiclePlate || ""}</td>
+        <td>${r.vehicle_color || r.vehicleColor || ""}</td>
+        <td class="text-left">${r.name || ""}</td>
+        <td style="font-size: 8px;">${claimType}</td>
+        <td class="text-left">${r.estimate_number || r.estimateNumber || r.trackingCode || ""}</td>
+        <td>${r.current_repair_part || r.currentRepairPart || ""}</td>
+        <td style="font-weight: bold;">ON-GOING REPAIR</td>
+        <td>${entryDateStr}</td>
+        <td style="color: #d97706; font-weight: bold;">${formattedTargetDate}</td>
+        <td>${ageDaysText}</td>
+        <td>${ageMonthsText}</td>
+        <td class="text-left">${r.paul_notes || r.paulNotes || r.remarks || ""}</td>
+      </tr>
+    `;
+  }).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Active Repairs Monitoring - ${monthLabel}</title>
+  <style>
+    @page { 
+      size: 13in 8.5in; /* Long Bond Paper Landscape */
+      margin: 0.4in; 
+    }
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0; 
+      padding: 0;
+      font-size: 9px;
+      -webkit-print-color-adjust: exact;
+      color: #000;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 4px;
+      text-align: center;
+      word-wrap: break-word;
+      vertical-align: middle;
+    }
+    th {
+      font-weight: bold;
+    }
+    thead {
+      display: table-header-group;
+    }
+    tbody tr {
+      page-break-inside: avoid;
+    }
+    .text-left { text-align: left; }
+    .text-right { text-align: right; }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: bold;
+      font-family: 'Times New Roman', serif;
+      letter-spacing: 2px;
+      display: inline-flex;
+      padding-bottom: 5px;
+    }
+    .red-line {
+      border-bottom: 4px solid #FF0000;
+      color: #FF0000;
+      text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;
+      padding-right: 5px;
+    }
+    .black-line {
+      border-bottom: 4px solid #000000;
+      color: #000000;
+      text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;
+    }
+  </style>
+</head>
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th colspan="14" style="text-align: left; border: none; padding-bottom: 10px;">
+          <h1>
+            <span class="red-line">ACTIVE</span>
+            <span class="black-line">ON-GOING REPAIRS</span>
+          </h1>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px;">
+            <div style="display: flex; gap: 40px; align-items: baseline;">
+              <div style="font-weight: bold; font-size: 10px;">UNIT ENTRY</div>
+              <div style="font-weight: normal; font-size: 13px; margin-left: 20px; color: #333;">As of: ${monthLabel}</div>
+            </div>
+            <div style="font-weight: bold; font-size: 16px; color: #000;">
+              Date Printed: <span style="font-weight: normal; font-size: 14px; margin-left: 8px;">${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} ${new Date().toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+            </div>
+          </div>
+        </th>
+      </tr>
+      <tr style="background: #fff345ff; color: #000;">
+        <th style="font-size: 8px; width: 3%;">NO.</th>
+        <th style="font-size: 8px; width: 13%;">UNIT</th>
+        <th style="font-size: 8px; width: 7%;">PLATE</th>
+        <th style="font-size: 8px; width: 5%;">COLOR</th>
+        <th style="font-size: 8px; width: 16%;">OWNER</th>
+        <th style="font-size: 6px; width: 8%;">CLAIM TYPE<br/>INSURANCE/PERSONAL</th>
+        <th style="font-size: 8px; width: 10%;">JO/ ES/ PO #</th>
+        <th style="font-size: 8px; width: 6%;">MOD</th>
+        <th style="font-size: 8px; width: 6%;">STATUS</th>
+        <th style="font-size: 8px; width: 7%;">${dateColumnLabel}</th>
+        <th style="font-size: 8px; width: 7%;">TARGET DATE</th>
+        <th style="font-size: 8px; width: 4%;">AGE (D)</th>
+        <th style="font-size: 8px; width: 4%;">AGE (M)</th>
+        <th style="font-size: 8px; width: 12%;">REMARKS</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+  </table>
+</body>
+</html>`;
+}
+
 export async function generateJobOrderPDF(appointment: TrackingAppointment): Promise<string> {
   const displayTitle = "JOB ORDER"
   const isReleased = appointment.isArchived
