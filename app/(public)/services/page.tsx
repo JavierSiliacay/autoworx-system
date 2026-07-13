@@ -45,7 +45,7 @@ const services = [
   },
   {
     icon: BatteryIcon,
-    title: "AC & Electrical",
+    title: "Electrical",
     description: "Keep cool and powered with our expert AC and electrical system diagnostics and repairs.",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
@@ -54,7 +54,7 @@ const services = [
   },
   {
     icon: CarFrontIcon,
-    title: "Body Repairs & Painting",
+    title: "Painting",
     description: "Restore your vehicle's appearance with our professional body work and painting services.",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
@@ -81,7 +81,7 @@ const services = [
   },
   {
     icon: DetailingIcon,
-    title: "Wash Over & Car Detailing",
+    title: "Detailing",
     description: "Professional cleaning and detailing services to make your vehicle look showroom-ready.",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",

@@ -148,14 +148,19 @@ const getServiceCategoryLabel = (appointment: any) => {
 
     const mapping: Record<string, string> = {
       "Mechanical Services": "Mechanical",
-      "Preventive Maintenance": "Preventive Maintenance",
-      "Engine & Transmission": "Engine & Transmission",
-      "Under Chassis": "Under Chassis",
-      "AC & Electrical": "AC & Electrical",
-      "Body Repairs & Painting": "Body Repairs & Painting",
-      "General Body Repairs & Fabrication": "General Body Repairs & Fabrication",
-      "General Overhauling": "General Overhauling",
-      "Wash Over & Car Detailing": "Car Detailing",
+      "Preventive Maintenance": "Mechanical",
+      "Engine & Transmission": "Mechanical",
+      "Under Chassis": "Mechanical",
+      "Electrical": "Electrical",
+      "Aircon": "Aircon",
+      "Painting": "Painting",
+      "Body Repairs & Tinsmith/Alignment": "Body Repairs & Tinsmith/Alignment",
+      "AC & Electrical": "Electrical",
+      "Body Repairs & Painting": "Painting",
+      "General Body Repairs & Fabrication": "Body Repairs & Tinsmith/Alignment",
+      "General Overhauling": "Mechanical",
+      "Detailing": "Detailing",
+      "Wash Over & Car Detailing": "Detailing",
       "24/7 Towing Service": "Towing",
       "Insurance Claim": "Insurance",
       "Rent A Car": "Rent A Car",
@@ -344,6 +349,14 @@ const fixImageUrl = (url: string | null | undefined): string | undefined => {
   return `${publicBaseUrl}/${url}`;
 };
 
+const mapLegacyServices = (service: string | undefined | null) => {
+  if (!service) return "";
+  return service
+    .replace(/Body Repairs & Painting/g, "Painting")
+    .replace(/Wash Over & Car Detailing/g, "Detailing")
+    .replace(/AC & Electrical/g, "Electrical");
+};
+
 // Helper to convert DB response to frontend format
 function dbToFrontend(apt: AppointmentDB): Appointment {
   const costing = apt.costing ? {
@@ -366,7 +379,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     engineNumber: apt.engine_number,
     odoMileage: apt.odo_mileage,
     assigneeDriver: apt.assignee_driver,
-    service: apt.service,
+    service: mapLegacyServices(apt.service),
     preferredDate: apt.preferred_date,
     message: apt.message,
     status: apt.status,
@@ -442,6 +455,34 @@ function sortCostingItems(items: CostItem[]): CostItem[] {
 const normalizeString = (str: string) => {
   if (!str) return ""
   return str.toLowerCase().replace(/[\s\-\.\/\,]/g, "")
+}
+
+const mapLegacyServiceForSearch = (serviceStr: string | undefined | null) => {
+  if (!serviceStr) return "";
+  const mapping: Record<string, string> = {
+    "Mechanical Services": "Mechanical Services",
+    "Preventive Maintenance": "Mechanical Services",
+    "Engine & Transmission": "Mechanical Services",
+    "Under Chassis": "Mechanical Services",
+    "Electrical": "Electrical",
+    "Aircon": "Aircon",
+    "Painting": "Painting",
+    "Body Repairs & Tinsmith/Alignment": "Body Repairs & Tinsmith/Alignment",
+    "AC & Electrical": "Electrical",
+    "Body Repairs & Painting": "Painting",
+    "General Body Repairs & Fabrication": "Body Repairs & Tinsmith/Alignment",
+    "General Overhauling": "Mechanical Services",
+    "Detailing": "Detailing",
+    "Wash Over & Car Detailing": "Detailing",
+    "24/7 Towing Service": "24/7 Towing Service",
+    "Insurance Claim": "Insurance Claim",
+    "Rent A Car": "Rent A Car",
+    "Glassworks": "Glassworks",
+    "Parts": "Parts",
+    "Machine Works": "Machine Works",
+    "Other": "Other"
+  };
+  return serviceStr.split(",").map(s => mapping[s.trim()] || s.trim()).join(", ");
 }
 
 const MONTHS = [
@@ -746,6 +787,7 @@ export default function AdminDashboard() {
         const data = await response.json() as HistoryRecord[]
         const fixedData = data.map(record => ({
           ...record,
+          service: mapLegacyServices(record.service),
           orcr_image: fixImageUrl(record.orcr_image),
           orcr_image_2: fixImageUrl(record.orcr_image_2),
           loa_attachment: fixImageUrl(record.loa_attachment),
@@ -3484,7 +3526,8 @@ export default function AdminDashboard() {
     // Vehicle brand filter
     if (vehicleBrandFilter !== "all" && apt.vehicleMake !== vehicleBrandFilter) return false
     // Service filter
-    if (serviceFilter !== "all" && !apt.service?.split(", ").includes(serviceFilter)) return false
+    const mappedService = mapLegacyServiceForSearch(apt.service);
+    if (serviceFilter !== "all" && !mappedService.split(", ").includes(serviceFilter)) return false
     // Date range filter
     if (!isInDateRange(apt.createdAt, dateRangeFilter)) return false
     // Search filter (Tokenized for Relational/Multi-field matching)
@@ -3513,10 +3556,16 @@ export default function AdminDashboard() {
         const matchesEstimateNumber = normalizeString(apt.estimateNumber || "").includes(normalizedToken)
         const matchesInsurance = normalizeString(apt.insurance || "").includes(normalizedToken)
         const matchesServiceAdvisor = normalizeString(apt.serviceAdvisor || apt.costing?.serviceAdvisorName || "").includes(normalizedToken)
+        const matchesService = normalizeString(mappedService).includes(normalizedToken)
+        const matchesCostingItems = [
+          ...(apt.costing?.items || []).map((item: any) => item.category),
+          ...(apt.costing?.items || []).map((item: any) => item.type),
+          ...(apt.costing?.items || []).map((item: any) => item.description)
+        ].some(field => normalizeString(field || "").includes(normalizedToken))
 
         return matchesName || matchesEmail || matchesPhone || matchesPlate || matchesBrand ||
           matchesModel || matchesTrackingCode || matchesMessage || matchesEstimateNumber ||
-          matchesInsurance || matchesServiceAdvisor || matchesMonth
+          matchesInsurance || matchesServiceAdvisor || matchesMonth || matchesService || matchesCostingItems
       })
 
       if (!isRecordMatch) return false
@@ -3616,7 +3665,8 @@ export default function AdminDashboard() {
         if (!isInDateRange(record.original_created_at, historyDateRangeFilter)) return false
 
         // Service filter
-        if (historyServiceFilter !== "all" && !record.service?.split(", ").includes(historyServiceFilter)) return false
+        const mappedService = mapLegacyServiceForSearch(record.service);
+        if (historyServiceFilter !== "all" && !mappedService.split(", ").includes(historyServiceFilter)) return false
 
         // Search filter (Tokenized for Relational/Multi-field matching)
         if (historySearchQuery.trim()) {
@@ -3643,10 +3693,16 @@ export default function AdminDashboard() {
             const matchesMessage = normalizeString(record.message || "").includes(normalizedToken)
             const matchesEstimateNumber = normalizeString(record.estimate_number || "").includes(normalizedToken)
             const matchesInsurance = normalizeString(record.insurance || "").includes(normalizedToken)
+            const matchesService = normalizeString(mappedService).includes(normalizedToken)
+            const matchesCostingItems = [
+              ...(record.costing?.items || []).map((item: any) => item.category),
+              ...(record.costing?.items || []).map((item: any) => item.type),
+              ...(record.costing?.items || []).map((item: any) => item.description)
+            ].some(field => normalizeString(field || "").includes(normalizedToken))
 
             return matchesName || matchesEmail || matchesPhone || matchesPlate || matchesBrand ||
               matchesModel || matchesTrackingCode || matchesMessage || matchesEstimateNumber ||
-              matchesInsurance || matchesMonth
+              matchesInsurance || matchesMonth || matchesService || matchesCostingItems
           })
 
           if (!isRecordMatch) return false
@@ -3919,10 +3975,7 @@ export default function AdminDashboard() {
             <div className="text-2xl font-bold text-green-500">{dashboardStats.completed}</div>
             <div className="text-sm text-muted-foreground font-medium">Completed</div>
           </div>
-          <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-orange-500">{dashboardStats.pendingInspection}</div>
-            <div className="text-sm text-muted-foreground font-medium">Pending Inspection</div>
-          </div>
+
           <div className="p-4 bg-card rounded-xl border border-primary/30">
             <div className="text-2xl font-bold text-primary">{dashboardStats.waitingForApproval}</div>
             <div className="text-sm text-muted-foreground font-medium">Waiting for Approval</div>

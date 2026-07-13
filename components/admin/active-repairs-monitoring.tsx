@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { Printer, Calendar as CalendarIcon, FileDown, Eye, Edit, Save, Loader2, X, FileCheck, FileX, Trash2, RefreshCw, BarChart3, TrendingUp, Search } from "lucide-react"
+import { Printer, Calendar as CalendarIcon, FileDown, Eye, Edit, Save, Loader2, X, FileCheck, FileX, Trash2, RefreshCw, BarChart3, TrendingUp, Search, Copy } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { generateActiveRepairsDoc } from "@/lib/generate-pdf"
+import { SERVICES } from "@/lib/constants"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -61,17 +62,7 @@ const parseCommaNumber = (value: string) => {
     return value.replace(/,/g, "");
 };
 
-const SERVICE_CATEGORIES = [
-    "Mechanical Works",
-    "Electrical",
-    "Aircon",
-    "Tinsmith/Alignment",
-    "Glassworks",
-    "Remove and Install",
-    "Detailing",
-    "Painting",
-    "Parts"
-];
+const SERVICE_CATEGORIES = SERVICES;
 
 export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[], onUpdate?: () => void }) {
     const { data: session } = useSession()
@@ -109,11 +100,11 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
     // Default to the latest month or current month if no data
     const currentYear = new Date().getFullYear().toString()
     const currentMonthKey = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
-    
+
     const [selectedYear, setSelectedYear] = useState<string>(
         availableYears.length > 0 ? availableYears[0] : currentYear
     )
-    
+
     const [selectedMonth, setSelectedMonth] = useState<string>(
         availableMonths.length > 0 ? availableMonths[0][0] : currentMonthKey
     )
@@ -137,9 +128,10 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
     const [editedData, setEditedData] = useState<Record<string, any>>({})
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+    const [showCategories, setShowCategories] = useState(false)
     const [claimTypeFilter, setClaimTypeFilter] = useState("all")
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
-    const [viewDetailsModal, setViewDetailsModal] = useState<{isOpen: boolean, record: any | null}>({ isOpen: false, record: null })
+    const [viewDetailsModal, setViewDetailsModal] = useState<{ isOpen: boolean, record: any | null }>({ isOpen: false, record: null })
     const [manualEntry, setManualEntry] = useState({
         name: "",
         vehicle_make: "",
@@ -179,6 +171,36 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                 if (selectedYear !== "all" && year !== selectedYear) return false
             }
 
+            const mapLegacyService = (serviceStr: string | undefined | null) => {
+                if (!serviceStr) return "";
+                const mapping: Record<string, string> = {
+                    "Mechanical Services": "Mechanical Services",
+                    "Preventive Maintenance": "Mechanical Services",
+                    "Engine & Transmission": "Mechanical Services",
+                    "Under Chassis": "Mechanical Services",
+                    "Electrical": "Electrical",
+                    "Aircon": "Aircon",
+                    "Painting": "Painting",
+                    "Body Repairs & Tinsmith/Alignment": "Body Repairs & Tinsmith/Alignment",
+                    "AC & Electrical": "Electrical",
+                    "Body Repairs & Painting": "Painting",
+                    "General Body Repairs & Fabrication": "Body Repairs & Tinsmith/Alignment",
+                    "General Overhauling": "Mechanical Services",
+                    "Detailing": "Detailing",
+                    "Wash Over & Car Detailing": "Detailing",
+                    "24/7 Towing Service": "24/7 Towing Service",
+                    "Insurance Claim": "Insurance Claim",
+                    "Rent A Car": "Rent A Car",
+                    "Glassworks": "Glassworks",
+                    "Parts": "Parts",
+                    "Machine Works": "Machine Works",
+                    "Other": "Other"
+                };
+                return serviceStr.split(",").map(s => mapping[s.trim()] || s.trim()).join(", ");
+            }
+
+            const mappedService = mapLegacyService(r.service);
+
             if (searchQuery.trim()) {
                 const tokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean)
                 const isRecordMatch = tokens.every(token => {
@@ -195,6 +217,7 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                         r.paul_notes || r.paulNotes,
                         r.current_repair_part || r.currentRepairPart,
                         r.trackingCode || r.tracking_code,
+                        mappedService,
                         ...(r.costing?.items || []).map((item: any) => item.category),
                         ...(r.costing?.items || []).map((item: any) => item.type),
                         ...(r.costing?.items || []).map((item: any) => item.description)
@@ -204,8 +227,8 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
             }
 
             if (selectedCategories.length > 0) {
-                const itemCategories = (r.costing?.items || []).map((item: any) => item.category?.trim()).filter(Boolean);
-                const hasMatch = selectedCategories.some(cat => itemCategories.includes(cat));
+                const recordServices = mappedService.split(",").map((s: string) => s.trim()).filter(Boolean);
+                const hasMatch = selectedCategories.some(cat => recordServices.includes(cat));
                 if (!hasMatch) return false;
             }
 
@@ -233,10 +256,10 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
     const getCategorizedCosts = (r: any) => {
         const costing = r.costing
         let result = { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 }
-        
+
         // Use edited data if available
         const edited = editedData[r.id] || {}
-        
+
         if (!costing && !edited.brpad && !edited.aircon && !edited.electrical && !edited.mechanical) return result
 
         // If we are currently editing costs, prioritize those live values
@@ -245,7 +268,7 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
             result.aircon = Number(edited.aircon ?? (costing?.gatepass_breakdown?.aircon ?? 0))
             result.electrical = Number(edited.electrical ?? (costing?.gatepass_breakdown?.electrical ?? 0))
             result.mechanical = Number(edited.mechanical ?? (costing?.gatepass_breakdown?.mechanical ?? 0))
-            
+
             const subtotal = result.brpad + result.aircon + result.electrical + result.mechanical
             let discount = 0;
             if (Number(costing?.discount) > 0) {
@@ -305,7 +328,7 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
         return result
     }
 
-    
+
 
     const tableTotals = useMemo(() => {
         return tableRecords.reduce((acc, r) => {
@@ -329,6 +352,11 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
         }
 
         let dynamicTitle = "ACTIVE ON-GOING REPAIRS"
+        if (selectedCategories.length > 0) {
+            dynamicTitle = `ACTIVE ${selectedCategories.join(" & ").toUpperCase()} REPAIRS`
+        } else if (searchQuery.trim() !== "") {
+            dynamicTitle = `ACTIVE ${searchQuery.trim().toUpperCase()} REPAIRS`
+        }
 
         const htmlContent = generateActiveRepairsDoc(filteredRecords, reportPeriodLabel, dynamicTitle, "DATE ENTRY")
 
@@ -345,6 +373,31 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
             printWindow.focus()
             printWindow.print()
         }, 800)
+    }
+
+    const handleCopyAllInfo = () => {
+        if (tableRecords.length === 0) {
+            toast({ title: "No data", description: "No records found to copy.", variant: "destructive" });
+            return;
+        }
+
+        let dynamicTitle = "ACTIVE ON-GOING REPAIRS"
+        if (selectedCategories.length > 0) {
+            dynamicTitle = `ACTIVE ${selectedCategories.join(" & ").toUpperCase()} REPAIRS`
+        } else if (searchQuery.trim() !== "") {
+            dynamicTitle = `ACTIVE ${searchQuery.trim().toUpperCase()} REPAIRS`
+        }
+
+        const recordsText = tableRecords.map((r, idx) => {
+            const unitStr = `${r.vehicle_year || r.vehicleYear || ""} ${r.vehicle_make || r.vehicleMake || ""} ${r.vehicle_model || r.vehicleModel || ""}`.trim();
+            return `${idx + 1}.\nUNIT: ${unitStr}\nPLATE: ${r.vehicle_plate || r.vehiclePlate || ""}\nCOLOR: ${r.vehicle_color || r.vehicleColor || ""}\nOWNER: ${r.name || ""}`;
+        }).join("\n\n");
+
+        const text = `${dynamicTitle}\n\n${recordsText}`;
+
+        navigator.clipboard.writeText(text).then(() => {
+            toast({ title: "Copied List", description: `${tableRecords.length} records copied to clipboard.` });
+        });
     }
 
     const handlePrintJobOrder = async (record: any) => {
@@ -461,8 +514,8 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
             const data = await response.json().catch(() => ({}));
 
             if (response.ok) {
-                toast({ 
-                    title: "Record Deleted", 
+                toast({
+                    title: "Record Deleted",
                     description: `"${name}" has been permanently removed from the database.`,
                 })
                 // Trigger refresh in parent component
@@ -474,10 +527,10 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
             }
         } catch (e: any) {
             console.error("[SalesMonitoring] Delete error:", e);
-            toast({ 
-                title: "Deletion Failed", 
-                description: e.message || "Could not remove record. Please check your connection and try again.", 
-                variant: "destructive" 
+            toast({
+                title: "Deletion Failed",
+                description: e.message || "Could not remove record. Please check your connection and try again.",
+                variant: "destructive"
             })
         } finally {
             setIsSaving(false)
@@ -543,9 +596,9 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                     </SelectContent>
                                 </Select>
 
-                                <Select 
-                                    value={selectedMonth.split('-')[1] || "01"} 
-                                    onValueChange={(m) => setSelectedMonth(`${selectedYear}-${m}`)} 
+                                <Select
+                                    value={selectedMonth.split('-')[1] || "01"}
+                                    onValueChange={(m) => setSelectedMonth(`${selectedYear}-${m}`)}
                                     disabled={isEditing || isSaving}
                                 >
                                     <SelectTrigger className="w-[130px]">
@@ -708,17 +761,17 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                                     initialFocus
                                                     footer={
                                                         <div className="flex items-center justify-between gap-2 p-3 border-t bg-muted/10">
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="sm" 
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
                                                                 className="text-[9px] h-7 px-2 font-bold hover:bg-primary/10 hover:text-primary transition-colors"
                                                                 onClick={() => setManualEntry({ ...manualEntry, created_at: format(new Date(), "yyyy-MM-dd") })}
                                                             >
                                                                 TODAY
                                                             </Button>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="sm" 
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
                                                                 className="text-[9px] h-7 px-2 font-bold hover:bg-primary/10 hover:text-primary transition-colors"
                                                                 onClick={() => {
                                                                     const yesterday = new Date();
@@ -900,31 +953,42 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
             </div>
 
             <div className="p-2 overflow-x-auto">
-                <div className="flex flex-wrap items-center gap-2 mb-4 mt-2">
-                    {SERVICE_CATEGORIES.map(cat => (
-                        <Badge 
-                            key={cat} 
-                            variant={selectedCategories.includes(cat) ? "default" : "outline"}
-                            className="cursor-pointer hover:bg-primary/90 hover:text-primary-foreground transition-colors"
-                            onClick={() => {
-                                setSelectedCategories(prev => 
-                                    prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
-                                )
-                            }}
-                        >
-                            {cat}
-                        </Badge>
-                    ))}
-                    {selectedCategories.length > 0 && (
-                        <Badge 
-                            variant="destructive" 
-                            className="cursor-pointer ml-auto"
-                            onClick={() => setSelectedCategories([])}
-                        >
-                            Clear Filters
-                        </Badge>
-                    )}
-                </div>
+                <Button 
+                    variant="ghost" 
+                    className="w-full justify-center text-xs text-blue-500 border-dashed border border-blue-500/50 mb-4 hover:bg-blue-500/10 hover:text-blue-400" 
+                    onClick={() => setShowCategories(!showCategories)}
+                >
+                    {showCategories ? "HIDE SERVICE CATEGORIES" : "CLICK TO SEE THE SERVICE CATEGORIES"}
+                </Button>
+                
+                {showCategories && (
+                    <div className="flex flex-wrap items-center gap-2 mb-4 mt-2">
+                        {SERVICE_CATEGORIES.map(cat => (
+                            <Badge
+                                key={cat}
+                                variant={selectedCategories.includes(cat) ? "default" : "outline"}
+                                className="cursor-pointer hover:bg-primary/90 hover:text-primary-foreground transition-colors"
+                                onClick={() => {
+                                    setSelectedCategories(prev =>
+                                        prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+                                    )
+                                }}
+                            >
+                                {cat}
+                            </Badge>
+                        ))}
+                        {selectedCategories.length > 0 && (
+                            <Badge
+                                variant="destructive"
+                                className="cursor-pointer ml-auto"
+                                onClick={() => setSelectedCategories([])}
+                            >
+                                Clear Filters
+                            </Badge>
+                        )}
+                    </div>
+                )}
+
                 <table className="w-full border-collapse text-[9px]">
                     <thead>
                         <tr>
@@ -934,7 +998,13 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                 </h1>
                                 <div className="flex gap-10 items-baseline mt-2 mb-2">
                                     <div className="font-bold text-lg text-foreground uppercase">Unit Entry</div>
-                                    <div className="font-normal text-sm text-foreground ml-5">As of: {reportPeriodLabel}</div>
+                                    <div className="font-normal text-sm text-foreground flex items-center gap-4">
+                                        <span>As of: {reportPeriodLabel}</span>
+                                        <Button onClick={handleCopyAllInfo} variant="secondary" size="sm" className="h-8 gap-2 bg-blue-600 text-white hover:bg-blue-700">
+                                            <Copy className="w-3 h-3" />
+                                            Copy List
+                                        </Button>
+                                    </div>
                                 </div>
                             </th>
                             <th colSpan={8} className="text-right pb-4 border-none align-bottom">
@@ -958,11 +1028,11 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                             <th className="p-1 border border-border text-center font-bold text-[9px]">OWNER</th>
                             <th className="p-1 border border-border text-center font-bold text-[8px] leading-tight w-20 uppercase">Claim Type</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px]">JO/ ES/ PO #</th>
-                            
-                            
-                            
-                            
-                            
+
+
+
+
+
                             <th className="p-1 border border-border text-center font-bold text-[9px]">MOD</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px]">DATE ENTERED</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px]">TARGET DATE</th>
@@ -988,7 +1058,7 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                 const costs = getCategorizedCosts(r)
                                 const currentVal = (field: string) => {
                                     if (editedData[r.id]?.[field] !== undefined) return editedData[r.id][field];
-                                    
+
                                     // Try snake_case then camelCase
                                     const camelField = field.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
                                     return r[field] ?? r[camelField] ?? "";
@@ -1003,7 +1073,7 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                 if (entryDate) {
                                     const diffTime = Math.abs(now.getTime() - entryDate.getTime());
                                     ageDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                                    
+
                                     ageMonths = (now.getFullYear() - entryDate.getFullYear()) * 12 + (now.getMonth() - entryDate.getMonth());
                                     if (now.getDate() < entryDate.getDate()) {
                                         ageMonths--;
@@ -1024,8 +1094,8 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                 }
 
                                 return (
-                                    <tr 
-                                        key={r.id} 
+                                    <tr
+                                        key={r.id}
                                         className={`group border-b border-border transition-all duration-200 ${isEditing ? 'bg-muted/30' : 'hover:bg-muted/20 cursor-pointer hover:outline hover:outline-2 hover:-outline-offset-2 hover:outline-blue-500 relative hover:z-10'}`}
                                         onClick={(e) => {
                                             if (!isEditing) {
@@ -1072,17 +1142,17 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                         <td className="p-1 border border-border text-center">
                                             {isEditing ? <Input className="h-6 text-[9px] px-1 text-center min-w-[120px]" value={currentVal("estimate_number")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), estimate_number: e.target.value } }))} /> : (r.estimate_number || r.estimateNumber || r.trackingCode || "")}
                                         </td>
-                                        
+
                                         <td className="p-1 border border-border text-center">
                                             {isEditing ? <Input className="h-6 text-[9px] px-1 text-center" value={currentVal("current_repair_part")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), current_repair_part: e.target.value } }))} /> : (r.current_repair_part || r.currentRepairPart || "")}
                                         </td>
                                         <td className="p-1 border border-border text-center font-mono text-[9px] uppercase">
                                             {isEditing ? (
-                                                <Input 
-                                                    type="date" 
-                                                    className="h-6 text-[9px] px-1 text-center w-full" 
-                                                    value={currentVal("synced_at") ? new Date(currentVal("synced_at")).toISOString().split('T')[0] : (syncDateStr ? new Date(syncDateStr).toISOString().split('T')[0] : "")} 
-                                                    onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), synced_at: e.target.value } }))} 
+                                                <Input
+                                                    type="date"
+                                                    className="h-6 text-[9px] px-1 text-center w-full"
+                                                    value={currentVal("synced_at") ? new Date(currentVal("synced_at")).toISOString().split('T')[0] : (syncDateStr ? new Date(syncDateStr).toISOString().split('T')[0] : "")}
+                                                    onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), synced_at: e.target.value } }))}
                                                 />
                                             ) : dateStr}
                                         </td>
@@ -1097,10 +1167,10 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                         </td>
                                         <td className={`p-1 border border-border text-left ${!isEditing ? "truncate max-w-[110px]" : "min-w-[200px]"}`} title={r.paul_notes || r.paulNotes || r.remarks || ""}>
                                             {isEditing ? (
-                                                <Input 
-                                                    className="h-6 text-[10px] px-1 w-full" 
-                                                    value={currentVal("paul_notes")} 
-                                                    onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), paul_notes: e.target.value } }))} 
+                                                <Input
+                                                    className="h-6 text-[10px] px-1 w-full"
+                                                    value={currentVal("paul_notes")}
+                                                    onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), paul_notes: e.target.value } }))}
                                                 />
                                             ) : (r.paul_notes || r.paulNotes || r.remarks)}
                                         </td>
@@ -1144,7 +1214,7 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                             <tr><td colSpan={18} className="p-12 text-center text-muted-foreground italic">No records found for {reportPeriodLabel}.</td></tr>
                         )}
                     </tbody>
-                    
+
                 </table>
             </div>
         </div>

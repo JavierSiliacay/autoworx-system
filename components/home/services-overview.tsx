@@ -24,23 +24,23 @@ const services = [
   },
   {
     icon: BatteryIcon,
-    title: "AC & Electrical",
-    description: "Air conditioning repairs, electrical diagnostics, battery service, and wiring repairs.",
+    title: "Electrical",
+    description: "Electrical diagnostics, battery service, and wiring repairs.",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
     image: "/services/electrical.jpg"
   },
   {
     icon: CarFrontIcon,
-    title: "Body Repairs & Painting",
-    description: "Collision repair, dent removal, rust treatment, and professional automotive painting.",
+    title: "Painting",
+    description: "Professional automotive painting.",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
     image: "/services/painting.jpg"
   },
   {
     icon: DetailingIcon,
-    title: "Car Detailing",
+    title: "Detailing",
     description: "Interior and exterior detailing, wash services, and paint protection treatments.",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",

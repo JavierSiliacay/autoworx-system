@@ -1132,7 +1132,6 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
         <td style="color: #d97706; font-weight: bold;">${formattedTargetDate}</td>
         <td>${ageDaysText}</td>
         <td>${ageMonthsText}</td>
-        <td class="text-left">${r.paul_notes || r.paulNotes || r.remarks || ""}</td>
       </tr>
     `;
   }).join("");
@@ -1204,10 +1203,10 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
   <table>
     <thead>
       <tr>
-        <th colspan="14" style="text-align: left; border: none; padding-bottom: 10px;">
+        <th colspan="13" style="text-align: left; border: none; padding-bottom: 10px;">
           <h1>
-            <span class="red-line">ACTIVE</span>
-            <span class="black-line">ON-GOING REPAIRS</span>
+            <span class="red-line">${title.split(" ")[0]}</span>
+            <span class="black-line">${title.split(" ").slice(1).join(" ")}</span>
           </h1>
           <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px;">
             <div style="display: flex; gap: 40px; align-items: baseline;">
@@ -1234,7 +1233,6 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
         <th style="font-size: 8px; width: 7%;">TARGET DATE</th>
         <th style="font-size: 8px; width: 4%;">AGE (D)</th>
         <th style="font-size: 8px; width: 4%;">AGE (M)</th>
-        <th style="font-size: 8px; width: 12%;">REMARKS</th>
       </tr>
     </thead>
     <tbody>
