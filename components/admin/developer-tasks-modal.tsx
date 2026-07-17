@@ -706,19 +706,12 @@ export function DeveloperTasksModal({
           <AlertDialogAction 
             onClick={async () => {
               try {
-                const supabase = createClient()
-                const channel = supabase.channel('system-refresh')
-                channel.subscribe(async (status) => {
-                  if (status === 'SUBSCRIBED') {
-                    await channel.send({
-                      type: 'broadcast',
-                      event: 'force-refresh',
-                      payload: { timestamp: Date.now() }
-                    })
-                    toast({ title: "Global Refresh Triggered", description: "All connected admins will be prompted to refresh." })
-                    setTimeout(() => supabase.removeChannel(channel), 1000)
-                  }
-                })
+                const res = await fetch('/api/developer/global-refresh', { method: 'POST' })
+                if (res.ok) {
+                  toast({ title: "Global Refresh Triggered", description: "All connected admins will be prompted to refresh." })
+                } else {
+                  toast({ title: "Error", description: "Failed to trigger global refresh.", variant: "destructive" })
+                }
               } catch (e) {
                 toast({ title: "Error", description: "Network error triggering global refresh.", variant: "destructive" })
               }

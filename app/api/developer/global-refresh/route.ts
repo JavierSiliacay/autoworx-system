@@ -15,13 +15,18 @@ export async function POST() {
     )
     
     // Broadcast the refresh signal directly to all listening AdminLayoutWrappers
-    const channel = supabase.channel('system-refresh')
+    const channel = supabase.channel('system-refresh', {
+      config: { broadcast: { ack: true } }
+    })
     
     // Wait for the channel to subscribe before sending
-    await new Promise((resolve) => {
-      channel.subscribe((status) => {
+    await new Promise((resolve, reject) => {
+      channel.subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           resolve(null)
+        }
+        if (status === 'CHANNEL_ERROR') {
+          reject(err)
         }
       })
     })
