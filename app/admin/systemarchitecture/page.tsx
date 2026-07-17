@@ -76,10 +76,7 @@ export default function SystemArchitecturePage() {
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div className="space-y-1">
-          <Link href="/admin/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-2">
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Dashboard
-          </Link>
+
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Network className="w-8 h-8 text-primary" />
             System Architecture

@@ -67,7 +67,8 @@ import {
   FileClock,
   Timer,
   Bell,
-  ClipboardList
+  ClipboardList,
+  ShoppingCart
 } from "lucide-react"
 import { PistonIcon, GearsIcon, SuspensionIcon, BatteryIcon, CarFrontIcon, TowingIcon, DifferentialIcon, DetailingIcon, DiagnosticsIcon, TireIcon, OilIcon, WrenchPistonIcon } from "@/components/icons/automotive-icons"
 import { motion, AnimatePresence } from "framer-motion"
@@ -89,6 +90,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+
 import { SERVICES, VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, COMMON_UNITS, type RepairStatus, type CostItem, type CostingData, type CostItemType, type JobOrderHistoryEntry } from "@/lib/constants"
 import { getRepairStatusInfo, generateTrackingCode } from "@/lib/appointment-tracking"
 import { generateTrackingPDF, generateGatepassPDF, type GatepassData } from "@/lib/generate-pdf"
@@ -581,6 +583,10 @@ export default function AdminDashboard() {
     origin: 'appointments'
   })
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+  const [recentlyClosedUnit, setRecentlyClosedUnit] = useState<string | null>(null)
+  const [statModalOpen, setStatModalOpen] = useState(false)
+  const [activeStatCategory, setActiveStatCategory] = useState<string | null>(null)
+  const [statModalPage, setStatModalPage] = useState(1)
   const [zoomModalOpen, setZoomModalOpen] = useState(false)
   const [zoomImages, setZoomImages] = useState<string[]>([])
   const [zoomInitialIndex, setZoomInitialIndex] = useState(0)
@@ -608,9 +614,9 @@ export default function AdminDashboard() {
             const notifiedId = localStorage.getItem("update_notified_id");
 
             // If a new update is detected, we haven't notified for it yet, and we have a previous baseline
-              // Instead of logging out, we can just optionally notify them or do nothing,
-              // as the WhatIsNewModal component handles its own real-time detection and will pop up automatically.
-              console.log("New update detected, What's New modal should appear.");
+            // Instead of logging out, we can just optionally notify them or do nothing,
+            // as the WhatIsNewModal component handles its own real-time detection and will pop up automatically.
+            console.log("New update detected, What's New modal should appear.");
           }
         }
       } catch (error) {
@@ -1030,9 +1036,7 @@ export default function AdminDashboard() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [activeTab, showDeletedHistory, historyViewMode])
 
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: "/admin" })
-  }
+
 
   const updateStatus = async (id: string, newStatus: "pending" | "contacted" | "completed" | "confirm") => {
     if (newStatus === "completed") {
@@ -2592,7 +2596,7 @@ export default function AdminDashboard() {
 
     setConfigAppointment(appointment)
     const targetDateVal = appointment.costing?.jobOrderHistory?.slice(-1)[0]?.targetDate || "";
-    
+
     const rawIns = appointment.insurance || "";
     const upperIns = rawIns.toUpperCase();
     const hasPersonal = upperIns.includes("PERSONAL");
@@ -2617,27 +2621,27 @@ export default function AdminDashboard() {
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, field: 'scopeOfWorks' | 'partsText') => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      
+
       const target = e.currentTarget;
       const start = target.selectionStart;
       const end = target.selectionEnd;
       const value = target.value;
-      
+
       const lastNewline = value.lastIndexOf('\n', start - 1);
       const currentLine = value.substring(lastNewline + 1, start);
-      
+
       let insertion = '\n';
       if (currentLine.trimStart().startsWith('•')) {
         insertion = '\n• ';
       }
-      
+
       const newValue = value.substring(0, start) + insertion + value.substring(end);
-      
+
       setJobOrderConfig(prev => ({
         ...prev,
         [field]: newValue
       }));
-      
+
       setTimeout(() => {
         if (target) {
           target.selectionStart = target.selectionEnd = start + insertion.length;
@@ -3477,6 +3481,33 @@ export default function AdminDashboard() {
   const toggleCardExpanded = (id: string) => {
     setExpandedCards((prev) => {
       const isExpanded = prev.has(id)
+
+      if (isExpanded) {
+        setRecentlyClosedUnit(id)
+        setTimeout(() => setRecentlyClosedUnit(null), 5000)
+      }
+
+      // Delay to allow DOM layout to update after state change
+      setTimeout(() => {
+        const element = document.getElementById(`appointment-card-${id}`)
+        if (element) {
+          // A sticky header is often around 60-80px, let's offset by 120px so it's not hidden
+          const offset = 120;
+          const elementRect = element.getBoundingClientRect();
+
+          // Only scroll if the element's top is out of view (too high up or too low down)
+          // When a large expanded card closes, the browser natively shifts scroll to compensate for lost height.
+          // This ensures the header of the card remains nicely in view.
+          if (elementRect.top < offset || elementRect.top > window.innerHeight - 100) {
+            const absoluteElementTop = elementRect.top + window.pageYOffset;
+            window.scrollTo({
+              top: absoluteElementTop - offset,
+              behavior: 'smooth'
+            });
+          }
+        }
+      }, 50);
+
       // Preference: Only one expanded at a time
       return isExpanded ? new Set() : new Set([id])
     })
@@ -3490,9 +3521,9 @@ export default function AdminDashboard() {
 
     switch (range) {
       case "today":
-        return date.getDate() === now.getDate() && 
-               date.getMonth() === now.getMonth() && 
-               date.getFullYear() === now.getFullYear()
+        return date.getDate() === now.getDate() &&
+          date.getMonth() === now.getMonth() &&
+          date.getFullYear() === now.getFullYear()
       case "week":
         return diffDays <= 7
       case "month":
@@ -3504,7 +3535,7 @@ export default function AdminDashboard() {
     }
   }
 
-  const filteredAppointments = appointments.filter((apt) => {
+  const baseFilteredAppointments = appointments.filter((apt) => {
     // Unified Status filter
     if (filter !== "all") {
       if (filter === "pending_inspection") {
@@ -3572,6 +3603,10 @@ export default function AdminDashboard() {
     }
     return true
   })
+
+  const filteredAppointments = expandedCards.size > 0
+    ? baseFilteredAppointments.filter(apt => expandedCards.has(apt.id))
+    : baseFilteredAppointments;
 
   const getMatchCategories = (apt: Appointment, query: string) => {
     if (!query.trim()) return []
@@ -3656,6 +3691,43 @@ export default function AdminDashboard() {
     insuranceApproved: appointments.filter((apt) => apt.repairStatus === "insurance_approved").length,
     onGoingRepairs: appointments.filter((apt) => apt.isSynced).length,
   }
+
+  const filteredStatUnits = useMemo(() => {
+    if (!activeStatCategory) return []
+    
+    // Adapt history record to Appointment shape for the modal list
+    const mappedHistory = historyRecords.map(record => ({
+      ...record,
+      id: record.id,
+      name: record.name,
+      vehiclePlate: record.vehicle_plate,
+      vehicleMake: record.vehicle_make,
+      vehicleModel: record.vehicle_model,
+      status: 'completed',
+      repairStatus: record.repair_status,
+      createdAt: record.original_created_at,
+      isHistory: true
+    } as any))
+
+    switch (activeStatCategory) {
+      case 'total':
+        return [...appointments, ...mappedHistory]
+      case 'pending':
+        return appointments.filter(apt => apt.status === "pending")
+      case 'contacted':
+        return appointments.filter(apt => apt.status === "contacted")
+      case 'completed':
+        return [...appointments.filter(apt => apt.status === "completed"), ...mappedHistory]
+      case 'waitingForApproval':
+        return appointments.filter(apt => apt.repairStatus === "waiting_for_insurance" || apt.repairStatus === "waiting_for_client_approval")
+      case 'insuranceApproved':
+        return appointments.filter(apt => apt.repairStatus === "insurance_approved")
+      case 'onGoingRepairs':
+        return appointments.filter(apt => apt.isSynced)
+      default:
+        return []
+    }
+  }, [activeStatCategory, appointments, historyRecords])
 
   // History filtering and sorting
   const filteredAndSortedHistory = useMemo(() => {
@@ -3859,438 +3931,409 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-card border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 py-4 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-18 h-10 select-none">
-                  <img src="/autoworxlogo.png" alt="Autoworx logo" className="w-18 h-18 object-contain drop-shadow-md" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-serif text-lg font-bold tracking-tight text-primary">
-                    AUTOWORX
-                  </span>
-                  <span className="text-[9px] uppercase tracking-widest text-muted-foreground -mt-1">
-                    Admin Panel
-                  </span>
-                </div>
-              </Link>
-            </div>
 
-            {/* Center Teleport Button */}
-            <div className="hidden md:flex items-center bg-muted/50 p-1 rounded-full border border-border">
-              <Button variant="secondary" size="sm" className="rounded-full shadow-sm">
-                <LayoutDashboard className="w-4 h-4 mr-2" />
-                Office / Admin
-              </Button>
-              <div className="w-px h-4 bg-border mx-1" />
-              <Link href="/admin/parts">
-                <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-primary transition-all">
-                  <Package className="w-4 h-4 mr-2" />
-                  Parts Room
-                </Button>
-              </Link>
-              <Link href="/admin/parts/prices">
-                <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-primary transition-all">
-                  <Tag className="w-4 h-4 mr-2" />
-                  Price List
-                </Button>
-              </Link>
-              <Link href="/admin/maintenance">
-                <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-primary transition-all">
-                  <Database className="w-4 h-4 mr-2" />
-                  System Files
-                </Button>
-              </Link>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Mobile Navigation Dropdown */}
-              <div className="md:hidden">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full">
-                      <LayoutDashboard className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl border-border">
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/parts" className="flex items-center gap-2 py-2.5">
-                        <Package className="w-4 h-4 text-primary" />
-                        <span className="font-bold text-sm">Parts Room</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/parts/prices" className="flex items-center gap-2 py-2.5">
-                        <Tag className="w-4 h-4 text-emerald-500" />
-                        <span className="font-bold text-sm">Price List</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/maintenance" className="flex items-center gap-2 py-2.5">
-                        <Database className="w-4 h-4 text-blue-500" />
-                        <span className="font-bold text-sm">System Files</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 border-blue-500/30 text-blue-500 hover:bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all h-9"
-                onClick={() => router.push('/admin/developer-tasks')}
-              >
-                <Code2 className="w-4 h-4" />
-                <span className="hidden lg:inline font-bold">Developer Tasks</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleLogout} className="bg-transparent h-9 px-3">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-4 mb-8">
-          <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-foreground">{dashboardStats.total}</div>
-            <div className="text-sm text-muted-foreground font-medium">Total Requests</div>
-          </div>
-          <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-yellow-500">{dashboardStats.pending}</div>
-            <div className="text-sm text-muted-foreground font-medium">Pending</div>
-          </div>
-          <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-blue-500">{dashboardStats.contacted}</div>
-            <div className="text-sm text-muted-foreground font-medium">Contacted</div>
-          </div>
-          <div className="p-4 bg-card rounded-xl border border-border">
-            <div className="text-2xl font-bold text-green-500">{dashboardStats.completed}</div>
-            <div className="text-sm text-muted-foreground font-medium">Completed</div>
-          </div>
-
-          <div className="p-4 bg-card rounded-xl border border-primary/30">
-            <div className="text-2xl font-bold text-primary">{dashboardStats.waitingForApproval}</div>
-            <div className="text-sm text-muted-foreground font-medium">Waiting for Approval</div>
-          </div>
-          <div className="p-4 bg-card rounded-xl border border-emerald-500/30">
-            <div className="text-2xl font-bold text-emerald-500">{dashboardStats.insuranceApproved}</div>
-            <div className="text-sm text-muted-foreground font-medium">Approved by Insurance</div>
-          </div>
-          <div className="p-4 bg-card rounded-xl border border-purple-500/30">
-            <div className="text-2xl font-bold text-purple-500">{dashboardStats.onGoingRepairs}</div>
-            <div className="text-sm text-muted-foreground font-medium">On-Going Repairs</div>
-          </div>
-        </div>
-
-        {/* Announcements Section */}
-        {announcements.length > 0 && (
-          <div className="mb-8 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary">
-                <Megaphone className="w-5 h-5 fill-primary/10" />
-                <h2 className="font-serif text-xl font-bold">Admin Announcements</h2>
+        {/* Stats & Announcements (Hidden when focused on a unit) */}
+        {expandedCards.size === 0 && (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-between gap-4 mb-8">
+              <div 
+                onClick={() => { setActiveStatCategory('total'); setStatModalOpen(true); setStatModalPage(1); }}
+                className="flex-1 min-w-[140px] p-4 bg-card rounded-xl border border-border/60 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative overflow-hidden group cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-slate-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                  <Activity className="w-4 h-4" />
+                  <div className="text-xs font-semibold uppercase tracking-wider">Total</div>
+                </div>
+                <div className="text-3xl font-bold text-foreground">{dashboardStats.total}</div>
               </div>
-              {(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+
+              <div 
+                onClick={() => { setActiveStatCategory('pending'); setStatModalOpen(true); setStatModalPage(1); }}
+                className="flex-1 min-w-[140px] p-4 bg-card rounded-xl border border-yellow-500/20 hover:border-yellow-500/40 hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(234,179,8,0.15)] transition-all duration-300 relative overflow-hidden group cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-2 mb-2 text-yellow-600/70">
+                  <Clock className="w-4 h-4" />
+                  <div className="text-xs font-semibold uppercase tracking-wider">Pending</div>
+                </div>
+                <div className="text-3xl font-bold text-yellow-500">{dashboardStats.pending}</div>
+              </div>
+
+              <div 
+                onClick={() => { setActiveStatCategory('contacted'); setStatModalOpen(true); setStatModalPage(1); }}
+                className="flex-1 min-w-[140px] p-4 bg-card rounded-xl border border-blue-500/20 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(59,130,246,0.15)] transition-all duration-300 relative overflow-hidden group cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-2 mb-2 text-blue-600/70">
+                  <Phone className="w-4 h-4" />
+                  <div className="text-xs font-semibold uppercase tracking-wider">Contacted</div>
+                </div>
+                <div className="text-3xl font-bold text-blue-500">{dashboardStats.contacted}</div>
+              </div>
+
+              <div 
+                onClick={() => { setActiveStatCategory('completed'); setStatModalOpen(true); setStatModalPage(1); }}
+                className="flex-1 min-w-[140px] p-4 bg-card rounded-xl border border-green-500/20 hover:border-green-500/40 hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(34,197,94,0.15)] transition-all duration-300 relative overflow-hidden group cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-2 mb-2 text-green-600/70">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <div className="text-xs font-semibold uppercase tracking-wider">Completed</div>
+                </div>
+                <div className="text-3xl font-bold text-green-500">{dashboardStats.completed}</div>
+              </div>
+
+              <div 
+                onClick={() => { setActiveStatCategory('waitingForApproval'); setStatModalOpen(true); setStatModalPage(1); }}
+                className="flex-1 min-w-[140px] p-4 bg-card rounded-xl border border-primary/20 hover:border-primary/40 hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(59,130,246,0.15)] transition-all duration-300 relative overflow-hidden group cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-2 mb-2 text-primary/70">
+                  <FileText className="w-4 h-4" />
+                  <div className="text-xs font-semibold uppercase tracking-wider">Waiting for Approval</div>
+                </div>
+                <div className="text-3xl font-bold text-primary">{dashboardStats.waitingForApproval}</div>
+              </div>
+
+              <div 
+                onClick={() => { setActiveStatCategory('insuranceApproved'); setStatModalOpen(true); setStatModalPage(1); }}
+                className="flex-1 min-w-[140px] p-4 bg-card rounded-xl border border-emerald-500/20 hover:border-emerald-500/40 hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(16,185,129,0.15)] transition-all duration-300 relative overflow-hidden group cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-2 mb-2 text-emerald-600/70">
+                  <ShieldCheck className="w-4 h-4" />
+                  <div className="text-xs font-semibold uppercase tracking-wider">Approved by Insurance</div>
+                </div>
+                <div className="text-3xl font-bold text-emerald-500">{dashboardStats.insuranceApproved}</div>
+              </div>
+
+              <div 
+                onClick={() => { setActiveStatCategory('onGoingRepairs'); setStatModalOpen(true); setStatModalPage(1); }}
+                className="flex-1 min-w-[140px] p-4 bg-card rounded-xl border border-purple-500/20 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(168,85,247,0.15)] transition-all duration-300 relative overflow-hidden group cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-2 mb-2 text-purple-600/70">
+                  <div className="relative flex items-center justify-center w-6 h-6">
+                    <div className="absolute inset-0 rounded-full border-2 border-purple-600/20 border-t-purple-600 animate-spin" />
+                    <Wrench className="w-3 h-3" />
+                  </div>
+                  <div className="text-xs font-semibold uppercase tracking-wider">On-Going Repairs</div>
+                </div>
+                <div className="text-3xl font-bold text-purple-500">{dashboardStats.onGoingRepairs}</div>
+              </div>
+            </div>
+
+            {/* Announcements Section */}
+            {announcements.length > 0 && (
+              <div className="mb-8 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Megaphone className="w-5 h-5 fill-primary/10" />
+                    <h2 className="font-serif text-xl font-bold">Admin Announcements</h2>
+                  </div>
+                  {(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAnnouncementModalOpen(true)}
+                      className="h-8 gap-2 border-primary/20 hover:bg-primary/5"
+                    >
+                      <Plus className="w-4 h-4" />
+                      New Announcement
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {announcements.map((ann) => (
+                    <AdminAnnouncementCard
+                      key={ann.id}
+                      announcement={ann}
+                      userEmail={session?.user?.email}
+                      canDelete={(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
+                      onDelete={async (id) => {
+                        await fetch(`/api/announcements?id=${id}`, { method: "DELETE" })
+                        loadAnnouncements()
+                      }}
+                      onUpdate={loadAnnouncements}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {announcements.length === 0 && (session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
+              <div className="mb-8 p-6 bg-primary/5 border border-dashed border-primary/20 rounded-xl text-center">
+                <Megaphone className="w-8 h-8 mx-auto text-primary/40 mb-3" />
+                <h3 className="font-semibold text-primary/80">No current announcements</h3>
+                <p className="text-sm text-muted-foreground mt-1 mb-4">
+                  Use this section to broadcast messages to all administrators.
+                </p>
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={() => setIsAnnouncementModalOpen(true)}
-                  className="h-8 gap-2 border-primary/20 hover:bg-primary/5"
+                  className="gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  New Announcement
+                  Post First Announcement
                 </Button>
-              )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {announcements.map((ann) => (
-                <AdminAnnouncementCard
-                  key={ann.id}
-                  announcement={ann}
-                  userEmail={session?.user?.email}
-                  canDelete={(session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email))}
-                  onDelete={async (id) => {
-                    await fetch(`/api/announcements?id=${id}`, { method: "DELETE" })
-                    loadAnnouncements()
-                  }}
-                  onUpdate={loadAnnouncements}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {announcements.length === 0 && (session?.user?.email === "paulsuazo64@gmail.com" || session?.user?.email === "autoworxcagayan2025@gmail.com" || isDeveloperEmail(session?.user?.email)) && (
-          <div className="mb-8 p-6 bg-primary/5 border border-dashed border-primary/20 rounded-xl text-center">
-            <Megaphone className="w-8 h-8 mx-auto text-primary/40 mb-3" />
-            <h3 className="font-semibold text-primary/80">No current announcements</h3>
-            <p className="text-sm text-muted-foreground mt-1 mb-4">
-              Use this section to broadcast messages to all administrators.
-            </p>
-            <Button
-              size="sm"
-              onClick={() => setIsAnnouncementModalOpen(true)}
-              className="gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Post First Announcement
-            </Button>
-          </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Tab Navigation */}
-        <div className="mb-6 flex overflow-x-auto pb-1 gap-2 border-b border-border hide-scrollbar">
-          <button
-            type="button"
-            onClick={() => setActiveTab("appointments")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "appointments"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <FileText className="w-4 h-4 inline-block mr-2" />
-            Active Appointments ({appointments.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("history")
-              setShowDeletedHistory(false)
-              if (historyRecords.length === 0) {
-                loadHistory()
-              }
-            }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "history" && !showDeletedHistory
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <HistoryIcon className="w-4 h-4 inline-block mr-2" />
-            History ({historyRecords.length})
-          </button>
-          {isAuthorizedForSalesUser && (
+        {expandedCards.size === 0 && (
+          <div className="mb-6 flex overflow-x-auto pb-1 gap-2 border-b border-border hide-scrollbar">
+            <button
+              type="button"
+              onClick={() => setActiveTab("appointments")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "appointments"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              <FileText className="w-4 h-4 inline-block mr-2" />
+              Active Appointments ({appointments.length})
+            </button>
             <button
               type="button"
               onClick={() => {
-                setActiveTab("sales")
+                setActiveTab("history")
+                setShowDeletedHistory(false)
                 if (historyRecords.length === 0) {
                   loadHistory()
                 }
               }}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "sales"
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "history" && !showDeletedHistory
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
             >
-              <TrendingUp className="w-4 h-4 inline-block mr-2" />
-              Sales Monitoring
+              <HistoryIcon className="w-4 h-4 inline-block mr-2" />
+              History ({historyRecords.length})
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("active-repairs")
-            }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "active-repairs"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <Activity className="w-4 h-4 inline-block mr-2" />
-            Active On-Going Repairs
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("history")
-              setShowDeletedHistory(true)
-              loadDeletedAppointments()
-            }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "history" && showDeletedHistory
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-          >
-            <Trash2 className="w-4 h-4 inline-block mr-2" />
-            Delete History ({deletedAppointments.length})
-          </button>
-
-          {isDeveloperUser && (
+            {isAuthorizedForSalesUser && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("sales")
+                  if (historyRecords.length === 0) {
+                    loadHistory()
+                  }
+                }}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "sales"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                <TrendingUp className="w-4 h-4 inline-block mr-2" />
+                Sales Monitoring
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
-                setActiveTab("recommendations")
-                loadRecommendations()
+                setActiveTab("active-repairs")
               }}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "recommendations"
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "active-repairs"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
             >
-              <Heart className="w-4 h-4 inline-block mr-2" />
-              Developer Recommendations ({recommendations.length})
+              <Activity className="w-4 h-4 inline-block mr-2" />
+              Active On-Going Repairs
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("history")
+                setShowDeletedHistory(true)
+                loadDeletedAppointments()
+              }}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "history" && showDeletedHistory
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              <Trash2 className="w-4 h-4 inline-block mr-2" />
+              Delete History ({deletedAppointments.length})
+            </button>
+
+            {isDeveloperUser && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("recommendations")
+                  loadRecommendations()
+                }}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "recommendations"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                <Heart className="w-4 h-4 inline-block mr-2" />
+                Developer Recommendations ({recommendations.length})
+              </button>
+            )}
+          </div>
+        )}
 
         {activeTab === "appointments" && (
           <div>
             {/* Toolbar */}
-            <div className="mb-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
+            {expandedCards.size === 0 && (
+              <div className="mb-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h1 className="font-serif text-2xl font-bold text-foreground">Appointment Requests</h1>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsAddAppointmentModalOpen(true)}
+                        className="px-3 border-dashed border-primary/50 text-primary hover:bg-primary/5 hover:text-primary transition-all group"
+                        title="Add New Appointment"
+                      >
+                        <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {dashboardStats.pending} pending request{dashboardStats.pending !== 1 ? "s" : ""} waiting for your attention
+                    </p>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <h1 className="font-serif text-2xl font-bold text-foreground">Appointment Requests</h1>
+                    <AIAnalystDialog />
                     <Button
                       variant="outline"
-                      onClick={() => setIsAddAppointmentModalOpen(true)}
-                      className="px-3 border-dashed border-primary/50 text-primary hover:bg-primary/5 hover:text-primary transition-all group"
-                      title="Add New Appointment"
+                      size="sm"
+                      onClick={handleGlobalRefresh}
+                      disabled={isRefreshing}
+                      className="flex items-center gap-2 border-white/20 text-white hover:bg-white/10 hover:text-white shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all bg-transparent"
                     >
-                      <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                      <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+                      <span className="hidden sm:inline font-bold">{isRefreshing ? "Refreshing..." : "Refresh"}</span>
                     </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {dashboardStats.pending} pending request{dashboardStats.pending !== 1 ? "s" : ""} waiting for your attention
-                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <AIAnalystDialog />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGlobalRefresh}
-                    disabled={isRefreshing}
-                    className="flex items-center gap-2 border-white/20 text-white hover:bg-white/10 hover:text-white shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all bg-transparent"
-                  >
-                    <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
-                    <span className="hidden sm:inline font-bold">{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-                  </Button>
-                </div>
-              </div>
 
-              {/* Add Appointment Modal Component */}
-              <AddAppointmentModal
-                isOpen={isAddAppointmentModalOpen}
-                onClose={() => setIsAddAppointmentModalOpen(false)}
-                onSuccess={loadAppointments}
-              />
+                {/* Add Appointment Modal Component */}
+                <AddAppointmentModal
+                  isOpen={isAddAppointmentModalOpen}
+                  onClose={() => setIsAddAppointmentModalOpen(false)}
+                  onSuccess={loadAppointments}
+                />
 
-              {/* Search Bar */}
-              <div className="group relative max-w-4xl mx-auto w-full pt-2">
-                {/* Always-on Deep Aura Glow */}
-                <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/20 to-indigo-500/10 rounded-[32px] blur-3xl opacity-30 group-focus-within:opacity-60 transition-opacity duration-700" />
+                {/* Search Bar */}
+                <div className="group relative max-w-4xl mx-auto w-full pt-2">
+                  {/* Always-on Deep Aura Glow */}
+                  <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/20 to-indigo-500/10 rounded-[32px] blur-3xl opacity-30 group-focus-within:opacity-60 transition-opacity duration-700" />
 
-                {/* Always-on Rotating Laser Border */}
-                <div className="absolute -inset-[2.5px] rounded-[22px] overflow-hidden opacity-50 group-focus-within:opacity-100 transition-opacity duration-500">
-                  <div className="absolute inset-[-1000%] animate-[spin_8s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,#3b82f6_50%,transparent_100%)]" />
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors duration-300" />
-                  <Input
-                    ref={searchInputRef}
-                    placeholder="Search anything: Name, S/A, Plate, Email, Brand, Tracking Code, Estimate #..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-14 pr-12 sm:pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-sm sm:text-base font-medium placeholder:text-muted-foreground/50"
-                  />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="p-1.5 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    )}
-                    <div className="hidden sm:flex items-center gap-1.5 px-2 py-1.5 border border-border bg-secondary/50 rounded-lg text-[10px] font-bold text-muted-foreground pointer-events-none select-none shadow-sm">
-                      <span className="text-[12px]">⌘</span>K
+                  {/* Always-on Rotating Laser Border */}
+                  <div className="absolute -inset-[2.5px] rounded-[22px] overflow-hidden opacity-50 group-focus-within:opacity-100 transition-opacity duration-500">
+                    <div className="absolute inset-[-1000%] animate-[spin_8s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,#3b82f6_50%,transparent_100%)]" />
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-blue-500 transition-colors duration-300" />
+                    <Input
+                      ref={searchInputRef}
+                      placeholder="Search anything: Name, S/A, Plate, Email, Brand, Tracking Code, Estimate #..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-14 pr-12 sm:pr-24 w-full h-14 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-border/60 focus:border-blue-500/50 shadow-2xl focus:ring-0 transition-all text-sm sm:text-base font-medium placeholder:text-muted-foreground/50"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery("")}
+                          className="p-1.5 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                      <div className="hidden sm:flex items-center gap-1.5 px-2 py-1.5 border border-border bg-secondary/50 rounded-lg text-[10px] font-bold text-muted-foreground pointer-events-none select-none shadow-sm">
+                        <span className="text-[12px]">⌘</span>K
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Search Result Summary Feedback */}
-              {searchQuery.trim() && (
-                <div className="animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2">
-                  <div className="h-px flex-1 bg-border/50" />
-                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-wider">
-                    {filteredAppointments.length === 0
-                      ? `No matches for "${searchQuery}"`
-                      : `Found ${filteredAppointments.length} matching unit${filteredAppointments.length !== 1 ? 's' : ''}`}
-                  </span>
-                  <div className="h-px flex-1 bg-border/50" />
+                {/* Search Result Summary Feedback */}
+                {searchQuery.trim() && (
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border/50" />
+                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-wider">
+                      {filteredAppointments.length === 0
+                        ? `No matches for "${searchQuery}"`
+                        : `Found ${filteredAppointments.length} matching unit${filteredAppointments.length !== 1 ? 's' : ''}`}
+                    </span>
+                    <div className="h-px flex-1 bg-border/50" />
+                  </div>
+                )}
+
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Select value={filter} onValueChange={setFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending Request</SelectItem>
+                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="pending_inspection">Pending Inspection</SelectItem>
+                      <SelectItem value="waiting_for_approval">Waiting for Approval</SelectItem>
+                      <SelectItem value="insurance_approved">Approved by Insurance</SelectItem>
+                      <SelectItem value="on_going_repairs">On-Going Repairs</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={vehicleBrandFilter} onValueChange={setVehicleBrandFilter}>
+                    <SelectTrigger className="w-full sm:w-[140px]">
+                      <SelectValue placeholder="Vehicle Brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Brands</SelectItem>
+                      {vehicleBrands.map((brand) => (
+                        <SelectItem key={brand} value={brand}>
+                          {brand}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Service Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Services</SelectItem>
+                      {SERVICES.map((service) => (
+                        <SelectItem key={service} value={service}>
+                          {service}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+                    <SelectTrigger className="w-full sm:w-[140px]">
+                      <SelectValue placeholder="Date Range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dateRanges.map((range) => (
+                        <SelectItem key={range.value} value={range.value}>
+                          {range.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-
-              {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Select value={filter} onValueChange={setFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending Request</SelectItem>
-                    <SelectItem value="contacted">Contacted</SelectItem>
-                    <SelectItem value="pending_inspection">Pending Inspection</SelectItem>
-                    <SelectItem value="waiting_for_approval">Waiting for Approval</SelectItem>
-                    <SelectItem value="insurance_approved">Approved by Insurance</SelectItem>
-                    <SelectItem value="on_going_repairs">On-Going Repairs</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={vehicleBrandFilter} onValueChange={setVehicleBrandFilter}>
-                  <SelectTrigger className="w-full sm:w-[140px]">
-                    <SelectValue placeholder="Vehicle Brand" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Brands</SelectItem>
-                    {vehicleBrands.map((brand) => (
-                      <SelectItem key={brand} value={brand}>
-                        {brand}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={serviceFilter} onValueChange={setServiceFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Service Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Services</SelectItem>
-                    {SERVICES.map((service) => (
-                      <SelectItem key={service} value={service}>
-                        {service}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
-                  <SelectTrigger className="w-full sm:w-[140px]">
-                    <SelectValue placeholder="Date Range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dateRanges.map((range) => (
-                      <SelectItem key={range.value} value={range.value}>
-                        {range.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
-            </div>
+            )}
 
             {/* Appointments List */}
             {filteredAppointments.length === 0 ? (
@@ -4354,7 +4397,10 @@ export default function AdminDashboard() {
                     return (
                       <div
                         key={appointment.id}
-                        className="bg-card rounded-xl border border-border overflow-hidden mb-2"
+                        id={`appointment-card-${appointment.id}`}
+                        className={cn("bg-card rounded-xl border border-border overflow-hidden mb-2 transition-all duration-1000",
+                          recentlyClosedUnit === appointment.id ? "ring-2 ring-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : ""
+                        )}
                       >
                         {/* Folder Header */}
                         <div
@@ -6282,7 +6328,7 @@ export default function AdminDashboard() {
                     const isExpanded = expandedCards.has(record.id)
 
                     return (
-                      <div key={record.id} className="bg-card rounded-xl border border-border overflow-hidden mb-2">
+                      <div key={record.id} id={`appointment-card-${record.id}`} className={cn("bg-card rounded-xl border border-border overflow-hidden mb-2 transition-all duration-1000", recentlyClosedUnit === record.id ? "ring-2 ring-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "")}>
                         {/* Folder Header */}
                         <div
                           onClick={() => toggleCardExpanded(record.id)}
@@ -7029,6 +7075,76 @@ export default function AdminDashboard() {
           )
         }
       </main>
+
+      {/* Dashboard Stats Modal */}
+      <Dialog open={statModalOpen} onOpenChange={setStatModalOpen}>
+        <DialogContent className="max-w-2xl bg-background border border-border shadow-2xl rounded-2xl overflow-hidden max-h-[85vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-4 border-b border-border/50 bg-muted/20">
+            <DialogTitle className="text-xl font-bold uppercase tracking-wider flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              {activeStatCategory === 'total' && "Total Requests"}
+              {activeStatCategory === 'pending' && "Pending Requests"}
+              {activeStatCategory === 'contacted' && "Contacted Requests"}
+              {activeStatCategory === 'completed' && "Completed Requests"}
+              {activeStatCategory === 'waitingForApproval' && "Waiting for Approval"}
+              {activeStatCategory === 'insuranceApproved' && "Approved by Insurance"}
+              {activeStatCategory === 'onGoingRepairs' && "On-Going Repairs"}
+              <Badge variant="secondary" className="ml-2 font-mono">{filteredStatUnits.length}</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {filteredStatUnits.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground">
+                <p>No units found for this category.</p>
+              </div>
+            ) : (
+              filteredStatUnits.slice((statModalPage - 1) * 10, statModalPage * 10).map((unit) => (
+                <div key={unit.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border bg-card hover:bg-muted/30 transition-colors">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-lg text-primary">{unit.vehiclePlate || "NO PLATE"}</span>
+                      <Badge variant="outline" className="text-xs uppercase">{unit.isHistory ? "History" : "Active"}</Badge>
+                    </div>
+                    <span className="text-sm text-foreground font-medium">{unit.vehicleMake} {unit.vehicleModel}</span>
+                    <span className="text-sm text-muted-foreground">{unit.name}</span>
+                  </div>
+                  <div className="flex flex-col sm:items-end mt-3 sm:mt-0 gap-1 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {new Date(unit.createdAt).toLocaleDateString()}</span>
+                    <span className="uppercase text-xs font-semibold">{unit.repairStatus ? unit.repairStatus.replace(/_/g, ' ') : (unit.status || 'pending')}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {filteredStatUnits.length > 10 && (
+            <div className="p-4 border-t border-border/50 bg-muted/10 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Showing {Math.min((statModalPage - 1) * 10 + 1, filteredStatUnits.length)} to {Math.min(statModalPage * 10, filteredStatUnits.length)} of {filteredStatUnits.length}
+              </span>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setStatModalPage(p => Math.max(1, p - 1))}
+                  disabled={statModalPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setStatModalPage(p => p + 1)}
+                  disabled={statModalPage * 10 >= filteredStatUnits.length}
+                >
+                  Next <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Image Zoom Modal */}
       <ImageZoomModal
@@ -8124,17 +8240,17 @@ export default function AdminDashboard() {
                         defaultMonth={
                           jobOrderConfig.targetDate
                             ? (() => {
-                                const [y, m, d] = jobOrderConfig.targetDate.split("-").map(Number);
-                                return new Date(y, m - 1, d);
-                              })()
+                              const [y, m, d] = jobOrderConfig.targetDate.split("-").map(Number);
+                              return new Date(y, m - 1, d);
+                            })()
                             : undefined
                         }
                         selected={
                           jobOrderConfig.targetDate
                             ? (() => {
-                                const [y, m, d] = jobOrderConfig.targetDate.split("-").map(Number);
-                                return new Date(y, m - 1, d);
-                              })()
+                              const [y, m, d] = jobOrderConfig.targetDate.split("-").map(Number);
+                              return new Date(y, m - 1, d);
+                            })()
                             : undefined
                         }
                         onSelect={(date) => {
