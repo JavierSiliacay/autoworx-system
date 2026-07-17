@@ -438,6 +438,54 @@ export async function PUT(request: Request) {
     }
   }
 
+  // Trigger Approval Emails if repairStatus changes to waiting_for_client_approval or waiting_for_insurance
+  if (updates.repairStatus === "waiting_for_client_approval" || updates.repairStatus === "waiting_for_insurance") {
+    const isValidEmail = data.email && data.email.toUpperCase() !== "N/A" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
+
+    if (isValidEmail) {
+      console.log(`Triggering approval email for ${data.email}`);
+      try {
+        await sendAppointmentEmail({
+          type: updates.repairStatus === "waiting_for_insurance" ? 'approval_insurance' : 'approval_client',
+          name: data.name,
+          email: data.email,
+          trackingCode: data.tracking_code,
+          vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
+          plateNumber: data.vehicle_plate,
+          services: data.service,
+          status: updates.repairStatus === "waiting_for_insurance" ? 'Waiting for Insurance' : 'Waiting for Client Approval',
+          repairStatus: REPAIR_STATUS_OPTIONS.find(opt => opt.value === data.repair_status)?.label
+        });
+      } catch (emailError) {
+        console.error("Failed to send approval email:", emailError);
+      }
+    }
+  }
+
+  // Trigger Ongoing Email if unit is synced to Sales Monitoring (Active On-Going Repairs)
+  if (updates.isSynced === true || updates.is_synced === true) {
+    const isValidEmail = data.email && data.email.toUpperCase() !== "N/A" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
+
+    if (isValidEmail) {
+      console.log(`Triggering ongoing email for ${data.email}`);
+      try {
+        await sendAppointmentEmail({
+          type: 'ongoing',
+          name: data.name,
+          email: data.email,
+          trackingCode: data.tracking_code,
+          vehicleDetails: `${data.vehicle_year} ${data.vehicle_make} ${data.vehicle_model}`,
+          plateNumber: data.vehicle_plate,
+          services: data.service,
+          status: 'Ongoing',
+          repairStatus: REPAIR_STATUS_OPTIONS.find(opt => opt.value === data.repair_status)?.label
+        });
+      } catch (emailError) {
+        console.error("Failed to send ongoing email:", emailError);
+      }
+    }
+  }
+
   return NextResponse.json(data)
 }
 

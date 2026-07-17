@@ -8,5 +8,6 @@
     "**/.next": true,
     "**/dist": true,
     "**/.electron-builder-cache": true
-  }
+  },
+  "css.lint.unknownAtRules": "ignore"
 }

@@ -4,13 +4,13 @@ import React, { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Tag, 
-  Database, 
-  Code2, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Tag,
+  Database,
+  Code2,
   LogOut,
   Menu,
   X,
@@ -155,7 +155,7 @@ export function AdminSidebar() {
       {/* Footer / User Profile */}
       <div className="p-4 border-t border-border bg-muted/20">
         {session?.user && (
-          <div 
+          <div
             className={cn("flex items-center gap-3 px-3 py-3 mb-2 rounded-lg bg-background border border-border/50 transition-all duration-300", isCollapsed && "justify-center px-0 bg-transparent border-transparent")}
             title={isCollapsed ? session.user.name || "Admin User" : undefined}
           >
@@ -172,9 +172,9 @@ export function AdminSidebar() {
             )}
           </div>
         )}
-        <Button 
-          variant="outline" 
-          className={cn("w-full gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-all duration-300", 
+        <Button
+          variant="outline"
+          className={cn("w-full gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-all duration-300",
             isCollapsed ? "justify-center px-0" : "justify-start"
           )}
           onClick={handleLogout}
@@ -198,7 +198,7 @@ export function AdminSidebar() {
 
       {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
           onClick={() => setIsMobileOpen(false)}
         />
@@ -230,15 +230,15 @@ export function AdminSidebar() {
               Thank you for your hard work today{session?.user?.name ? `, ${session.user.name.split(' ')[0]}` : ''}!
             </p>
             <div className="flex w-full gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1"
                 onClick={() => setIsLogoutModalOpen(false)}
               >
                 Cancel
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 className="flex-1"
                 onClick={confirmLogout}
               >
