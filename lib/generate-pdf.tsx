@@ -1578,6 +1578,17 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
       --- END OF JOB ORDER (PAGE 1 OF 1) ---
     </div>
   </div>
+  ${(appointment.service && appointment.service.toLowerCase().includes('painting')) || activeCategories.includes('Painting') ? `
+  <div style="margin-top: 30px; padding: 0 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: bold; font-size: 14px; color: #000; display: flex; flex-direction: column; gap: 40px;">
+    <div style="text-align: center;">
+      Assignee:
+    </div>
+    <div style="display: flex; justify-content: space-between;">
+      <div>Preparation:</div>
+      <div style="margin-right: 32%;">Painting:</div>
+    </div>
+  </div>
+  ` : ''}
 </body>
 </html>
 `
