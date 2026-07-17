@@ -13,45 +13,26 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { RefreshCw } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [showRefreshModal, setShowRefreshModal] = useState(false)
-  const [initialTimestamp, setInitialTimestamp] = useState<number | null>(null)
-
   useEffect(() => {
     let isMounted = true
-
-    // Fetch initial timestamp when wrapper loads
-    fetch('/api/developer/global-refresh')
-      .then(res => res.json())
-      .then(data => {
-        if (isMounted && data.timestamp) {
-          setInitialTimestamp(data.timestamp)
-        }
+    const supabase = createClient()
+    
+    const channel = supabase.channel('system-refresh')
+      .on('broadcast', { event: 'force-refresh' }, (payload) => {
+        if (isMounted) setShowRefreshModal(true)
       })
-      .catch(() => {})
+      .subscribe()
 
-    return () => { isMounted = false }
+    return () => {
+      isMounted = false
+      supabase.removeChannel(channel)
+    }
   }, [])
-
-  useEffect(() => {
-    if (!initialTimestamp) return
-
-    // Poll every 30 seconds
-    const interval = setInterval(() => {
-      fetch('/api/developer/global-refresh')
-        .then(res => res.json())
-        .then(data => {
-          if (data.timestamp && data.timestamp > initialTimestamp) {
-            setShowRefreshModal(true)
-          }
-        })
-        .catch(() => {})
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [initialTimestamp])
 
   const handleRefresh = () => {
     window.location.reload()
