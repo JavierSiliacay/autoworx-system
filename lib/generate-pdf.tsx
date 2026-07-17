@@ -1345,25 +1345,36 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment): Pro
     return html;
   };
 
-  const parsePartsText = (text: string) => {
-    if (!text) return `<div style="display: flex; flex: 1; align-items: center; justify-content: center; min-height: 120px;">
+  const parsePartsText = (text: string, partsItems: any[] = []) => {
+    if (!text && partsItems.length === 0) return `<div style="display: flex; flex: 1; align-items: center; justify-content: center; min-height: 120px;">
          <div style="font-size: 22px; font-weight: 900; color: #bbb; text-transform: uppercase; letter-spacing: 2px; text-align: center; width: 100%;">NO PARTS<br/>WERE ADDED</div>
        </div>`;
     
-    const lines = text.split('\n');
     let html = '<div style="column-width: 150px; column-gap: 15px; column-fill: balance;"><ul style="margin-top: 2px; padding-left: 18px; margin-bottom: 0;">';
-    for (let line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      const content = (trimmed.startsWith('-') || trimmed.startsWith('•')) ? trimmed.substring(1).trim() : trimmed;
-      html += `<li style="margin-bottom: 2px;">${toTitleCase(content)}</li>`;
+    
+    if (partsItems.length > 0) {
+      for (const item of partsItems) {
+        if (!item.description) continue;
+        const qtyStr = (item.quantity && item.quantity > 0) ? `${item.quantity}` : '';
+        const unitStr = item.unit ? `${item.unit}` : '';
+        const qtyUnit = (qtyStr || unitStr) ? ` ${qtyStr}${unitStr}`.toUpperCase() : '';
+        html += `<li style="margin-bottom: 2px;">${toTitleCase(item.description)}<span style="font-weight: bold;">${qtyUnit}</span></li>`;
+      }
+    } else if (text) {
+      const lines = text.split('\n');
+      for (let line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        const content = (trimmed.startsWith('-') || trimmed.startsWith('•')) ? trimmed.substring(1).trim() : trimmed;
+        html += `<li style="margin-bottom: 2px;">${toTitleCase(content)}</li>`;
+      }
     }
     html += '</ul></div>';
     return html;
   };
 
   const scopeOfWorksHtml = parseScopeText(appointment.costing?.scopeOfWorks || appointment.scopeOfWorks || "");
-  const partsHtml = parsePartsText(appointment.costing?.partsText || "");
+  const partsHtml = parsePartsText(appointment.costing?.partsText || "", categorized["Parts"] || []);
 
   const insuranceRaw = appointment.insurance || '';
   const insuranceUpper = insuranceRaw.toUpperCase();
