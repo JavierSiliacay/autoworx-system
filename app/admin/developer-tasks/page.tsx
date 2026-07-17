@@ -35,7 +35,7 @@ import {
 import { 
   Loader2, Plus, Clock, CheckCircle2, PlayCircle, AlertCircle,
   Code2, Trash2, Calendar, User, ExternalLink, Rocket, Sparkles, Wand2, FileText,
-  MessageSquare, Heart, ThumbsUp, Flame, Eye, ChevronLeft
+  MessageSquare, Heart, ThumbsUp, Flame, Eye, ChevronLeft, RefreshCw
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
@@ -159,6 +159,7 @@ export default function DeveloperTasksPage() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [pendingArchiveTaskId, setPendingArchiveTaskId] = useState<string | null>(null);
+  const [pendingGlobalRefresh, setPendingGlobalRefresh] = useState(false);
 
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishForm, setPublishForm] = useState({
@@ -379,6 +380,40 @@ export default function DeveloperTasksPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AlertDialog open={pendingGlobalRefresh} onOpenChange={setPendingGlobalRefresh}>
+        <AlertDialogContent className="bg-slate-900 border border-slate-700 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-blue-400 flex items-center gap-2">
+              <RefreshCw className="w-5 h-5" />
+              Force Global Refresh?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              This will instantly prompt all currently active admins to refresh their system. Are you sure you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 hover:bg-white/10 text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/developer/global-refresh', { method: 'POST' })
+                  if (res.ok) {
+                    toast({ title: "Global Refresh Triggered", description: "All connected admins will be prompted to refresh." })
+                  } else {
+                    toast({ title: "Error", description: "Failed to trigger global refresh.", variant: "destructive" })
+                  }
+                } catch (e) {
+                  toast({ title: "Error", description: "Network error triggering global refresh.", variant: "destructive" })
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-500 text-white"
+            >
+              Yes, Force Refresh
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex items-center justify-between border-b border-white/10 pb-4">
         <div className="flex items-center gap-4">
           <Link href="/admin/dashboard" className="p-2 hover:bg-white/10 rounded-full transition-colors">
@@ -392,19 +427,40 @@ export default function DeveloperTasksPage() {
             <p className="text-slate-400 text-sm">Manage system updates, bug fixes, and feature requests</p>
           </div>
         </div>
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-[150px] bg-white/5 border-white/10">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-white/10 text-white">
-            <SelectItem value="All">All Tasks</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Ongoing Fix">Ongoing Fix</SelectItem>
-            <SelectItem value="For Testing">For Testing</SelectItem>
-            <SelectItem value="Completed">Completed</SelectItem>
-            <SelectItem value="Archived">Archived</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3">
+          <Button 
+            type="button" 
+            variant="outline"
+            onClick={() => {
+              if (!isDeveloper) {
+                toast({ 
+                  title: "Access Denied", 
+                  description: "You're not authorized to do this feature (Antigravity) and only the developer can proceed with this.", 
+                  variant: "destructive" 
+                });
+                return;
+              }
+              setPendingGlobalRefresh(true);
+            }}
+            className="bg-white/5 hover:bg-white/10 border border-white/20 text-blue-400 h-10"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Force Refresh
+          </Button>
+          <Select value={filter} onValueChange={setFilter}>
+            <SelectTrigger className="w-[150px] bg-white/5 border-white/10">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-white/10 text-white">
+              <SelectItem value="All">All Tasks</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Ongoing Fix">Ongoing Fix</SelectItem>
+              <SelectItem value="For Testing">For Testing</SelectItem>
+              <SelectItem value="Completed">Completed</SelectItem>
+              <SelectItem value="Archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

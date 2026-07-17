@@ -8,6 +8,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +45,8 @@ import {
   Rocket,
   Sparkles,
   Wand2,
-  FileText
+  FileText,
+  RefreshCw
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
@@ -73,6 +84,7 @@ export function DeveloperTasksModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filter, setFilter] = useState<string>("All");
+  const [pendingGlobalRefresh, setPendingGlobalRefresh] = useState(false);
   
   const [newTask, setNewTask] = useState({
     description: "",
@@ -340,6 +352,7 @@ export function DeveloperTasksModal({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-hidden flex flex-col bg-slate-950 border-white/10 text-white p-0 gap-0">
         <DialogHeader className="p-6 pb-4 border-b border-white/5">
@@ -405,14 +418,36 @@ export function DeveloperTasksModal({
                       </p>
                     </div>
                   </div>
-                  <Button 
-                    onClick={prepareRelease}
-                    size="sm" 
-                    disabled={tasks.filter(t => t.status === "Done" && !(t as any).update_id).length === 0}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 disabled:bg-slate-800 disabled:text-slate-500"
-                  >
-                    {tasks.filter(t => t.status === "Done" && !(t as any).update_id).length === 0 ? "System Up to Date" : "Prepare Release"}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (!isDeveloper) {
+                          toast({ 
+                            title: "Access Denied", 
+                            description: "You're not authorized to do this feature (Antigravity) and only the developer can proceed with this.", 
+                            variant: "destructive" 
+                          });
+                          return;
+                        }
+                        setPendingGlobalRefresh(true);
+                      }}
+                      className="border-blue-500/30 text-blue-400 hover:bg-blue-600/20 h-9"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Force Refresh
+                    </Button>
+                    <Button 
+                      onClick={prepareRelease}
+                      size="sm" 
+                      disabled={tasks.filter(t => t.status === "Done" && !(t as any).update_id).length === 0}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 disabled:bg-slate-800 disabled:text-slate-500 h-9"
+                    >
+                      {tasks.filter(t => t.status === "Done" && !(t as any).update_id).length === 0 ? "System Up to Date" : "Prepare Release"}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="bg-slate-900 border border-blue-500/50 rounded-xl p-6 space-y-6 shadow-2xl shadow-blue-900/20">
@@ -654,5 +689,40 @@ export function DeveloperTasksModal({
         </div>
       </DialogContent>
     </Dialog>
+    
+    <AlertDialog open={pendingGlobalRefresh} onOpenChange={setPendingGlobalRefresh}>
+      <AlertDialogContent className="bg-slate-900 border border-slate-700 text-white">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-blue-400 flex items-center gap-2">
+            <RefreshCw className="w-5 h-5" />
+            Force Global Refresh?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-slate-400">
+            This will instantly prompt all currently active admins to refresh their system. Are you sure you want to proceed?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="bg-white/5 border-white/10 hover:bg-white/10 text-white">Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/developer/global-refresh', { method: 'POST' })
+                if (res.ok) {
+                  toast({ title: "Global Refresh Triggered", description: "All connected admins will be prompted to refresh." })
+                } else {
+                  toast({ title: "Error", description: "Failed to trigger global refresh.", variant: "destructive" })
+                }
+              } catch (e) {
+                toast({ title: "Error", description: "Network error triggering global refresh.", variant: "destructive" })
+              }
+            }}
+            className="bg-blue-600 hover:bg-blue-500 text-white"
+          >
+            Yes, Force Refresh
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
