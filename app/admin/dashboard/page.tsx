@@ -3479,6 +3479,9 @@ export default function AdminDashboard() {
   }
 
   const toggleCardExpanded = (id: string) => {
+    const element = document.getElementById(`appointment-card-${id}`)
+    const oldTop = element ? element.getBoundingClientRect().top : null
+
     setExpandedCards((prev) => {
       const isExpanded = prev.has(id)
 
@@ -3487,30 +3490,23 @@ export default function AdminDashboard() {
         setTimeout(() => setRecentlyClosedUnit(null), 5000)
       }
 
-      // Delay to allow DOM layout to update after state change
-      setTimeout(() => {
-        const element = document.getElementById(`appointment-card-${id}`)
-        if (element) {
-          // A sticky header is often around 60-80px, let's offset by 120px so it's not hidden
-          const offset = 120;
-          const elementRect = element.getBoundingClientRect();
-
-          // Only scroll if the element's top is out of view (too high up or too low down)
-          // When a large expanded card closes, the browser natively shifts scroll to compensate for lost height.
-          // This ensures the header of the card remains nicely in view.
-          if (elementRect.top < offset || elementRect.top > window.innerHeight - 100) {
-            const absoluteElementTop = elementRect.top + window.pageYOffset;
-            window.scrollTo({
-              top: absoluteElementTop - offset,
-              behavior: 'smooth'
-            });
-          }
-        }
-      }, 50);
-
       // Preference: Only one expanded at a time
       return isExpanded ? new Set() : new Set([id])
     })
+
+    if (oldTop !== null) {
+      // Use requestAnimationFrame or timeout to wait for DOM update
+      setTimeout(() => {
+        const currentElement = document.getElementById(`appointment-card-${id}`)
+        if (currentElement) {
+          const newTop = currentElement.getBoundingClientRect().top
+          const diff = newTop - oldTop
+          if (Math.abs(diff) > 0) {
+            window.scrollBy({ top: diff, behavior: 'instant' })
+          }
+        }
+      }, 0)
+    }
   }
 
   const isInDateRange = (dateString: string, range: string) => {

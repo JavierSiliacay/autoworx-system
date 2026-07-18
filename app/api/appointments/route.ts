@@ -360,7 +360,7 @@ export async function PUT(request: Request) {
   // Fallback if synced_at column is missing in Supabase
   if (error && (error.code === '42703' || error.message?.includes('synced_at'))) {
     console.warn("synced_at column missing, retrying without it")
-    const fallbackUpdates = { ...dbUpdates }
+    const fallbackUpdates = { ...dbUpdates } 
     delete fallbackUpdates.synced_at
     
     const { data: retryData, error: retryError } = await adminSupabase
