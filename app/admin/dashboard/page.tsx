@@ -97,6 +97,7 @@ import { generateTrackingPDF, generateGatepassPDF, type GatepassData } from "@/l
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
 import { ReleaseMonitoring } from "@/components/admin/release-monitoring"
+import { SendEstimateModal } from "@/components/admin/send-estimate-modal"
 import { AddAppointmentModal } from "@/components/admin/add-appointment-modal"
 import { SalesMonitoring } from "@/components/admin/sales-monitoring"
 import { ActiveRepairsMonitoring } from "@/components/admin/active-repairs-monitoring"
@@ -582,6 +583,8 @@ export default function AdminDashboard() {
     date: new Date().toLocaleDateString("en-PH", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
     origin: 'appointments'
   })
+  const [isSendEstimateModalOpen, setIsSendEstimateModalOpen] = useState(false)
+  const [sendEstimateAppointment, setSendEstimateAppointment] = useState<Appointment | null>(null)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [recentlyClosedUnit, setRecentlyClosedUnit] = useState<string | null>(null)
   const [statModalOpen, setStatModalOpen] = useState(false)
@@ -4180,6 +4183,13 @@ export default function AdminDashboard() {
 
         {activeTab === "appointments" && (
           <div>
+            {/* Global Modals */}
+            <SendEstimateModal
+              isOpen={isSendEstimateModalOpen}
+              onClose={() => setIsSendEstimateModalOpen(false)}
+              appointmentData={sendEstimateAppointment}
+            />
+
             {/* Toolbar */}
             {expandedCards.size === 0 && (
               <div className="mb-6 space-y-4">
@@ -4221,7 +4231,6 @@ export default function AdminDashboard() {
                   onClose={() => setIsAddAppointmentModalOpen(false)}
                   onSuccess={loadAppointments}
                 />
-
                 {/* Search Bar */}
                 <div className="group relative max-w-4xl mx-auto w-full pt-2">
                   {/* Always-on Deep Aura Glow */}
@@ -4587,11 +4596,21 @@ export default function AdminDashboard() {
                                         {appointment.phone}
                                       </a>
                                     </div>
-                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground w-full group">
                                       <Mail className="w-4 h-4 shrink-0" />
-                                      <a href={`mailto:${appointment.email}`} className="hover:text-foreground truncate">
-                                        {appointment.email}
-                                      </a>
+                                      <button 
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          e.stopPropagation()
+                                          if (appointment.email && appointment.email.toUpperCase() !== "N/A") {
+                                            setSendEstimateAppointment(appointment)
+                                            setIsSendEstimateModalOpen(true)
+                                          }
+                                        }}
+                                        className={`truncate text-left focus:outline-none ${appointment.email && appointment.email.toUpperCase() !== "N/A" ? "hover:text-foreground cursor-pointer" : "cursor-default opacity-70"}`}
+                                      >
+                                        {appointment.email && appointment.email.toUpperCase() !== "N/A" ? appointment.email : "N/A"}
+                                      </button>
                                     </div>
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                       <Car className="w-4 h-4 shrink-0" />
@@ -6485,11 +6504,21 @@ export default function AdminDashboard() {
                                         {record.phone}
                                       </a>
                                     </div>
-                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground w-full group">
                                       <Mail className="w-4 h-4 shrink-0" />
-                                      <a href={`mailto:${record.email}`} className="hover:text-foreground truncate">
-                                        {record.email}
-                                      </a>
+                                      <button 
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          e.stopPropagation()
+                                          if (record.email && record.email.toUpperCase() !== "N/A") {
+                                            setSendEstimateAppointment(record as any)
+                                            setIsSendEstimateModalOpen(true)
+                                          }
+                                        }}
+                                        className={`truncate text-left focus:outline-none ${record.email && record.email.toUpperCase() !== "N/A" ? "hover:text-foreground cursor-pointer" : "cursor-default opacity-70"}`}
+                                      >
+                                        {record.email && record.email.toUpperCase() !== "N/A" ? record.email : "N/A"}
+                                      </button>
                                     </div>
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                       <Car className="w-4 h-4 shrink-0" />

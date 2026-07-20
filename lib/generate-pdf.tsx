@@ -384,8 +384,8 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     .costing-section { margin-top: 4px; margin-bottom: 4px; }
     .costing-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; page-break-inside: auto; }
     .costing-table tr { page-break-inside: avoid; page-break-after: auto; }
-    .costing-table th, .costing-table td { border: 1px solid #000; padding: 3px 6px; text-align: left; font-size: 8.5px; }
-    .costing-table th { background: #d9e1f2 !important; font-weight: bold; border: 1px solid #000 !important; -webkit-print-color-adjust: exact; }
+    .costing-table th, .costing-table td { border: 1px solid #000; padding: 5px 6px; text-align: left; font-size: 8.5px; vertical-align: middle; line-height: 1.4; white-space: pre-wrap; }
+    .costing-table th { background: #d9e1f2 !important; font-weight: bold; border: 1px solid #000 !important; -webkit-print-color-adjust: exact; padding: 4px 6px; }
     .amount { text-align: right; font-family: monospace; font-size: 9px; }
     
     .delivery-date { color: red; font-weight: bold; margin: 4px 0 2px 0; font-size: 10px; }
@@ -1243,8 +1243,8 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
 </html>`;
 }
 
-export async function generateJobOrderPDF(appointment: TrackingAppointment): Promise<string> {
-  const displayTitle = "JOB ORDER"
+export async function generateJobOrderPDF(appointment: TrackingAppointment, reportTitle?: string): Promise<string> {
+  const displayTitle = reportTitle || "JOB ORDER"
   const isReleased = appointment.isArchived
   let repairStatus = getRepairStatusLabel(isReleased ? "completed_ready" : appointment.repairStatus)
 
