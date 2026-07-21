@@ -562,6 +562,7 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
   const [isGatepassModalOpen, setIsGatepassModalOpen] = useState(false)
+  const [mopError, setMopError] = useState(false);
   const [gatepassData, setGatepassData] = useState<GatepassData>({
     id: "",
     clientName: "",
@@ -2384,6 +2385,16 @@ export default function AdminDashboard() {
   };
 
   const handleDownloadGatepass = async () => {
+    if (!gatepassData.mop || gatepassData.mop.trim() === '') {
+      setMopError(true);
+      toast({
+        title: "Mode of Payment Required",
+        description: "Please select a Mode of Payment (MOP) before generating the gatepass.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setMopError(false);
     const filename = `Gatepass ${gatepassData.plateNo} ${gatepassData.clientName}`.trim()
     const printWindow = window.open("", "_blank")
     if (!printWindow) {
@@ -2391,9 +2402,10 @@ export default function AdminDashboard() {
         title: "Popup Blocked",
         description: "Please allow popups to print the gatepass.",
         variant: "destructive"
-      })
-      return
+      });
+      return;
     }
+    setMopError(false);
 
     printWindow.document.write(`
       <html>
@@ -8048,19 +8060,63 @@ export default function AdminDashboard() {
               <Label htmlFor="gate-mop">MOP</Label>
               <Select
                 value={(gatepassData.mop && !["Cash", "GCash", "Bank Transfer", "Check", "Charge/Terms", "Insurance"].includes(gatepassData.mop)) ? "Custom" : (gatepassData.mop || undefined)}
-                onValueChange={(value) => setGatepassData(prev => ({ ...prev, mop: value === "Custom" ? "Custom Value" : value }))}
+                onValueChange={(value) => {
+                  setGatepassData(prev => ({ ...prev, mop: value === "Custom" ? "Custom Value" : value }));
+                  setMopError(false);
+                }}
               >
-                <SelectTrigger id="gate-mop">
+                <SelectTrigger id="gate-mop" className={mopError ? "border-red-500 ring-2 ring-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" : ""}>
                   <SelectValue placeholder="Mode of Payment" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="GCash">GCash</SelectItem>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="Check">Check</SelectItem>
-                  <SelectItem value="Charge/Terms">Charge/Terms</SelectItem>
-                  <SelectItem value="Insurance">Insurance</SelectItem>
-                  <SelectItem value="Custom">Custom...</SelectItem>
+                  <SelectItem value="Cash" onPointerUp={() => {
+                    if (gatepassData.mop === "Cash") {
+                      setGatepassData(prev => ({ ...prev, mop: "" }));
+                      // We dispatch escape to close the select since onValueChange won't fire
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                    }
+                  }}>Cash</SelectItem>
+                  <SelectItem value="GCash" onPointerUp={() => {
+                    if (gatepassData.mop === "GCash") {
+                      setGatepassData(prev => ({ ...prev, mop: "" }));
+                      // We dispatch escape to close the select since onValueChange won't fire
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                    }
+                  }}>GCash</SelectItem>
+                  <SelectItem value="Bank Transfer" onPointerUp={() => {
+                    if (gatepassData.mop === "Bank Transfer") {
+                      setGatepassData(prev => ({ ...prev, mop: "" }));
+                      // We dispatch escape to close the select since onValueChange won't fire
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                    }
+                  }}>Bank Transfer</SelectItem>
+                  <SelectItem value="Check" onPointerUp={() => {
+                    if (gatepassData.mop === "Check") {
+                      setGatepassData(prev => ({ ...prev, mop: "" }));
+                      // We dispatch escape to close the select since onValueChange won't fire
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                    }
+                  }}>Check</SelectItem>
+                  <SelectItem value="Charge/Terms" onPointerUp={() => {
+                    if (gatepassData.mop === "Charge/Terms") {
+                      setGatepassData(prev => ({ ...prev, mop: "" }));
+                      // We dispatch escape to close the select since onValueChange won't fire
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                    }
+                  }}>Charge/Terms</SelectItem>
+                  <SelectItem value="Insurance" onPointerUp={() => {
+                    if (gatepassData.mop === "Insurance") {
+                      setGatepassData(prev => ({ ...prev, mop: "" }));
+                      // We dispatch escape to close the select since onValueChange won't fire
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                    }
+                  }}>Insurance</SelectItem>
+                  <SelectItem value="Custom" onPointerUp={() => {
+                    if (gatepassData.mop === "Custom Value" || (gatepassData.mop && !["Cash", "GCash", "Bank Transfer", "Check", "Charge/Terms", "Insurance"].includes(gatepassData.mop))) {
+                      setGatepassData(prev => ({ ...prev, mop: "" }));
+                      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                    }
+                  }}>Custom...</SelectItem>
                 </SelectContent>
               </Select>
               {(gatepassData.mop && !["Cash", "GCash", "Bank Transfer", "Check", "Charge/Terms", "Insurance"].includes(gatepassData.mop)) && (
@@ -8068,7 +8124,10 @@ export default function AdminDashboard() {
                   className="mt-2"
                   placeholder="Enter custom MOP..."
                   value={gatepassData.mop === "Custom Value" ? "" : gatepassData.mop}
-                  onChange={(e) => setGatepassData(prev => ({ ...prev, mop: e.target.value }))}
+                  onChange={(e) => {
+                    setGatepassData(prev => ({ ...prev, mop: e.target.value }));
+                    if (e.target.value.trim() !== '') setMopError(false);
+                  }}
                   autoFocus
                 />
               )}
