@@ -425,21 +425,23 @@ return (
 // FORCED LIGHT MODE WRAPPER
 <div className="min-h-screen print:min-h-0 print:h-auto print:block !bg-gray-50 !text-gray-900 font-sans p-6 print:p-0 print:!bg-white">
 
-{/* Watermark for Print */}
-<div className="hidden print:flex fixed inset-0 z-0 items-center justify-center opacity-[0.15] pointer-events-none">
-  <img src="/autoworxlogo.png" alt="" className="w-[600px] max-w-[80%] object-contain" />
+{/* Watermark only visible in print */}
+<div className="hidden print:flex fixed inset-0 pointer-events-none items-center justify-center z-0">
+  <img src="/autoworxlogo.png" alt="" className="w-[600px] max-w-[80%] object-contain opacity-5 mix-blend-multiply" />
 </div>
 
 <style>{`
 @media print {
-body {
--webkit-print-color-adjust: exact;
-print-color-adjust: exact;
-}
-table { page-break-inside: auto; }
-tr    { page-break-inside: avoid; page-break-after: auto; }
-thead { display: table-header-group; }
-tfoot { display: table-footer-group; }
+  html, body {
+    background-color: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  table { page-break-inside: auto; }
+  tr    { page-break-inside: avoid; page-break-after: auto; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
 }
 `}</style>
 

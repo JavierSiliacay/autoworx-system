@@ -56,14 +56,14 @@ export function AdminSidebar() {
       icon: Package,
     },
     {
-      title: "Purchasing",
-      href: "/admin/purchasing",
-      icon: ShoppingCart,
-    },
-    {
       title: "Price List",
       href: "/admin/parts/prices",
       icon: Tag,
+    },
+    {
+      title: "Purchasing",
+      href: "/admin/purchasing",
+      icon: ShoppingCart,
     },
     // Conditionally include Expenses Monitoring
     ...(isAccountingEmail(session?.user?.email) ? [{

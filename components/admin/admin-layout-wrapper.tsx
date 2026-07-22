@@ -45,7 +45,7 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
 
   return (
     <>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-background print:bg-white print:min-h-0 print:block">
         {/* Sidebar Component */}
         <AdminSidebar />
         

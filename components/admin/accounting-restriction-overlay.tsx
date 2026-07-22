@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button"
 export function AccountingRestrictionOverlay({ moduleName, children }: { moduleName: string, children: React.ReactNode }) {
   const { data: session } = useSession()
 
-  if (!isAccountingOnly(session?.user?.email)) {
+  // Allow access if they are a full admin OR if they are accounting but trying to access Purchasing
+  if (!isAccountingOnly(session?.user?.email) || moduleName === "Purchasing") {
     return <>{children}</>
   }
 
