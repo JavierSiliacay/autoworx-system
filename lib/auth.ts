@@ -66,6 +66,7 @@ const AUTHORIZED_ACCOUNTING_EMAILS = [
   "alfred_autoworks@yahoo.com",
   "alfredagbong76@gmail.com",
   "alfredagbong2@gmail.com",
+  "paulsuazo64@gmail.com",
   "nainguegenelyn@gmail.com",
   "joysayson2512@gmail.com",
   "emelybingat37@gmail.com"
