@@ -423,7 +423,12 @@ const totalFilteredAmount = filteredExpenses.reduce((acc, curr) => acc + curr.to
 
 return (
 // FORCED LIGHT MODE WRAPPER
-<div className="min-h-screen !bg-gray-50 !text-gray-900 font-sans p-6 print:p-0 print:!bg-white">
+<div className="min-h-screen print:min-h-0 print:h-auto print:block !bg-gray-50 !text-gray-900 font-sans p-6 print:p-0 print:!bg-white">
+
+{/* Watermark for Print */}
+<div className="hidden print:flex fixed inset-0 z-0 items-center justify-center opacity-[0.15] pointer-events-none">
+  <img src="/autoworxlogo.png" alt="" className="w-[600px] max-w-[80%] object-contain" />
+</div>
 
 <style>{`
 @media print {
@@ -438,10 +443,8 @@ tfoot { display: table-footer-group; }
 }
 `}</style>
 
-
-
 {/* Header Section */}
-<div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b !border-gray-300 pb-4 print:hidden">
+<div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b !border-gray-300 pb-4 print:hidden relative z-10">
 <div>
 <h2 className="text-sm font-semibold !text-gray-500 uppercase tracking-wider">
 {reportPeriod === "daily" ? "DAILY OUTGOING EXPENSES" : reportPeriod === "weekly" ? "WEEKLY OUTGOING EXPENSES" : reportPeriod === "monthly" ? "MONTHLY OUTGOING EXPENSES" : reportPeriod === "yearly" ? "YEARLY OUTGOING EXPENSES" : "OVERALL OUTGOING EXPENSES"}
@@ -590,13 +593,8 @@ setSelectedMonth(`${y}-${monthPart}`)
 </div>
 
 {/* Table Section */}
-<div className="!bg-white rounded-xl shadow-sm border !border-gray-200 overflow-hidden print:shadow-none print:border-none print:overflow-visible">
+<div className="!bg-white rounded-xl shadow-sm border !border-gray-200 overflow-hidden print:shadow-none print:border-none print:overflow-visible relative z-10">
 <div className="overflow-x-auto print:overflow-visible">
-
-{/* Watermark for Print */}
-<div className="hidden print:flex fixed inset-0 z-50 items-center justify-center opacity-[0.15] pointer-events-none">
-  <img src="/autoworxlogo.png" alt="" className="w-[600px] max-w-[80%] object-contain" />
-</div>
 
 <table className="w-full border-collapse text-sm text-left !text-gray-700 [&_th]:border [&_th]:!border-gray-200 [&_td]:border [&_td]:!border-gray-200 print:text-[10px] print:[&_th]:px-1 print:[&_th]:py-1 print:[&_td]:px-1 print:[&_td]:py-1">
 <thead className="text-xs !text-gray-700 !bg-blue-50 border-b !border-blue-200 uppercase font-bold" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>

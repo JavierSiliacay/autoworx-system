@@ -5,8 +5,8 @@ export async function convertHtmlToPdfBase64(htmlContent: string): Promise<strin
   return new Promise((resolve, reject) => {
     try {
       const iframe = document.createElement('iframe')
-      iframe.style.width = '794px' // A4 width at 96 DPI
-      iframe.style.minHeight = '1123px'
+      iframe.style.width = '816px' // 8.5in width at 96 DPI
+      iframe.style.minHeight = '1248px' // 13in height at 96 DPI
       iframe.style.position = 'absolute'
       iframe.style.left = '-9999px'
       iframe.style.top = '0'
@@ -34,8 +34,8 @@ export async function convertHtmlToPdfBase64(htmlContent: string): Promise<strin
           body.style.setProperty('-webkit-font-smoothing', 'antialiased')
 
           // Smart Page Break Simulator:
-          // html2canvas doesn't understand page breaks, so we manually calculate if elements cross the A4 height line (1123px).
-          const A4_HEIGHT = 1123;
+          // html2canvas doesn't understand page breaks, so we manually calculate if elements cross the Long height line (1248px).
+          const PAGE_HEIGHT = 1248;
           const elementsToProtect = doc.querySelectorAll('.footer-layout, tr, .info-item')
           const elementsArray = Array.from(elementsToProtect)
           
@@ -44,7 +44,7 @@ export async function convertHtmlToPdfBase64(htmlContent: string): Promise<strin
             // Get fresh coordinates because previous insertions push subsequent elements down
             const top = el.getBoundingClientRect().top
             const height = el.getBoundingClientRect().height
-            const pageEnd = Math.floor(top / A4_HEIGHT) * A4_HEIGHT + A4_HEIGHT
+            const pageEnd = Math.floor(top / PAGE_HEIGHT) * PAGE_HEIGHT + PAGE_HEIGHT
             
             // If the element's bottom crosses the page boundary, push it down!
             if (top + height > pageEnd && top < pageEnd) {
@@ -89,17 +89,17 @@ export async function convertHtmlToPdfBase64(htmlContent: string): Promise<strin
             scale: 4, // Extremely high scale for crisp text
             useCORS: true,
             logging: false,
-            windowWidth: 794,
+            windowWidth: 816,
             windowHeight: body.scrollHeight
           })
 
           const imgData = canvas.toDataURL('image/jpeg', 1.0)
           
-          // Calculate PDF dimensions based on A4 size
+          // Calculate PDF dimensions based on Long size
           const pdf = new jsPDF({
             orientation: 'p',
             unit: 'mm',
-            format: 'a4'
+            format: [215.9, 330.2] // 8.5 x 13 inches
           })
           
           const pdfWidth = pdf.internal.pageSize.getWidth()

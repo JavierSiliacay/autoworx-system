@@ -949,7 +949,7 @@ export default function AdminDashboard() {
       router.push("/admin")
       return
     }
-    if (status === "authenticated" && session?.user?.role !== "admin") {
+    if (status === "authenticated" && session?.user?.role !== "admin" && session?.user?.role !== "accounting") {
       router.push("/admin")
       return
     }
@@ -968,7 +968,7 @@ export default function AdminDashboard() {
 
   // Real-time updates subscription
   useEffect(() => {
-    if (status !== "authenticated" || session?.user?.role !== "admin") return
+    if (status !== "authenticated" || (session?.user?.role !== "admin" && session?.user?.role !== "accounting")) return
 
     const supabase = createClient()
 
