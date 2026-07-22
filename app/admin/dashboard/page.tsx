@@ -9,7 +9,8 @@ import { signOut, useSession } from "next-auth/react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast, toast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
-import { isAuthorizedAdminEmail, isDeveloperEmail, isAuthorizedForReport, isAuthorizedForSales } from "@/lib/auth"
+import { isAuthorizedAdminEmail, isDeveloperEmail, isAuthorizedForReport, isAuthorizedForSales, isAccountingOnly } from "@/lib/auth"
+import { AccountingRestrictionOverlay } from "@/components/admin/accounting-restriction-overlay"
 import {
   Wrench,
   LogOut,
@@ -3941,7 +3942,8 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <AccountingRestrictionOverlay moduleName="Dashboard">
+      <div className="min-h-screen bg-background">
 
 
       <main className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
@@ -8513,6 +8515,7 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
       <WhatIsNewModal />
-    </div>
+      </div>
+    </AccountingRestrictionOverlay>
   )
 }

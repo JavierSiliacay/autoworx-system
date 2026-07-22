@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { AccountingRestrictionOverlay } from "@/components/admin/accounting-restriction-overlay"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger
 } from "@/components/ui/dialog"
@@ -816,7 +817,8 @@ export default function PartsLedgerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <AccountingRestrictionOverlay moduleName="Parts Room">
+      <div className="min-h-screen bg-slate-100 flex flex-col font-sans selection:bg-blue-200 selection:text-blue-900">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-[#0f172a] border-b border-slate-800 shadow-lg">
@@ -1514,7 +1516,8 @@ export default function PartsLedgerPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AccountingRestrictionOverlay>
   )
 }
 

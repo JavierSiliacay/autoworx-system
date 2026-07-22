@@ -23,6 +23,7 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { MAINTENANCE_CONFIG } from "@/lib/maintenance-config";
+import { AccountingRestrictionOverlay } from "@/components/admin/accounting-restriction-overlay";
 
 /* ─── helpers ──────────────────────────────────────────────────────────────── */
 
@@ -204,7 +205,8 @@ export default function MaintenancePage() {
   const badgeLabel = !fsSupported ? "Browser Unsupported" : isReady ? "Connected" : restoring ? "Restoring..." : "Not Connected";
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white p-6 md:p-10 space-y-8 animate-in fade-in duration-700">
+    <AccountingRestrictionOverlay moduleName="System Maintenance">
+      <div className="min-h-screen bg-[#0a0a0b] text-white p-6 md:p-10 space-y-8 animate-in fade-in duration-700">
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -372,7 +374,8 @@ export default function MaintenancePage() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </AccountingRestrictionOverlay>
   );
 }
 

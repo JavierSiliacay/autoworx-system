@@ -24,6 +24,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select"
 import { VEHICLE_BRANDS } from "@/lib/constants"
+import { AccountingRestrictionOverlay } from "@/components/admin/accounting-restriction-overlay"
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
 interface PartPrice {
@@ -232,7 +233,8 @@ export default function PartsPricesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
+    <AccountingRestrictionOverlay moduleName="Parts Pricing Ledger">
+      <div className="min-h-screen bg-slate-50/50 pb-20">
       {/* ─── Header ─── */}
       <header className="bg-white border-b sticky top-0 z-30 px-4 py-4 md:px-8 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -585,6 +587,7 @@ export default function PartsPricesPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AccountingRestrictionOverlay>
   )
 }

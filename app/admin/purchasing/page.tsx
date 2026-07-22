@@ -6,10 +6,12 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { ShoppingCart, ArrowLeft, Info, Package, Hammer, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { AccountingRestrictionOverlay } from "@/components/admin/accounting-restriction-overlay"
 
 export default function PurchasingPage() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-6 selection:bg-blue-100 selection:text-blue-900">
+    <AccountingRestrictionOverlay moduleName="Purchasing">
+      <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-6 selection:bg-blue-100 selection:text-blue-900">
       
       <main className="max-w-4xl mx-auto">
         <motion.div 
@@ -93,6 +95,7 @@ export default function PurchasingPage() {
         </motion.div>
       </main>
 
-    </div>
+      </div>
+    </AccountingRestrictionOverlay>
   )
 }

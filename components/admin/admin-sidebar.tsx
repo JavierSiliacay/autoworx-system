@@ -16,10 +16,12 @@ import {
   X,
   UserCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Banknote
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { isDeveloperEmail, isAccountingEmail, isAccountingOnly } from "@/lib/auth"
 
 export function AdminSidebar() {
   const pathname = usePathname()
@@ -40,10 +42,6 @@ export function AdminSidebar() {
     } catch (error) {
       console.error("Logout error:", error)
     }
-  }
-
-  const isDeveloperEmail = (email: string | null | undefined) => {
-    return email === "jrsiliacay.dev@gmail.com" || email === "kyla@example.com"
   }
 
   const navItems = [
@@ -67,6 +65,12 @@ export function AdminSidebar() {
       href: "/admin/parts/prices",
       icon: Tag,
     },
+    // Conditionally include Expenses Monitoring
+    ...(isAccountingEmail(session?.user?.email) ? [{
+      title: "Expenses Monitoring",
+      href: "/admin/expenses",
+      icon: Banknote,
+    }] : []),
     {
       title: "System Files",
       href: "/admin/maintenance",
@@ -131,25 +135,29 @@ export function AdminSidebar() {
         })}
 
         {/* Developer Tasks (Conditional) */}
-        {!isCollapsed && (
-          <div className="mt-8 mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 animate-in fade-in duration-300">
-            Tools
-          </div>
-        )}
-        <Link href="/admin/developer-tasks" onClick={() => setIsMobileOpen(false)} title={isCollapsed ? "Developer Tasks" : undefined}>
-          <div
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group mt-2",
-              isCollapsed && "justify-center px-0",
-              pathname?.startsWith("/admin/developer-tasks")
-                ? "bg-blue-500/10 text-blue-500 border border-blue-500/20"
-                : "text-blue-500/70 hover:bg-blue-500/5 hover:text-blue-500"
+        {isDeveloperEmail(session?.user?.email) && (
+          <>
+            {!isCollapsed && (
+              <div className="mt-8 mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 animate-in fade-in duration-300">
+                Tools
+              </div>
             )}
-          >
-            <Code2 className="w-5 h-5 shrink-0" />
-            {!isCollapsed && <span className="truncate animate-in fade-in duration-300">Developer Tasks</span>}
-          </div>
-        </Link>
+            <Link href="/admin/developer-tasks" onClick={() => setIsMobileOpen(false)} title={isCollapsed ? "Developer Tasks" : undefined}>
+              <div
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group mt-2",
+                  isCollapsed && "justify-center px-0",
+                  pathname?.startsWith("/admin/developer-tasks")
+                    ? "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                    : "text-blue-500/70 hover:bg-blue-500/5 hover:text-blue-500"
+                )}
+              >
+                <Code2 className="w-5 h-5 shrink-0" />
+                {!isCollapsed && <span className="truncate animate-in fade-in duration-300">Developer Tasks</span>}
+              </div>
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* Footer / User Profile */}
@@ -190,7 +198,7 @@ export function AdminSidebar() {
   return (
     <>
       {/* Mobile Hamburger Button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
+      <div className="lg:hidden fixed top-4 left-4 z-50 print:hidden">
         <Button variant="outline" size="icon" className="bg-card shadow-md" onClick={() => setIsMobileOpen(!isMobileOpen)}>
           {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </Button>
@@ -207,7 +215,7 @@ export function AdminSidebar() {
       {/* Sidebar Container */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen shrink-0 border-r border-border bg-card",
+          "fixed inset-y-0 left-0 z-40 transform transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen shrink-0 border-r border-border bg-card print:hidden",
           isMobileOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0",
           !isMobileOpen && (isCollapsed ? "lg:w-20" : "lg:w-64")
         )}

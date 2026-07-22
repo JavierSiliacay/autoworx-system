@@ -11,14 +11,16 @@ const AUTHORIZED_EMAILS = [
   "siliacay.javier@gmail.com",
   "paulsuazo64@gmail.com",
   "alfred_autoworks@yahoo.com",
-  "javiersiliacaysiliacay1234@gmail.com",
+  //"nainguegenelyn@gmail.com",
+  //"joysayson2512@gmail.com",
+  //"javiersiliacaysiliacay1234@gmail.com",
   "ryan.quintos0459@gmail.com",
-  "emelybingat37@gmail.com"
+  //"emelybingat37@gmail.com"
 ]
 
 const DEVELOPER_EMAILS = [
-  "siliacay.javier@gmail.com",
-  "javiersiliacaysiliacay1234@gmail.com"
+  "siliacay.javier@gmail.com"
+  //"javiersiliacaysiliacay1234@gmail.com"
 ]
 
 // Authorized emails for Release Monitoring Report (Owners/High-level managers)
@@ -29,8 +31,8 @@ const AUTHORIZED_REPORT_EMAILS = [
   "alfred_autoworks@yahoo.com",
   "alfredagbong2@gmail.com",
   "siliacay.javier@gmail.com",
-  "ryan.quintos0459@gmail.com",
-  "javiersiliacaysiliacay1234@gmail.com"
+  "ryan.quintos0459@gmail.com"
+  //"javiersiliacaysiliacay1234@gmail.com"
 ]
 
 // Authorized emails for Sales Monitoring (Owners, Managers, and specific monitoring staff)
@@ -42,8 +44,8 @@ const AUTHORIZED_SALES_EMAILS = [
   "alfredagbong2@gmail.com",
   "alfred_autoworks@yahoo.com",
   "ryan.quintos0459@gmail.com",
-  "siliacay.javier@gmail.com",
-  "javiersiliacaysiliacay1234@gmail.com"
+  "siliacay.javier@gmail.com"
+  //"javiersiliacaysiliacay1234@gmail.com"
 ]
 
 export function isAuthorizedAdminEmail(email?: string | null) {
@@ -56,6 +58,25 @@ export function isDeveloperEmail(email?: string | null) {
 
 export function isAuthorizedForReport(email?: string | null) {
   return !!email && AUTHORIZED_REPORT_EMAILS.some(e => e.trim().toLowerCase() === email.trim().toLowerCase())
+}
+
+const AUTHORIZED_ACCOUNTING_EMAILS = [
+  "siliacay.javier@gmail.com",
+  "javiersiliacaysiliacay1234@gmail.com",
+  "alfred_autoworks@yahoo.com",
+  "alfredagbong76@gmail.com",
+  "alfredagbong2@gmail.com",
+  "nainguegenelyn@gmail.com",
+  "joysayson2512@gmail.com",
+  "emelybingat37@gmail.com"
+]
+
+export function isAccountingEmail(email?: string | null) {
+  return !!email && AUTHORIZED_ACCOUNTING_EMAILS.some(e => e.trim().toLowerCase() === email.trim().toLowerCase())
+}
+
+export function isAccountingOnly(email?: string | null) {
+  return isAccountingEmail(email) && !isAuthorizedAdminEmail(email)
 }
 
 export function isAuthorizedForSales(email?: string | null) {
@@ -81,7 +102,9 @@ export function getUserIdentity(email: string | null | undefined): { name: strin
     "siliacay.javier@gmail.com": "Javier",
     "javiersiliacaysiliacay1234@gmail.com": "Javier",
     "ryan.quintos0459@gmail.com": "Ryan",
-    "emelybingat37@gmail.com": "Emely",
+    "emelybingat37@gmail.com": "Maam Emely",
+    "nainguegenelyn@gmail.com": "Maam Genelyn",
+    "joysayson2512@gmail.com": "Madam Joy",
     "autoworxcagayan2025@gmail.com": "System"
   };
 
@@ -92,13 +115,13 @@ export function getUserIdentity(email: string | null | undefined): { name: strin
 }
 
 type SignInCallbackParams = { user: { email?: string | null } }
-type JwtCallbackParams = { token: JWT; user?: { email?: string | null } | null }
+type JwtCallbackParams = { token: any; user?: { email?: string | null } | null }
 type SessionCallbackParams = {
   session: {
-    user?: { name?: string | null; email?: string | null; image?: string | null; role?: "admin" }
+    user?: { name?: string | null; email?: string | null; image?: string | null; role?: "admin" | "accounting" }
     expires: string
   }
-  token: JWT
+  token: any
 }
 
 export const authOptions: NextAuthOptions = {
@@ -111,19 +134,22 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user }: SignInCallbackParams) {
       // Check if user's email is in the authorized list
-      if (!isAuthorizedAdminEmail(user.email)) {
+      if (!isAuthorizedAdminEmail(user.email) && !isAccountingEmail(user.email)) {
         return false
       }
       return true
     },
     async jwt({ token, user }: JwtCallbackParams) {
-      // Persist admin role in the token once the user is known
-      if (user?.email && isAuthorizedAdminEmail(user.email)) token.role = "admin"
+      // Persist role in the token once the user is known
+      if (user?.email) {
+        if (isAuthorizedAdminEmail(user.email)) token.role = "admin"
+        else if (isAccountingEmail(user.email)) (token as any).role = "accounting"
+      }
       return token
     },
     async session({ session, token }: SessionCallbackParams) {
       // Expose role to the client session
-      if (session.user) session.user.role = token.role === "admin" ? "admin" : undefined
+      if (session.user) (session.user as any).role = token.role as "admin" | "accounting" | undefined
       return session
     },
   },
