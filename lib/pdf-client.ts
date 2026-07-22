@@ -28,8 +28,8 @@ export async function convertHtmlToPdfBase64(htmlContent: string): Promise<strin
           
           // html2canvas ignores @page margins. We must manually inject physical padding
           // to simulate the A4 print margins, otherwise it stretches to the very edges!
-          // We use a small top margin (0.05in) to prevent massive empty space at the top
-          body.style.padding = '0.05in 0.25in 0.3in 0.25in'
+          // We use 0 top margin to push it as far up as physically possible
+          body.style.padding = '0 0.25in 0.3in 0.25in'
           body.style.backgroundColor = 'white'
           body.style.textRendering = 'optimizeLegibility'
           body.style.setProperty('-webkit-font-smoothing', 'antialiased')
