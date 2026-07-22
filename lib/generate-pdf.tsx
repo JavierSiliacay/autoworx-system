@@ -78,7 +78,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
       print-color-adjust: exact;
     }
     @page { 
-      size: 8.5in 13in; 
+      size: 8.5in 12.5in; 
       margin: 0.1in 0.3in 0.4in 0.3in; /* Reduced top margin to 0.1in */
     }
     .container { 
@@ -347,7 +347,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       print-color-adjust: exact;
     }
     @page { 
-      size: 8.5in 13in; 
+      size: 8.5in 12.5in; 
       margin: 0 0.25in 0.3in 0.25in; 
     }
     .container { 

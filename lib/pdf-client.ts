@@ -6,7 +6,7 @@ export async function convertHtmlToPdfBase64(htmlContent: string): Promise<strin
     try {
       const iframe = document.createElement('iframe')
       iframe.style.width = '816px' // 8.5in width at 96 DPI
-      iframe.style.minHeight = '1248px' // 13in height at 96 DPI
+      iframe.style.minHeight = '1200px' // 12.5in height at 96 DPI
       iframe.style.position = 'absolute'
       iframe.style.left = '-9999px'
       iframe.style.top = '0'
@@ -35,8 +35,8 @@ export async function convertHtmlToPdfBase64(htmlContent: string): Promise<strin
           body.style.setProperty('-webkit-font-smoothing', 'antialiased')
 
           // Smart Page Break Simulator:
-          // html2canvas doesn't understand page breaks, so we manually calculate if elements cross the Long height line (1248px).
-          const PAGE_HEIGHT = 1248;
+          // html2canvas doesn't understand page breaks, so we manually calculate if elements cross the Long height line (1200px).
+          const PAGE_HEIGHT = 1200;
           const elementsToProtect = doc.querySelectorAll('.footer-layout, tr, .info-item')
           const elementsArray = Array.from(elementsToProtect)
           
@@ -100,7 +100,7 @@ export async function convertHtmlToPdfBase64(htmlContent: string): Promise<strin
           const pdf = new jsPDF({
             orientation: 'p',
             unit: 'mm',
-            format: [215.9, 330.2] // 8.5 x 13 inches
+            format: [215.9, 317.5] // 8.5 x 12.5 inches
           })
           
           const pdfWidth = pdf.internal.pageSize.getWidth()
