@@ -141,10 +141,12 @@ export const authOptions: NextAuthOptions = {
       return true
     },
     async jwt({ token, user }: JwtCallbackParams) {
-      // Persist role in the token once the user is known
-      if (user?.email) {
-        if (isAuthorizedAdminEmail(user.email)) token.role = "admin"
-        else if (isAccountingEmail(user.email)) (token as any).role = "accounting"
+      // Dynamically calculate role based on token email so access lists are always up to date
+      const email = user?.email || token?.email;
+      if (email) {
+        if (isAuthorizedAdminEmail(email)) token.role = "admin"
+        else if (isAccountingEmail(email)) token.role = "accounting"
+        else delete token.role
       }
       return token
     },
