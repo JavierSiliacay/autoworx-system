@@ -1405,9 +1405,9 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment, repo
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    @page { 
-      size: 8.5in 13in; 
-      margin: 0.1in; 
+    @page {
+      size: 8.5in 12.5in; 
+      margin: 0.3in 0.25in;
     }
     .container { width: 100%; margin: 0 auto; border: 2px solid #000; padding: 10px; position: relative; }
     
