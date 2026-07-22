@@ -79,7 +79,7 @@ export async function generateConfirmationPDF(options: PDFGeneratorOptions): Pro
     }
     @page { 
       size: 8.5in 13in; 
-      margin: 0.4in 0.3in; 
+      margin: 0.1in 0.3in 0.4in 0.3in; /* Reduced top margin to 0.1in */
     }
     .container { 
       width: 100%; 
