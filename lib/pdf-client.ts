@@ -112,7 +112,9 @@ export async function convertHtmlToPdfBase64(htmlContent: string): Promise<strin
           pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight)
           heightLeft -= pageHeight
 
-          while (heightLeft > 0) {
+          // Only add a new page if there's more than 5mm of content spilling over.
+          // This prevents blank second pages caused by a few pixels of empty bottom margin.
+          while (heightLeft > 5) {
             position = position - pageHeight
             pdf.addPage()
             pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight)
