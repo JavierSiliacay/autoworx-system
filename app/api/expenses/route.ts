@@ -57,6 +57,7 @@ export async function POST(request: Request) {
         charge_to: body.charge_to || null,
         unit_vehicle: body.unit_vehicle || null,
         plate_number: body.plate_number || null,
+        type_of_payment: body.type_of_payment || null,
         total_amount: parseFloat(body.total_amount),
         remarks: body.remarks || null,
         created_by: token.email
@@ -99,6 +100,7 @@ export async function PUT(request: Request) {
         charge_to: body.charge_to || null,
         unit_vehicle: body.unit_vehicle || null,
         plate_number: body.plate_number || null,
+        type_of_payment: body.type_of_payment || null,
         total_amount: parseFloat(body.total_amount),
         remarks: body.remarks || null
       })

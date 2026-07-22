@@ -29,6 +29,7 @@ date_issued: string
 charge_to: string | null
 unit_vehicle: string | null
 plate_number: string | null
+type_of_payment: string | null
 total_amount: number
 remarks: string | null
 created_by?: string
@@ -109,6 +110,8 @@ date_issued: format(new Date(), "yyyy-MM-dd"),
 charge_to: "",
 unit_vehicle: "",
 plate_number: "",
+type_of_payment: "",
+custom_payment_type: "",
 total_amount: "",
 remarks: ""
 })
@@ -305,6 +308,8 @@ date_issued: expense.date_issued,
 charge_to: expense.charge_to || "",
 unit_vehicle: expense.unit_vehicle || "",
 plate_number: expense.plate_number || "",
+type_of_payment: expense.type_of_payment && !["Cash", "Check", "Bank Transfer"].includes(expense.type_of_payment) ? "CUSTOM" : (expense.type_of_payment || ""),
+custom_payment_type: expense.type_of_payment && !["Cash", "Check", "Bank Transfer"].includes(expense.type_of_payment) ? expense.type_of_payment : "",
 total_amount: expense.total_amount.toLocaleString('en-US', {maximumFractionDigits:2}),
 remarks: expense.remarks || ""
 })
@@ -318,6 +323,8 @@ date_issued: format(new Date(), "yyyy-MM-dd"),
 charge_to: "",
 unit_vehicle: "",
 plate_number: "",
+type_of_payment: "",
+custom_payment_type: "",
 total_amount: "",
 remarks: ""
 })
@@ -327,10 +334,22 @@ setIsModalOpen(true)
 
 const handleSubmit = async (e: React.FormEvent) => {
 e.preventDefault()
+setHasSubmitted(true)
+
+if (formData.type_of_payment === "CUSTOM" && !formData.custom_payment_type.trim()) {
+toast({
+title: "Required Field",
+description: "Please specify the custom payment type.",
+variant: "destructive"
+})
+return
+}
+
 setIsSubmitting(true)
 
 try {
 const finalCategory = formData.category === "CUSTOM" ? formData.customCategory : formData.category
+const finalPaymentType = formData.type_of_payment === "CUSTOM" ? formData.custom_payment_type : formData.type_of_payment
 
 const payload = {
 id: editingExpense?.id,
@@ -340,6 +359,7 @@ date_issued: formData.date_issued,
 charge_to: formData.charge_to,
 unit_vehicle: formData.unit_vehicle,
 plate_number: formData.plate_number,
+type_of_payment: finalPaymentType,
 total_amount: parseFloat(String(formData.total_amount).replace(/,/g, '')) || 0,
 remarks: formData.remarks
 }
@@ -354,13 +374,24 @@ body: JSON.stringify(payload)
 
 if (!res.ok) throw new Error("Failed to save expense")
 
+const savedExpense = await res.json()
+if (savedExpense && savedExpense.id) {
+  setExpenses(prev => {
+    if (editingExpense) {
+      return prev.map(item => item.id === savedExpense.id ? savedExpense : item)
+    }
+    return [savedExpense, ...prev]
+  })
+} else {
+  fetchExpenses()
+}
+
 toast({
 title: "Success",
 description: `Expense successfully ${editingExpense ? "updated" : "added"}.`
 })
 
 setIsModalOpen(false)
-fetchExpenses()
 } catch (error) {
 toast({
 title: "Error",
@@ -373,13 +404,17 @@ setIsSubmitting(false)
 }
 
 const handleDelete = async (id: string) => {
+setExpenses(prev => prev.filter(item => item.id !== id))
 try {
 const res = await fetch(`/api/expenses?id=${id}`, { method: "DELETE" })
-if (!res.ok) throw new Error("Failed to delete")
+if (!res.ok) {
+fetchExpenses()
+throw new Error("Failed to delete")
+}
 toast({ title: "Success", description: "Expense deleted." })
 setExpenseToDelete(null)
-fetchExpenses()
 } catch (error) {
+fetchExpenses()
 toast({ title: "Error", description: "Failed to delete expense.", variant: "destructive" })
 }
 }
@@ -598,6 +633,7 @@ setSelectedMonth(`${y}-${monthPart}`)
 <th scope="col" className="px-3 py-2.5 text-[11px]">CHARGE TO: CLIENT NAME</th>
 <th scope="col" className="px-3 py-2.5 text-[11px]">UNIT/VEHICLE</th>
 <th scope="col" className="px-3 py-2.5 text-[11px]">PLATE #</th>
+<th scope="col" className="px-3 py-2.5 text-[11px]">TYPE OF PAYMENT</th>
 <th scope="col" className="px-3 py-2.5 text-[11px] text-right whitespace-nowrap">TOTAL AMOUNT</th>
 <th scope="col" className="px-3 py-2.5 text-[11px]">REMARKS</th>
 <th scope="col" className="px-3 py-2.5 text-[11px] text-right print:hidden whitespace-nowrap">ACTIONS</th>
@@ -606,14 +642,14 @@ setSelectedMonth(`${y}-${monthPart}`)
 <tbody>
 {isLoading ? (
 <tr>
-<td colSpan={isSelectMode ? 11 : 10} className="px-4 py-12 text-center !text-gray-500">
+<td colSpan={isSelectMode ? 12 : 11} className="px-4 py-12 text-center !text-gray-500">
 <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-500" />
 Loading expenses...
 </td>
 </tr>
 ) : filteredExpenses.length === 0 ? (
 <tr>
-<td colSpan={isSelectMode ? 11 : 10} className="px-4 py-12 text-center !text-gray-500">
+<td colSpan={isSelectMode ? 12 : 11} className="px-4 py-12 text-center !text-gray-500">
 {reportPeriod === 'monthly' ? `There's no records of expenses in this month of ${  [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
@@ -642,6 +678,7 @@ filteredExpenses.map((expense, index) => (
 <td className="px-3 py-2.5 font-medium !text-gray-800 text-xs">{expense.charge_to || "-"}</td>
 <td className="px-3 py-2.5 text-xs">{expense.unit_vehicle || "-"}</td>
 <td className="px-3 py-2.5 font-mono text-gray-600 text-xs">{expense.plate_number || "-"}</td>
+<td className="px-3 py-2.5 text-xs font-semibold">{expense.type_of_payment || "-"}</td>
 <td className="px-3 py-2.5 text-right font-bold !text-gray-900 text-xs">
 ₱ {expense.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 </td>
@@ -673,7 +710,7 @@ onClick={() => setExpenseToDelete(expense.id)}
 {filteredExpenses.length > 0 && (
 <tbody className="!bg-gray-50 font-bold border-t-2 !border-gray-200">
 <tr>
-<td colSpan={7} className="px-4 py-4 text-right !text-gray-700 uppercase">
+<td colSpan={8} className="px-4 py-4 text-right !text-gray-700 uppercase">
 {reportPeriod === 'daily' ? 'Daily' : reportPeriod === 'weekly' ? 'Weekly' : reportPeriod === 'monthly' ? 'Monthly' : reportPeriod === 'yearly' ? 'Yearly' : 'Overall'} Total Expenses of {reportPeriod === 'daily' ? format(parseISO(selectedDay), "MMM d, yyyy") : reportPeriod === 'weekly' ? formatWeekRange(selectedWeek) : reportPeriod === 'monthly' ? format(parseISO(selectedMonth + '-01'), "MMMM yyyy") : (selectedYear === 'all' ? 'All Time' : selectedYear)}:
 </td>
 <td className="px-4 py-4 text-right text-xl text-blue-700 whitespace-nowrap">
@@ -695,7 +732,7 @@ onClick={() => setExpenseToDelete(expense.id)}
 {editingExpense ? "Edit Expense Record" : "Add New Expense"}
 </DialogTitle>
 <DialogDescription className="!text-gray-500">
-Fill in the details below. Required fields are marked with an asterisk (*).
+Fill in the details below. Required fields are marked with an asterisk (<span className="text-red-500">*</span>).
 </DialogDescription>
 </DialogHeader>
 
@@ -705,7 +742,7 @@ Fill in the details below. Required fields are marked with an asterisk (*).
 {/* Left Column */}
 <div className="space-y-4">
 <div className="space-y-1.5 relative">
-<Label className="!text-gray-700 font-semibold text-xs uppercase">CATEGORY *</Label>
+<Label className="!text-gray-700 font-semibold text-xs uppercase">CATEGORY <span className="text-red-500">*</span></Label>
 <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
 <PopoverTrigger asChild>
 <Button
@@ -758,7 +795,7 @@ formData.category === cat ? "opacity-100 text-blue-600" : "opacity-0"
 
 {formData.category === "CUSTOM" && (
 <div className="space-y-1.5">
-<Label htmlFor="customCategory" className="!text-gray-700 font-semibold text-xs uppercase">Custom Category *</Label>
+<Label htmlFor="customCategory" className="!text-gray-700 font-semibold text-xs uppercase">Custom Category <span className="text-red-500">*</span></Label>
 <Input
 id="customCategory"
 required
@@ -772,7 +809,7 @@ placeholder="Enter custom category name"
 )}
 
 <div className="space-y-1.5">
-<Label htmlFor="date_issued" className="!text-gray-700 font-semibold text-xs uppercase">Date Issued *</Label>
+<Label htmlFor="date_issued" className="!text-gray-700 font-semibold text-xs uppercase">Date Issued <span className="text-red-500">*</span></Label>
 <Input
 id="date_issued"
 type="date" style={{ colorScheme: "light" }}
@@ -784,7 +821,7 @@ className={cn('!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visi
 </div>
 
 <div className="space-y-1.5">
-<Label htmlFor="total_amount" className="!text-gray-700 font-semibold text-xs uppercase">Total Amount (₱) *</Label>
+<Label htmlFor="total_amount" className="!text-gray-700 font-semibold text-xs uppercase">Total Amount (₱) <span className="text-red-500">*</span></Label>
 <Input
 id="total_amount"
 type="text"
@@ -812,7 +849,7 @@ placeholder="0.00"
 {/* Right Column */}
 <div className="space-y-4">
 <div className="space-y-1.5">
-<Label htmlFor="charge_to" className="!text-gray-700 font-semibold text-xs uppercase">Charge To (Client Name) *</Label>
+<Label htmlFor="charge_to" className="!text-gray-700 font-semibold text-xs uppercase">Charge To (Client Name) <span className="text-red-500">*</span></Label>
 <Input
 id="charge_to"
 value={formData.charge_to}
@@ -825,7 +862,7 @@ required
 
 <div className="grid grid-cols-2 gap-2">
 <div className="space-y-1.5">
-<Label htmlFor="unit_vehicle" className="!text-gray-700 font-semibold text-xs uppercase">Unit / Vehicle *</Label>
+<Label htmlFor="unit_vehicle" className="!text-gray-700 font-semibold text-xs uppercase">Unit / Vehicle <span className="text-red-500">*</span></Label>
 <Input
 id="unit_vehicle"
 value={formData.unit_vehicle}
@@ -836,7 +873,7 @@ required
 />
 </div>
 <div className="space-y-1.5">
-<Label htmlFor="plate_number" className="!text-gray-700 font-semibold text-xs uppercase">Plate # *</Label>
+<Label htmlFor="plate_number" className="!text-gray-700 font-semibold text-xs uppercase">Plate # <span className="text-red-500">*</span></Label>
 <Input
 id="plate_number"
 value={formData.plate_number}
@@ -846,13 +883,51 @@ placeholder="Plate number"
 required
 />
 </div>
+<div className="space-y-1.5 relative">
+<Label htmlFor="type_of_payment" className="!text-gray-700 font-semibold text-xs uppercase">Type of Payment <span className="text-red-500">*</span></Label>
+<Select value={formData.type_of_payment} onValueChange={(val) => setFormData({...formData, type_of_payment: val})}>
+<SelectTrigger className={cn("!bg-white !border-gray-300 focus:ring-blue-500 focus:ring-2 focus:border-blue-500 focus:ring-offset-0 !text-gray-900 w-full", hasSubmitted && !formData.type_of_payment && "!border-red-500 focus-visible:!ring-red-500 !bg-red-50")}>
+<SelectValue placeholder="Select type" />
+</SelectTrigger>
+<SelectContent className="!bg-white !border-gray-200 z-[100]">
+<SelectItem value="Check" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Check</SelectItem>
+<SelectItem value="Cash" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Cash</SelectItem>
+<SelectItem value="Bank Transfer" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Bank Transfer</SelectItem>
+<SelectItem value="CUSTOM" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Custom</SelectItem>
+</SelectContent>
+</Select>
+<input
+tabIndex={-1}
+autoComplete="off"
+className="opacity-0 absolute bottom-0 left-1/4 w-1/2 h-0 pointer-events-none"
+required
+value={formData.type_of_payment}
+onChange={() => {}}
+onInvalid={(e) => {
+setHasSubmitted(true)
+}}
+/>
+</div>
+{formData.type_of_payment === "CUSTOM" && (
+<div className="space-y-1.5 col-span-2">
+<Label htmlFor="custom_payment_type" className="!text-gray-700 font-semibold text-xs uppercase">Specify Custom Payment Type <span className="text-red-500">*</span></Label>
+<Input
+id="custom_payment_type"
+value={formData.custom_payment_type}
+onChange={(e) => setFormData({...formData, custom_payment_type: e.target.value})}
+className={cn("!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500", hasSubmitted && !formData.custom_payment_type && "!border-red-500 focus-visible:!ring-red-500 !bg-red-50")}
+placeholder="Enter payment type..."
+required
+/>
+</div>
+)}
 </div>
 </div>
 </div>
 
 {/* Full Width */}
 <div className="space-y-1.5 mt-2">
-<Label htmlFor="description" className="!text-gray-700 font-semibold text-xs uppercase">Expenses Description *</Label>
+<Label htmlFor="description" className="!text-gray-700 font-semibold text-xs uppercase">Expenses Description <span className="text-red-500">*</span></Label>
 <Textarea
 id="description"
 required
