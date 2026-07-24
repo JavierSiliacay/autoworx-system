@@ -337,8 +337,8 @@ invoice_number: expense.invoice_number || "",
 supplier_name: expense.supplier_name || "",
 unit_vehicle: expense.unit_vehicle || "",
 plate_number: expense.plate_number || "",
-type_of_payment: expense.type_of_payment && !["Cash", "Check", "Bank Transfer"].includes(expense.type_of_payment) ? "CUSTOM" : (expense.type_of_payment || ""),
-custom_payment_type: expense.type_of_payment && !["Cash", "Check", "Bank Transfer"].includes(expense.type_of_payment) ? expense.type_of_payment : "",
+type_of_payment: expense.type_of_payment && !["Cash", "Cheque", "Check", "Bank Transfer"].includes(expense.type_of_payment) ? "CUSTOM" : (expense.type_of_payment === "Check" ? "Cheque" : (expense.type_of_payment || "")),
+custom_payment_type: expense.type_of_payment && !["Cash", "Cheque", "Check", "Bank Transfer"].includes(expense.type_of_payment) ? expense.type_of_payment : "",
 total_amount: expense.total_amount.toLocaleString('en-US', {maximumFractionDigits:2}),
 remarks: expense.remarks || ""
 })
@@ -538,8 +538,8 @@ return (
 <h2 className="text-sm font-semibold !text-gray-500 uppercase tracking-wider">
 {reportPeriod === "daily" ? "DAILY OUTGOING EXPENSES" : reportPeriod === "weekly" ? "WEEKLY OUTGOING EXPENSES" : reportPeriod === "monthly" ? "MONTHLY OUTGOING EXPENSES" : reportPeriod === "yearly" ? "YEARLY OUTGOING EXPENSES" : "OVERALL OUTGOING EXPENSES"}
 </h2>
-<div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-1">
-  <h1 className="text-3xl font-extrabold !text-gray-900 tracking-tight">EXPENSES REPORT MONITORING</h1>
+<div className="flex flex-wrap items-center gap-3 mt-1">
+  <h1 className="text-2xl md:text-3xl font-extrabold !text-gray-900 tracking-tight">EXPENSES REPORT MONITORING</h1>
   
   {/* View Mode Toggle Buttons */}
   <div className="inline-flex items-center bg-gray-200/80 p-1 rounded-lg border border-gray-300 shrink-0">
@@ -751,45 +751,47 @@ setSelectedMonth(`${y}-${monthPart}`)
           </tr>
         </thead>
         <tbody>
-          {CATEGORIES.map((cat, idx) => {
-            const data = categorySummaries[cat] || { cash: 0, cheque: 0, total: 0, descriptions: [], remarks: [] }
-            const hasAmount = data.total > 0
-            return (
-              <tr 
-                key={cat} 
-                onClick={() => hasAmount && setSummaryCategoryModal(cat)}
-                className={cn(
-                  "border-b border-gray-300 transition-colors",
-                  hasAmount ? "bg-blue-50/30 hover:bg-blue-100/60 font-medium cursor-pointer group" : "hover:bg-gray-50/50 opacity-80"
-                )}
-                title={hasAmount ? `Click to view all ${cat} expense entries` : undefined}
-              >
-                <td className="border border-gray-300 px-2 py-1.5 text-center font-bold text-gray-700">{idx + 1}</td>
-                <td className="border border-gray-300 px-3 py-1.5 font-extrabold text-gray-900">
-                  <span className={cn(hasAmount ? "bg-yellow-300/80 px-1.5 py-0.5 rounded text-gray-900" : "text-gray-800")}>
+          {CATEGORIES.filter(cat => (categorySummaries[cat]?.total || 0) > 0).length === 0 ? (
+            <tr>
+              <td colSpan={7} className="border border-gray-300 px-4 py-8 text-center text-gray-500 font-medium italic">
+                No outgoing expenses recorded for this period.
+              </td>
+            </tr>
+          ) : (
+            CATEGORIES.filter(cat => (categorySummaries[cat]?.total || 0) > 0).map((cat, idx) => {
+              const data = categorySummaries[cat]
+              return (
+                <tr 
+                  key={cat} 
+                  onClick={() => setSummaryCategoryModal(cat)}
+                  className="border-b border-gray-300 transition-colors bg-white hover:bg-blue-50/50 font-medium cursor-pointer group"
+                  title={`Click to view all ${cat} expense entries`}
+                >
+                  <td className="border border-gray-300 px-2 py-1.5 text-center font-bold text-gray-700">{idx + 1}</td>
+                  <td className="border border-gray-300 px-3 py-1.5 font-extrabold text-gray-900">
                     {cat}
-                  </span>
-                </td>
-                <td className="border border-gray-300 px-3 py-1.5 text-[10px] text-gray-700 uppercase font-semibold leading-tight max-w-[250px] truncate" title={data.descriptions.length > 0 ? data.descriptions.join(", ") : (CATEGORY_DESCRIPTIONS[cat] || "")}>
-                  {data.descriptions.length > 0
-                    ? data.descriptions.join(", ")
-                    : (CATEGORY_DESCRIPTIONS[cat] || "")}
-                </td>
-                <td className="border border-gray-300 px-2 py-1.5 text-right text-gray-800 font-mono">
-                  {data.cheque > 0 ? `₱${data.cheque.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
-                </td>
-                <td className="border border-gray-300 px-2 py-1.5 text-right text-gray-800 font-mono">
-                  {data.cash > 0 ? `₱${data.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
-                </td>
-                <td className={cn("border border-gray-300 px-3 py-1.5 text-right font-mono font-extrabold", hasAmount ? "text-blue-900" : "text-gray-400")}>
-                  {hasAmount ? `₱${data.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
-                </td>
-                <td className="border border-gray-300 px-3 py-1.5 text-[10px] text-gray-600 italic">
-                  {data.remarks.length > 0 ? data.remarks.join("; ") : ""}
-                </td>
-              </tr>
-            )
-          })}
+                  </td>
+                  <td className="border border-gray-300 px-3 py-1.5 text-[10px] text-gray-700 uppercase font-semibold leading-tight max-w-[250px] truncate" title={data.descriptions.length > 0 ? data.descriptions.join(", ") : (CATEGORY_DESCRIPTIONS[cat] || "")}>
+                    {data.descriptions.length > 0
+                      ? data.descriptions.join(", ")
+                      : (CATEGORY_DESCRIPTIONS[cat] || "")}
+                  </td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-right text-gray-800 font-mono">
+                    {data.cheque > 0 ? `₱${data.cheque.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
+                  </td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-right text-gray-800 font-mono">
+                    {data.cash > 0 ? `₱${data.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
+                  </td>
+                  <td className="border border-gray-300 px-3 py-1.5 text-right font-mono font-extrabold text-blue-900">
+                    ₱{data.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="border border-gray-300 px-3 py-1.5 text-[10px] text-gray-600 italic">
+                    {data.remarks.length > 0 ? data.remarks.join("; ") : ""}
+                  </td>
+                </tr>
+              )
+            })
+          )}
         </tbody>
         <tfoot>
           <tr className="bg-gray-200 border-t-2 border-gray-400 font-black text-gray-900 text-sm">
@@ -1145,7 +1147,7 @@ required
 <SelectValue placeholder="Select type" />
 </SelectTrigger>
 <SelectContent className="!bg-white !border-gray-200 z-[100]">
-<SelectItem value="Check" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Check</SelectItem>
+<SelectItem value="Cheque" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Cheque</SelectItem>
 <SelectItem value="Cash" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Cash</SelectItem>
 <SelectItem value="Bank Transfer" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Bank Transfer</SelectItem>
 <SelectItem value="CUSTOM" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Custom</SelectItem>
@@ -1262,86 +1264,101 @@ className="bg-blue-600 hover:bg-blue-700 text-white"
 
       {/* View Expense Modal */}
       <Dialog open={!!viewingExpense} onOpenChange={(open) => !open && setViewingExpense(null)}>
-        <DialogContent className="!bg-white sm:max-w-[500px] !border-gray-200 shadow-xl overflow-hidden p-0">
-          <div className="p-6 bg-gray-50 border-b border-gray-100">
+        <DialogContent className="!bg-white sm:max-w-[650px] !border-gray-200 shadow-2xl overflow-hidden p-0 z-[120]">
+          <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100 shrink-0">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-gray-900">Expense Details</DialogTitle>
-              <DialogDescription className="text-gray-500">
-                Detailed view of the selected expense record.
+              <DialogTitle className="text-lg font-extrabold text-gray-900">Expense Record Inspector</DialogTitle>
+              <DialogDescription className="text-[11px] text-gray-500">
+                Detailed parameters and metadata for this expense entry.
               </DialogDescription>
             </DialogHeader>
           </div>
           
           {viewingExpense && (
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-5 space-y-3">
+              {/* Row 1: Key Summary */}
+              <div className="grid grid-cols-3 gap-2.5">
                 <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Category</p>
-                  <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded-md">{viewingExpense.category}</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Category</p>
+                  <p className="text-xs font-bold text-blue-700 bg-blue-50/80 px-2.5 py-1.5 rounded-md truncate">{viewingExpense.category}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Date Issued</p>
-                  <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded-md">
-                    {format(parseISO(viewingExpense.date_issued), "MMMM d, yyyy")}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Description</p>
-                  <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded-md whitespace-pre-wrap">
-                    {viewingExpense.description}
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Date Issued</p>
+                  <p className="text-xs font-medium text-gray-900 bg-gray-50 px-2.5 py-1.5 rounded-md">
+                    {format(parseISO(viewingExpense.date_issued), "MMM d, yyyy")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Charge To</p>
-                  <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded-md">{viewingExpense.charge_to || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Invoice No.</p>
-                  <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded-md font-mono">{viewingExpense.invoice_number || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Suppliers Name</p>
-                  <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded-md">{viewingExpense.supplier_name || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Unit / Vehicle</p>
-                  <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded-md">{viewingExpense.unit_vehicle || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Plate Number</p>
-                  <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded-md font-mono">{viewingExpense.plate_number || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Amount</p>
-                  <p className="text-lg font-bold text-blue-700 bg-blue-50 p-2 rounded-md">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Total Amount</p>
+                  <p className="text-xs font-extrabold text-blue-900 bg-blue-100/70 px-2.5 py-1.5 rounded-md font-mono">
                     ₱ {viewingExpense.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Remarks</p>
-                  <p className="text-sm font-medium text-gray-900 bg-gray-50 p-2 rounded-md min-h-[40px] italic">
-                    {viewingExpense.remarks || "No remarks provided."}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-1">
-                <p className="text-xs text-gray-400">
-                  <span className="font-semibold text-gray-500">Record ID:</span> {viewingExpense.id}
+              {/* Row 2: Description */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Description / Type of Expense</p>
+                <p className="text-xs font-semibold text-gray-900 bg-gray-50 p-2 rounded-md border border-gray-100 whitespace-pre-wrap">
+                  {viewingExpense.description}
                 </p>
-                <p className="text-xs text-gray-400">
-                  <span className="font-semibold text-gray-500">Created By:</span> <span className="text-blue-600 font-medium">{viewingExpense.created_by || "System / Unknown"}</span>
+              </div>
+
+              {/* Row 3: Billing & Suppliers */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Charge To (Client)</p>
+                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">{viewingExpense.charge_to || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Invoice No.</p>
+                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md font-mono truncate">{viewingExpense.invoice_number || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Suppliers Name</p>
+                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">{viewingExpense.supplier_name || "-"}</p>
+                </div>
+              </div>
+
+              {/* Row 4: Vehicle & Payment Details */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Unit / Vehicle</p>
+                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">{viewingExpense.unit_vehicle || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Plate Number</p>
+                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md font-mono truncate">{viewingExpense.plate_number || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Payment Type</p>
+                  <p className="text-xs font-bold text-gray-900 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">{viewingExpense.type_of_payment || "Cash"}</p>
+                </div>
+              </div>
+
+              {/* Row 5: Remarks */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Remarks</p>
+                <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-md italic">
+                  {viewingExpense.remarks || "No remarks provided."}
                 </p>
               </div>
             </div>
           )}
           
-          <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+          {/* Footer Bar with Record Metadata & Back Button */}
+          <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
+            {viewingExpense && (
+              <div className="text-[10px] text-gray-500 flex flex-wrap items-center gap-x-4 gap-y-0.5 font-sans">
+                <p><span className="font-semibold text-gray-600">ID:</span> <span className="font-mono text-gray-700">{viewingExpense.id.slice(0, 18)}...</span></p>
+                <p><span className="font-semibold text-gray-600">Created By:</span> <span className="text-blue-600 font-medium">{viewingExpense.created_by || "System"}</span></p>
+              </div>
+            )}
             <Button
               onClick={() => setViewingExpense(null)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-8 px-4 shrink-0 ml-auto"
             >
-              Close
+              {summaryCategoryModal ? `← Back to ${summaryCategoryModal} Breakdown` : "Close"}
             </Button>
           </div>
         </DialogContent>
@@ -1354,7 +1371,7 @@ className="bg-blue-600 hover:bg-blue-700 text-white"
           <div className="p-6 bg-blue-50/80 border-b border-blue-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="bg-yellow-300 text-gray-900 text-[10px] font-black uppercase px-2 py-0.5 rounded shadow-sm">Category Audit</span>
+                <span className="bg-blue-100 text-blue-800 text-[10px] font-black uppercase px-2 py-0.5 rounded shadow-sm border border-blue-200">Category Audit</span>
                 <p className="text-xs font-bold text-gray-600 uppercase">
                   Period: {reportPeriod === 'daily' ? format(parseISO(selectedDay), "MMMM d, yyyy") : reportPeriod === 'weekly' ? formatWeekRange(selectedWeek) : reportPeriod === 'monthly' ? format(parseISO(selectedMonth + '-01'), "MMMM yyyy") : (selectedYear === 'all' ? 'All Time' : selectedYear)}
                 </p>
@@ -1404,7 +1421,6 @@ className="bg-blue-600 hover:bg-blue-700 text-white"
                         key={exp.id} 
                         className="hover:bg-blue-50/50 transition-colors cursor-pointer"
                         onClick={() => {
-                          setSummaryCategoryModal(null)
                           setViewingExpense(exp)
                         }}
                         title="Click to inspect this specific expense entry"

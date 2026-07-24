@@ -1649,6 +1649,11 @@ export default function AdminDashboard() {
     }
 
     // Optimistic update
+    setExpandedCards((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
     setAppointments((prev) => prev.filter((apt) => apt.id !== id))
 
     try {
@@ -3616,9 +3621,14 @@ export default function AdminDashboard() {
     return true
   })
 
-  const filteredAppointments = expandedCards.size > 0
-    ? baseFilteredAppointments.filter(apt => expandedCards.has(apt.id))
-    : baseFilteredAppointments;
+  const filteredAppointments = baseFilteredAppointments;
+
+  useEffect(() => {
+    const maxPages = Math.max(1, Math.ceil(filteredAppointments.length / itemsPerPage));
+    if (activePage > maxPages) {
+      setActivePage(maxPages);
+    }
+  }, [filteredAppointments.length, activePage, itemsPerPage]);
 
   const getMatchCategories = (apt: Appointment, query: string) => {
     if (!query.trim()) return []
