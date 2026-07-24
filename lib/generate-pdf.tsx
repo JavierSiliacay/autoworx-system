@@ -349,6 +349,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
     @page { 
       size: 8.5in 12.5in; 
       margin: 0 0.25in 0.3in 0.25in; 
+      
     }
     .container { 
       width: 100%; 
