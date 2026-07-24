@@ -141,13 +141,14 @@ unit_vehicle: "",
 plate_number: "",
 type_of_payment: "",
 custom_payment_type: "",
+po_number: "",
 total_amount: "",
 remarks: ""
 })
 
 // Delete Confirm State
 const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null)
-  const [selectedExpenses, setSelectedExpenses] = useState<string[]>([])
+const [selectedExpenses, setSelectedExpenses] = useState<string[]>([])
   const [isSelectMode, setIsSelectMode] = useState(false)
 
   const handleBulkDelete = async () => {
@@ -327,6 +328,9 @@ setHasSubmitted(false)
 if (expense) {
 setEditingExpense(expense)
 const isCustom = !CATEGORIES.includes(expense.category) && expense.category !== ""
+const isPO = expense.type_of_payment && (expense.type_of_payment.toUpperCase().includes("PO") || expense.type_of_payment.toUpperCase().includes("P.O"));
+const isStandard = expense.type_of_payment && ["Cash", "Cheque", "Check", "Online Payment", "Bank Transfer"].includes(expense.type_of_payment);
+
 setFormData({
 category: isCustom ? "CUSTOM" : expense.category,
 customCategory: isCustom ? expense.category : "",
@@ -337,8 +341,9 @@ invoice_number: expense.invoice_number || "",
 supplier_name: expense.supplier_name || "",
 unit_vehicle: expense.unit_vehicle || "",
 plate_number: expense.plate_number || "",
-type_of_payment: expense.type_of_payment && !["Cash", "Cheque", "Check", "Bank Transfer"].includes(expense.type_of_payment) ? "CUSTOM" : (expense.type_of_payment === "Check" ? "Cheque" : (expense.type_of_payment || "")),
-custom_payment_type: expense.type_of_payment && !["Cash", "Cheque", "Check", "Bank Transfer"].includes(expense.type_of_payment) ? expense.type_of_payment : "",
+type_of_payment: isPO ? "Purchase Order / PO" : isStandard ? (expense.type_of_payment === "Check" ? "Cheque" : (expense.type_of_payment === "Bank Transfer" ? "Online Payment" : (expense.type_of_payment || ""))) : "CUSTOM",
+custom_payment_type: (!isPO && !isStandard) ? (expense.type_of_payment || "") : "",
+po_number: isPO ? expense.type_of_payment?.replace(/purchase order|p\.o\.?|po/gi, '').replace(/^[\s:-]+|[\s:-]+$/g, '') || "" : "",
 total_amount: expense.total_amount.toLocaleString('en-US', {maximumFractionDigits:2}),
 remarks: expense.remarks || ""
 })
@@ -356,6 +361,7 @@ unit_vehicle: "",
 plate_number: "",
 type_of_payment: "",
 custom_payment_type: "",
+po_number: "",
 total_amount: "",
 remarks: ""
 })
@@ -380,7 +386,7 @@ setIsSubmitting(true)
 
 try {
 const finalCategory = formData.category === "CUSTOM" ? formData.customCategory : formData.category
-const finalPaymentType = formData.type_of_payment === "CUSTOM" ? formData.custom_payment_type : formData.type_of_payment
+const finalPaymentType = formData.type_of_payment === "CUSTOM" ? formData.custom_payment_type : formData.type_of_payment === "Purchase Order / PO" ? (formData.po_number ? "PO - " + formData.po_number : "PO") : formData.type_of_payment
 
 const payload = {
 id: editingExpense?.id,
@@ -453,22 +459,24 @@ toast({ title: "Error", description: "Failed to delete expense.", variant: "dest
 }
 
 const categorySummaries = useMemo(() => {
-  const map: Record<string, { cash: number; cheque: number; total: number; descriptions: string[]; remarks: string[] }> = {}
+  const map: Record<string, { cash: number; cheque: number; po: number; total: number; descriptions: string[]; remarks: string[] }> = {}
 
   CATEGORIES.forEach(cat => {
-    map[cat] = { cash: 0, cheque: 0, total: 0, descriptions: [], remarks: [] }
+    map[cat] = { cash: 0, cheque: 0, po: 0, total: 0, descriptions: [], remarks: [] }
   })
 
   filteredExpenses.forEach(exp => {
     const rawCat = (exp.category || "").trim().toUpperCase()
     const catKey = CATEGORIES.includes(rawCat) ? rawCat : "CUSTOM"
     if (!map[catKey]) {
-      map[catKey] = { cash: 0, cheque: 0, total: 0, descriptions: [], remarks: [] }
+      map[catKey] = { cash: 0, cheque: 0, po: 0, total: 0, descriptions: [], remarks: [] }
     }
 
     const payType = (exp.type_of_payment || "").trim().toLowerCase()
     if (payType.includes("cheque") || payType.includes("check")) {
       map[catKey].cheque += exp.total_amount
+    } else if (payType.includes("po") || payType.includes("p.o") || payType.includes("purchase order")) {
+      map[catKey].po += exp.total_amount
     } else {
       map[catKey].cash += exp.total_amount
     }
@@ -741,24 +749,25 @@ setSelectedMonth(`${y}-${monthPart}`)
             <th rowSpan={2} className="border border-gray-300 px-2 py-2 text-center w-10">No.</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[160px]">CATEGORY DESCRIPTION</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[200px]">TYPE OF EXPENSE</th>
-            <th colSpan={2} className="border border-gray-300 px-2 py-1 text-center">PAYMENT TYPE</th>
+            <th colSpan={3} className="border border-gray-300 px-2 py-1 text-center">PAYMENT TYPE</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 text-right min-w-[110px]">TOTAL AMOUNT</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[120px]">REMARKS</th>
           </tr>
           <tr className="bg-blue-50 border-b border-gray-300 text-gray-900 font-bold uppercase text-[10px]" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
             <th className="border border-gray-300 px-2 py-1 text-center w-20">CHEQUE</th>
             <th className="border border-gray-300 px-2 py-1 text-center w-20">CASH</th>
+            <th className="border border-gray-300 px-2 py-1 text-center w-20">PO</th>
           </tr>
         </thead>
         <tbody>
-          {CATEGORIES.filter(cat => (categorySummaries[cat]?.total || 0) > 0).length === 0 ? (
+          {CATEGORIES.length === 0 ? (
             <tr>
-              <td colSpan={7} className="border border-gray-300 px-4 py-8 text-center text-gray-500 font-medium italic">
+              <td colSpan={8} className="border border-gray-300 px-4 py-8 text-center text-gray-500 font-medium italic">
                 No outgoing expenses recorded for this period.
               </td>
             </tr>
           ) : (
-            CATEGORIES.filter(cat => (categorySummaries[cat]?.total || 0) > 0).map((cat, idx) => {
+            CATEGORIES.map((cat, idx) => {
               const data = categorySummaries[cat]
               return (
                 <tr 
@@ -782,8 +791,11 @@ setSelectedMonth(`${y}-${monthPart}`)
                   <td className="border border-gray-300 px-2 py-1.5 text-right text-gray-800 font-mono">
                     {data.cash > 0 ? `₱${data.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
                   </td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-right text-gray-800 font-mono">
+                    {data.po > 0 ? `₱${data.po.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
+                  </td>
                   <td className="border border-gray-300 px-3 py-1.5 text-right font-mono font-extrabold text-blue-900">
-                    ₱{data.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {data.total > 0 ? `₱${data.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
                   </td>
                   <td className="border border-gray-300 px-3 py-1.5 text-[10px] text-gray-600 italic">
                     {data.remarks.length > 0 ? data.remarks.join("; ") : ""}
@@ -794,9 +806,27 @@ setSelectedMonth(`${y}-${monthPart}`)
           )}
         </tbody>
         <tfoot>
-          <tr className="bg-gray-200 border-t-2 border-gray-400 font-black text-gray-900 text-sm">
-            <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right uppercase tracking-wider">
-              TOTAL OVERHEAD EXPENSES
+          <tr className="bg-gray-100 border-t-2 border-gray-400 font-bold text-gray-800 text-xs">
+            <td colSpan={3} className="border border-gray-300 px-4 py-2.5 text-right uppercase tracking-wider">
+              SUB TOTAL PER PAYMENT TYPE
+            </td>
+            <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
+              ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.cheque || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+            <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
+              ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.cash || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+            <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
+              ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.po || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+            <td className="border border-gray-300 px-3 py-2.5 text-right font-mono text-blue-900 font-black">
+              ₱{totalFilteredAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+            <td className="border border-gray-300 px-3 py-2.5"></td>
+          </tr>
+          <tr className="bg-gray-200 border-t border-gray-400 font-black text-gray-900 text-sm">
+            <td colSpan={6} className="border border-gray-300 px-4 py-3 text-right uppercase tracking-wider">
+              GRAND TOTAL OVERHEAD EXPENSES
             </td>
             <td className="border border-gray-300 px-3 py-3 text-right font-mono text-base text-blue-950 font-black">
               ₱{totalFilteredAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1149,7 +1179,8 @@ required
 <SelectContent className="!bg-white !border-gray-200 z-[100]">
 <SelectItem value="Cheque" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Cheque</SelectItem>
 <SelectItem value="Cash" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Cash</SelectItem>
-<SelectItem value="Bank Transfer" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Bank Transfer</SelectItem>
+<SelectItem value="Online Payment" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Online Payment</SelectItem>
+<SelectItem value="Purchase Order / PO" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Purchase Order / PO</SelectItem>
 <SelectItem value="CUSTOM" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Custom</SelectItem>
 </SelectContent>
 </Select>
@@ -1165,6 +1196,19 @@ setHasSubmitted(true)
 }}
 />
 </div>
+{formData.type_of_payment === "Purchase Order / PO" && (
+<div className="space-y-1.5 col-span-2">
+<Label htmlFor="po_number" className="!text-gray-700 font-semibold text-xs uppercase">PO Number <span className="text-red-500">*</span></Label>
+<Input
+id="po_number"
+value={formData.po_number}
+onChange={(e) => setFormData({...formData, po_number: e.target.value})}
+className={cn("!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500", hasSubmitted && !formData.po_number && "!border-red-500 focus-visible:!ring-red-500 !bg-red-50")}
+placeholder="Enter PO number..."
+required
+/>
+</div>
+)}
 {formData.type_of_payment === "CUSTOM" && (
 <div className="space-y-1.5 col-span-2">
 <Label htmlFor="custom_payment_type" className="!text-gray-700 font-semibold text-xs uppercase">Specify Custom Payment Type <span className="text-red-500">*</span></Label>
