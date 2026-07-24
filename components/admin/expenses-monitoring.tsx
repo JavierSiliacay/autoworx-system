@@ -426,17 +426,22 @@ return (
 <div className="min-h-screen print:min-h-0 print:h-auto print:block !bg-gray-50 !text-gray-900 font-sans p-6 print:p-0 print:!bg-white">
 
 {/* Watermark only visible in print */}
-<div className="hidden print:flex fixed inset-0 pointer-events-none items-center justify-center z-0">
-  <img src="/autoworxlogo.png" alt="" className="w-[600px] max-w-[80%] object-contain opacity-5 mix-blend-multiply" />
+<div className="hidden print:flex fixed inset-0 pointer-events-none items-center justify-center z-50">
+  <img src="/autoworxlogo.png" alt="Autoworx Watermark" className="w-[500px] max-w-[70%] object-contain opacity-10 mix-blend-multiply" />
 </div>
 
 <style>{`
 @media print {
-  html, body {
-    background-color: white !important;
-    color: black !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  @page {
+    margin: 10mm;
+    background-color: #ffffff;
+  }
+  html, body, #__next, body > div, main {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   table { page-break-inside: auto; }
   tr    { page-break-inside: avoid; page-break-after: auto; }
