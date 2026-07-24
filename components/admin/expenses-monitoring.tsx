@@ -853,19 +853,19 @@ setSelectedMonth(`${y}-${monthPart}`)
   />
 </th>
 )}
-<th scope="col" className="px-3 py-2.5 text-[11px]">NO.</th>
-<th scope="col" className="px-3 py-2.5 text-[11px]">CATEGORY</th>
-<th scope="col" className="px-3 py-2.5 text-[11px] min-w-[180px]">EXPENSES DESCRIPTION / TYPE OF EXPENSES</th>
-<th scope="col" className="px-3 py-2.5 text-[11px]">DATE ISSUE / DATE COVERED</th>
-<th scope="col" className="px-3 py-2.5 text-[11px]">CHARGE TO: CLIENT NAME</th>
-<th scope="col" className="px-3 py-2.5 text-[11px]">INVOICE NO.</th>
-<th scope="col" className="px-3 py-2.5 text-[11px]">SUPPLIERS NAME</th>
-<th scope="col" className="px-3 py-2.5 text-[11px]">UNIT/VEHICLE</th>
-<th scope="col" className="px-3 py-2.5 text-[11px]">PLATE #</th>
-<th scope="col" className="px-3 py-2.5 text-[11px]">TYPE OF PAYMENT</th>
-<th scope="col" className="px-3 py-2.5 text-[11px] text-right whitespace-nowrap">TOTAL AMOUNT</th>
-<th scope="col" className="px-3 py-2.5 text-[11px]">REMARKS</th>
-<th scope="col" className="px-3 py-2.5 text-[11px] text-right print:hidden whitespace-nowrap">ACTIONS</th>
+<th scope="col" className="px-2 py-2 text-[10px]">NO.</th>
+<th scope="col" className="px-2 py-2 text-[10px]">CATEGORY</th>
+<th scope="col" className="px-2 py-2 text-[10px] min-w-[140px]">EXPENSES DESCRIPTION / TYPE OF EXPENSES</th>
+<th scope="col" className="px-2 py-2 text-[10px] whitespace-nowrap">DATE ISSUE / DATE COVERED</th>
+<th scope="col" className="px-2 py-2 text-[10px]">CHARGE TO</th>
+<th scope="col" className="px-2 py-2 text-[10px]">INVOICE NO.</th>
+<th scope="col" className="px-2 py-2 text-[10px]">SUPPLIER NAME</th>
+<th scope="col" className="px-2 py-2 text-[10px]">UNIT/VEHICLE</th>
+<th scope="col" className="px-2 py-2 text-[10px]">PLATE #</th>
+<th scope="col" className="px-2 py-2 text-[10px]">PAYMENT</th>
+<th scope="col" className="px-2 py-2 text-[10px] text-right whitespace-nowrap">TOTAL AMOUNT</th>
+<th scope="col" className="px-2 py-2 text-[10px]">REMARKS</th>
+<th scope="col" className="px-2 py-2 text-[10px] text-right print:hidden whitespace-nowrap">ACTIONS</th>
 </tr>
 </thead>
 <tbody>
@@ -890,7 +890,7 @@ Loading expenses...
 filteredExpenses.map((expense, index) => (
 <tr key={expense.id} className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors group cursor-pointer" onClick={() => !isSelectMode && setViewingExpense(expense)}>
 {isSelectMode && (
-<td className="px-4 py-3 print:hidden w-12" onClick={(e) => e.stopPropagation()}>
+<td className="px-3 py-2 print:hidden w-10" onClick={(e) => e.stopPropagation()}>
   <Checkbox 
     checked={selectedExpenses.includes(expense.id)}
     onCheckedChange={(checked) => toggleSelect(expense.id, checked as boolean)}
@@ -898,39 +898,39 @@ filteredExpenses.map((expense, index) => (
   />
 </td>
 )}
-<td className="px-3 py-2.5 font-medium text-xs">{index + 1}</td>
-<td className="px-3 py-2.5 font-semibold text-blue-700 text-xs">{expense.category}</td>
-<td className="px-3 py-2.5 !text-gray-900 text-xs">{expense.description}</td>
-<td className="px-3 py-2.5 whitespace-nowrap text-xs">
+<td className="px-2 py-2 font-mono text-[11px] text-gray-500">{index + 1}</td>
+<td className="px-2 py-2 font-semibold text-blue-700 text-[11px] whitespace-nowrap">{expense.category}</td>
+<td className="px-2 py-2 !text-gray-900 text-xs">{expense.description}</td>
+<td className="px-2 py-2 whitespace-nowrap text-[11px]">
 {format(parseISO(expense.date_issued), "MMM dd, yyyy")}
 </td>
-<td className="px-3 py-2.5 font-medium !text-gray-800 text-xs">{expense.charge_to || "-"}</td>
-<td className="px-3 py-2.5 font-mono text-gray-700 text-xs">{expense.invoice_number || "-"}</td>
-<td className="px-3 py-2.5 font-medium !text-gray-800 text-xs">{expense.supplier_name || "-"}</td>
-<td className="px-3 py-2.5 text-xs">{expense.unit_vehicle || "-"}</td>
-<td className="px-3 py-2.5 font-mono text-gray-600 text-xs">{expense.plate_number || "-"}</td>
-<td className="px-3 py-2.5 text-xs font-semibold">{expense.type_of_payment || "-"}</td>
-<td className="px-3 py-2.5 text-right font-bold !text-gray-900 text-xs">
+<td className="px-2 py-2 font-medium !text-gray-800 text-[11px]">{expense.charge_to || "-"}</td>
+<td className="px-2 py-2 font-mono text-gray-700 text-[11px]">{expense.invoice_number || "-"}</td>
+<td className="px-2 py-2 font-medium !text-gray-800 text-[11px]">{expense.supplier_name || "-"}</td>
+<td className="px-2 py-2 text-[11px]">{expense.unit_vehicle || "-"}</td>
+<td className="px-2 py-2 font-mono text-gray-600 text-[11px]">{expense.plate_number || "-"}</td>
+<td className="px-2 py-2 text-[11px] font-semibold">{expense.type_of_payment || "-"}</td>
+<td className="px-2 py-2 text-right font-bold !text-gray-900 text-xs whitespace-nowrap">
 ₱ {expense.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 </td>
-<td className="px-3 py-2.5 text-gray-600 italic text-xs">{expense.remarks || "-"}</td>
-<td className="px-3 py-2.5 text-right whitespace-nowrap print:hidden text-xs" onClick={(e) => e.stopPropagation()}>
-<div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
+<td className="px-2 py-2 text-gray-600 italic text-[11px] max-w-[120px] truncate" title={expense.remarks || ""}>{expense.remarks || "-"}</td>
+<td className="px-2 py-2 text-right whitespace-nowrap print:hidden text-xs" onClick={(e) => e.stopPropagation()}>
+<div className="flex items-center justify-end gap-1 opacity-90 group-hover:opacity-100 transition-opacity print:hidden">
 <Button
 variant="ghost"
 size="icon"
-className="h-8 w-8 text-blue-600 hover:bg-blue-100"
+className="h-7 w-7 text-blue-600 hover:bg-blue-100"
 onClick={() => openModal(expense)}
 >
-<Edit className="h-4 w-4" />
+<Edit className="h-3.5 w-3.5" />
 </Button>
 <Button
 variant="ghost"
 size="icon"
-className="h-8 w-8 text-red-600 hover:bg-red-100"
+className="h-7 w-7 text-red-600 hover:bg-red-100"
 onClick={() => setExpenseToDelete(expense.id)}
 >
-<Trash2 className="h-4 w-4" />
+<Trash2 className="h-3.5 w-3.5" />
 </Button>
 </div>
 </td>
