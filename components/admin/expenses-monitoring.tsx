@@ -104,6 +104,7 @@ const [isLoading, setIsLoading] = useState(true)
 const [searchQuery, setSearchQuery] = useState("")
 const [viewMode, setViewMode] = useState<"detailed" | "summary">("detailed")
 const [categoryFilter, setCategoryFilter] = useState("all")
+const [paymentFilter, setPaymentFilter] = useState("all")
 const currentYear = new Date().getFullYear().toString()
 const currentMonthKey = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
 
@@ -300,8 +301,19 @@ return true
       result = result.filter(expense => expense.category === categoryFilter)
     }
 
+    if (paymentFilter !== "all") {
+      result = result.filter(expense => {
+        const payType = (expense.type_of_payment || "").trim().toLowerCase();
+        if (paymentFilter === "cheque") return payType.includes("cheque") || payType.includes("check");
+        if (paymentFilter === "cash") return payType === "cash" || payType === "online payment";
+        if (paymentFilter === "po") return payType.includes("po") || payType.includes("p.o") || payType.includes("purchase order");
+        return false;
+      })
+    }
+
 if (searchQuery.trim()) {
-const tokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean)
+const queryWithoutDots = searchQuery.toLowerCase().replace(/\./g, '')
+const tokens = queryWithoutDots.split(/\s+/).filter(Boolean)
 result = result.filter(expense => {
 const searchableString = `
 ${expense.category}
@@ -311,9 +323,10 @@ ${expense.invoice_number || ""}
 ${expense.supplier_name || ""}
 ${expense.unit_vehicle || ""}
 ${expense.plate_number || ""}
+${expense.type_of_payment || ""}
 ${expense.remarks || ""}
 ${expense.total_amount}
-`.toLowerCase()
+`.toLowerCase().replace(/\./g, '')
 
 return tokens.every(token => searchableString.includes(token))
 })
@@ -605,7 +618,7 @@ return (
 <div className="relative w-full">
 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 <Input
-placeholder="Search category, description, client, plate..."
+placeholder="Search category, client, plate, payment type..."
 value={searchQuery}
 onChange={(e) => setSearchQuery(e.target.value)}
 className="pl-9 !bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 focus-visible:ring-blue-500 !text-gray-900 placeholder:!text-gray-500 w-full"
@@ -621,6 +634,17 @@ className="pl-9 !bg-white !border-gray-300 focus-visible:ring-blue-500 focus-vis
 <SelectItem key={cat} value={cat} className="!text-gray-900 cursor-pointer hover:bg-gray-100">{cat}</SelectItem>
 ))}
 <SelectItem value="CUSTOM" className="!text-gray-900 cursor-pointer hover:bg-gray-100">Custom</SelectItem>
+</SelectContent>
+</Select>
+<Select value={paymentFilter} onValueChange={setPaymentFilter}>
+<SelectTrigger className="w-[160px] shrink-0 !bg-white !border-gray-300 !text-gray-900">
+<SelectValue placeholder="All Payments" />
+</SelectTrigger>
+<SelectContent className="!bg-white">
+<SelectItem value="all" className="!text-gray-900 cursor-pointer hover:bg-gray-100">All Payments</SelectItem>
+<SelectItem value="cash" className="!text-gray-900 cursor-pointer hover:bg-gray-100">Cash / Online</SelectItem>
+<SelectItem value="cheque" className="!text-gray-900 cursor-pointer hover:bg-gray-100">Cheque</SelectItem>
+<SelectItem value="po" className="!text-gray-900 cursor-pointer hover:bg-gray-100">Purchase Order</SelectItem>
 </SelectContent>
 </Select>
 <Button 
