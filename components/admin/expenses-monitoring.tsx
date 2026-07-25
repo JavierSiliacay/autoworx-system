@@ -473,17 +473,17 @@ toast({ title: "Error", description: "Failed to delete expense.", variant: "dest
 }
 
 const categorySummaries = useMemo(() => {
-  const map: Record<string, { cash: number; cheque: number; po: number; total: number; descriptions: string[]; remarks: string[] }> = {}
+  const map: Record<string, { cash: number; cheque: number; po: number; online: number; total: number; descriptions: string[]; remarks: string[] }> = {}
 
   CATEGORIES.forEach(cat => {
-    map[cat] = { cash: 0, cheque: 0, po: 0, total: 0, descriptions: [], remarks: [] }
+    map[cat] = { cash: 0, cheque: 0, po: 0, online: 0, total: 0, descriptions: [], remarks: [] }
   })
 
   filteredExpenses.forEach(exp => {
     const rawCat = (exp.category || "").trim().toUpperCase()
     const catKey = CATEGORIES.includes(rawCat) ? rawCat : "CUSTOM"
     if (!map[catKey]) {
-      map[catKey] = { cash: 0, cheque: 0, po: 0, total: 0, descriptions: [], remarks: [] }
+      map[catKey] = { cash: 0, cheque: 0, po: 0, online: 0, total: 0, descriptions: [], remarks: [] }
     }
 
     const payType = (exp.type_of_payment || "").trim().toLowerCase()
@@ -491,6 +491,8 @@ const categorySummaries = useMemo(() => {
       map[catKey].cheque += exp.total_amount
     } else if (payType.includes("po") || payType.includes("p.o") || payType.includes("purchase order")) {
       map[catKey].po += exp.total_amount
+    } else if (payType.includes("online")) {
+      map[catKey].online += exp.total_amount
     } else {
       map[catKey].cash += exp.total_amount
     }
@@ -775,20 +777,21 @@ setSelectedMonth(`${y}-${monthPart}`)
             <th rowSpan={2} className="border border-gray-300 px-2 py-2 text-center w-10">No.</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[160px]">CATEGORY DESCRIPTION</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[200px]">TYPE OF EXPENSE</th>
-            <th colSpan={3} className="border border-gray-300 px-2 py-1 text-center">PAYMENT TYPE</th>
+            <th colSpan={4} className="border border-gray-300 px-2 py-1 text-center">PAYMENT TYPE</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 text-right min-w-[110px]">TOTAL AMOUNT</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[120px]">REMARKS</th>
           </tr>
           <tr className="bg-blue-50 border-b border-gray-300 text-gray-900 font-bold uppercase text-[10px]" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
             <th className="border border-gray-300 px-2 py-1 text-center w-20">CHEQUE</th>
             <th className="border border-gray-300 px-2 py-1 text-center w-20">CASH</th>
+            <th className="border border-gray-300 px-2 py-1 text-center w-20">ONLINE PAYMENT</th>
             <th className="border border-gray-300 px-2 py-1 text-center w-20">PO</th>
           </tr>
         </thead>
         <tbody>
           {CATEGORIES.length === 0 ? (
             <tr>
-              <td colSpan={8} className="border border-gray-300 px-4 py-8 text-center text-gray-500 font-medium italic">
+              <td colSpan={9} className="border border-gray-300 px-4 py-8 text-center text-gray-500 font-medium italic">
                 No outgoing expenses recorded for this period.
               </td>
             </tr>
@@ -818,6 +821,9 @@ setSelectedMonth(`${y}-${monthPart}`)
                     {data.cash > 0 ? `₱${data.cash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
                   </td>
                   <td className="border border-gray-300 px-2 py-1.5 text-right text-gray-800 font-mono">
+                    {data.online > 0 ? `₱${data.online.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
+                  </td>
+                  <td className="border border-gray-300 px-2 py-1.5 text-right text-gray-800 font-mono">
                     {data.po > 0 ? `₱${data.po.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
                   </td>
                   <td className="border border-gray-300 px-3 py-1.5 text-right font-mono font-extrabold text-blue-900">
@@ -843,6 +849,9 @@ setSelectedMonth(`${y}-${monthPart}`)
               ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.cash || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
             <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
+              ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.online || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+            <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
               ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.po || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </td>
             <td className="border border-gray-300 px-3 py-2.5 text-right font-mono text-blue-900 font-black">
@@ -851,7 +860,7 @@ setSelectedMonth(`${y}-${monthPart}`)
             <td className="border border-gray-300 px-3 py-2.5"></td>
           </tr>
           <tr className="bg-gray-200 border-t border-gray-400 font-black text-gray-900 text-sm">
-            <td colSpan={6} className="border border-gray-300 px-4 py-3 text-right uppercase tracking-wider">
+            <td colSpan={7} className="border border-gray-300 px-4 py-3 text-right uppercase tracking-wider">
               GRAND TOTAL OVERHEAD EXPENSES
             </td>
             <td className="border border-gray-300 px-3 py-3 text-right font-mono text-base text-blue-950 font-black">
