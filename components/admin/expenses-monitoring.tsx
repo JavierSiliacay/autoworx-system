@@ -305,7 +305,8 @@ return true
       result = result.filter(expense => {
         const payType = (expense.type_of_payment || "").trim().toLowerCase();
         if (paymentFilter === "cheque") return payType.includes("cheque") || payType.includes("check");
-        if (paymentFilter === "cash") return payType === "cash" || payType === "online payment";
+        if (paymentFilter === "cash") return payType === "cash";
+        if (paymentFilter === "online") return payType === "online payment";
         if (paymentFilter === "po") return payType.includes("po") || payType.includes("p.o") || payType.includes("purchase order");
         return false;
       })
@@ -334,7 +335,7 @@ return tokens.every(token => searchableString.includes(token))
 
 // Sort descending by date issued
 return result.sort((a, b) => new Date(a.date_issued).getTime() - new Date(b.date_issued).getTime())
-}, [expenses, searchQuery, categoryFilter, reportPeriod, selectedDay, selectedWeek, selectedMonth, selectedYear])
+}, [expenses, searchQuery, categoryFilter, paymentFilter, reportPeriod, selectedDay, selectedWeek, selectedMonth, selectedYear])
 
 const openModal = (expense?: Expense) => {
 setHasSubmitted(false)
@@ -642,7 +643,8 @@ className="pl-9 !bg-white !border-gray-300 focus-visible:ring-blue-500 focus-vis
 </SelectTrigger>
 <SelectContent className="!bg-white">
 <SelectItem value="all" className="!text-gray-900 cursor-pointer hover:bg-gray-100">All Payments</SelectItem>
-<SelectItem value="cash" className="!text-gray-900 cursor-pointer hover:bg-gray-100">Cash / Online</SelectItem>
+<SelectItem value="cash" className="!text-gray-900 cursor-pointer hover:bg-gray-100">Cash</SelectItem>
+<SelectItem value="online" className="!text-gray-900 cursor-pointer hover:bg-gray-100">Online Payment</SelectItem>
 <SelectItem value="cheque" className="!text-gray-900 cursor-pointer hover:bg-gray-100">Cheque</SelectItem>
 <SelectItem value="po" className="!text-gray-900 cursor-pointer hover:bg-gray-100">Purchase Order</SelectItem>
 </SelectContent>
