@@ -240,4 +240,42 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+}
+
+
+
+/* Ensure autofill background never turns grey */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Single native date/time picker calendar icon styling */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: light !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  display: block !important;
+  cursor: pointer !important;
+  filter: brightness(0) !important;
+  opacity: 0.8 !important;
+  padding: 2px !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1 !important;
+  filter: brightness(0) !important;
 }

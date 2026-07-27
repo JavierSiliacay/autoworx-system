@@ -1,14 +1,14 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import React, { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import {
   Package, Plus, Search, Trash2, RefreshCw,
   ArrowUpCircle, ArrowDownCircle, LayoutDashboard,
   TrendingUp, TrendingDown, Boxes,
   CheckCircle2, Settings2, Check, Save,
-  Folder, ChevronDown, ChevronRight, LogOut, RotateCcw, StickyNote
+  Folder, ChevronDown, ChevronRight, LogOut, RotateCcw, StickyNote, Award
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
 import Link from "next/link"
-import { AccountingRestrictionOverlay } from "@/components/admin/accounting-restriction-overlay"
+// import removed
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger
 } from "@/components/ui/dialog"
@@ -27,6 +27,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger
 } from "@/components/ui/sheet"
 import { PartsNotes } from "@/components/admin/PartsNotes"
+import { AccessoriesJobLogs } from "@/components/admin/accessories-job-logs"
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
 type TransactionType = "STOCK_IN" | "STOCK_OUT" | "EDIT" | null
@@ -92,8 +93,10 @@ const formatDate = (iso: string) => {
 }
 
 /* ─── Page ─────────────────────────────────────────────────────────────────── */
-export default function PartsLedgerPage() {
+function PartsLedgerContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams?.get("tab")
   const { status, data: session } = useSession()
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -102,6 +105,15 @@ export default function PartsLedgerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<"ALL" | TransactionType>("ALL")
+  const [mainViewMode, setMainViewMode] = useState<"inventory" | "performance">("inventory")
+
+  useEffect(() => {
+    if (tabParam === "accessories" || tabParam === "performance") {
+      setMainViewMode("performance")
+    } else {
+      setMainViewMode("inventory")
+    }
+  }, [tabParam])
 
   // Modal & Group state
   const [modalType, setModalType] = useState<TransactionType | null>(null)
@@ -156,8 +168,7 @@ export default function PartsLedgerPage() {
   /* ── Auth guard ── */
   useEffect(() => {
     if (status === "unauthenticated") router.push("/admin")
-    if (status === "authenticated" && session?.user?.role !== "admin") router.push("/admin")
-  }, [status, session, router])
+  }, [status, router])
 
   /* ── Fetch data ── */
   const fetchLedger = useCallback(async () => {
@@ -817,7 +828,6 @@ export default function PartsLedgerPage() {
   }
 
   return (
-    <AccountingRestrictionOverlay moduleName="Parts Room">
       <div className="min-h-screen bg-slate-100 flex flex-col font-sans selection:bg-blue-200 selection:text-blue-900">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
@@ -876,14 +886,21 @@ export default function PartsLedgerPage() {
 
       <main className="flex-1 mx-auto w-full max-w-[1600px] px-4 lg:px-8 py-6 space-y-6">
 
-        {/* ── STAT CARDS ─────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <StatCard icon={<Boxes className="w-5 h-5" />} label="Total Quantity" value={displayTotals.totalQty} color="blue" />
-          <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Total Stock In" value={displayTotals.stockIn} color="emerald" />
-          <StatCard icon={<TrendingDown className="w-5 h-5" />} label="Total Stock Out" value={displayTotals.stockOut} color="red" />
-          <StatCard icon={<Package className="w-5 h-5" />} label="Left in Stock" value={displayTotals.leftInStock} color={displayTotals.leftInStock < 10 ? "amber" : "slate"} />
-          <StatCard icon={<ArrowUpCircle className="w-5 h-5" />} label="STOCK IN Entries" value={transactions.filter(t => t.transaction_type === "STOCK_IN" && t.status !== "RELEASED").length} color="emerald" isCount />
-        </div>
+
+        {mainViewMode === "performance" ? (
+          <div className="bg-slate-100/60 p-6 rounded-2xl border border-slate-300/70 shadow-sm">
+            <AccessoriesJobLogs />
+          </div>
+        ) : (
+          <>
+            {/* ── STAT CARDS ─────────────────────────────────────────────────────── */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <StatCard icon={<Boxes className="w-5 h-5" />} label="Total Quantity" value={displayTotals.totalQty} color="blue" />
+              <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Total Stock In" value={displayTotals.stockIn} color="emerald" />
+              <StatCard icon={<TrendingDown className="w-5 h-5" />} label="Total Stock Out" value={displayTotals.stockOut} color="red" />
+              <StatCard icon={<Package className="w-5 h-5" />} label="Left in Stock" value={displayTotals.leftInStock} color={displayTotals.leftInStock < 10 ? "amber" : "slate"} />
+              <StatCard icon={<ArrowUpCircle className="w-5 h-5" />} label="STOCK IN Entries" value={transactions.filter(t => t.transaction_type === "STOCK_IN" && t.status !== "RELEASED").length} color="emerald" isCount />
+            </div>
 
         {/* ── TOOLBAR ──────────────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -902,7 +919,7 @@ export default function PartsLedgerPage() {
                   : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
                   }`}
               >
-                {f === "ALL" ? "All Transactions" : f === "STOCK_IN" ? "↑ Stock In" : "↓ Stock Out"}
+                {f === "ALL" ? "All Transactions" : f === "STOCK_IN" ? "↑ STOCK IN" : "↓ STOCK OUT"}
               </button>
             ))}
 
@@ -925,7 +942,7 @@ export default function PartsLedgerPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search item, owner, plate..."
-                className="pl-10 h-10 bg-white border-slate-200 text-slate-900 text-sm"
+                className="pl-10 h-10 !bg-white border-slate-300 !text-slate-900 text-sm shadow-xs"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
@@ -1048,6 +1065,8 @@ export default function PartsLedgerPage() {
 
 
         </div>
+          </>
+        )}
       </main>
 
       {/* ── STOCK IN MODAL: Master-Detail entry ─────────────────────────────────── */}
@@ -1057,7 +1076,7 @@ export default function PartsLedgerPage() {
             <DialogTitle className="text-xl font-black flex items-center gap-3">
               <ArrowUpCircle className="w-6 h-6 text-emerald-400" />
               <div>
-                <div>Stock IN</div>
+                <div>STOCK IN</div>
                 <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">Multi-item Owner Entry</div>
               </div>
             </DialogTitle>
@@ -1076,19 +1095,19 @@ export default function PartsLedgerPage() {
               <div className="flex flex-wrap gap-4 items-end">
                 <div className="flex-[2] min-w-[200px] space-y-1 flex flex-col justify-end">
                   <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate block mb-1">Owner Name</Label>
-                  <Input value={batchCustomer} onChange={e => setBatchCustomer(e.target.value)} placeholder="Juan Dela Cruz" className="h-10 text-slate-900 font-bold bg-white w-full" />
+                  <Input value={batchCustomer} onChange={e => setBatchCustomer(e.target.value)} placeholder="Juan Dela Cruz" className="h-10 !text-slate-900 font-bold !bg-white border-slate-300 w-full" />
                 </div>
                 <div className="flex-[1.5] min-w-[150px] space-y-1 flex flex-col justify-end">
                   <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate block mb-1">Unit Model</Label>
-                  <Input value={batchUnitModel} onChange={e => setBatchUnitModel(e.target.value)} placeholder="Toyota Vios" className="h-10 text-slate-900 font-bold bg-white w-full" />
+                  <Input value={batchUnitModel} onChange={e => setBatchUnitModel(e.target.value)} placeholder="Toyota Vios" className="h-10 !text-slate-900 font-bold !bg-white border-slate-300 w-full" />
                 </div>
                 <div className="flex-[1] min-w-[120px] space-y-1 flex flex-col justify-end">
                   <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate block mb-1">Plate Number</Label>
-                  <Input value={batchPlate} onChange={e => setBatchPlate(e.target.value)} placeholder="KAB 2316" className="h-10 text-slate-900 font-mono font-black uppercase bg-white tracking-widest px-3 w-full" />
+                  <Input value={batchPlate} onChange={e => setBatchPlate(e.target.value)} placeholder="KAB 2316" className="h-10 !text-slate-900 font-mono font-black uppercase !bg-white border-slate-300 tracking-widest px-3 w-full" />
                 </div>
                 <div className="flex-[1.5] min-w-[150px] space-y-1 flex flex-col justify-end">
                   <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate block mb-1">Purchaser</Label>
-                  <Input value={batchPurchaser} onChange={e => setBatchPurchaser(e.target.value)} placeholder="Name of purchaser" className="h-10 text-slate-900 font-bold bg-white w-full" />
+                  <Input value={batchPurchaser} onChange={e => setBatchPurchaser(e.target.value)} placeholder="Name of purchaser" className="h-10 !text-slate-900 font-bold !bg-white border-slate-300 w-full" />
                 </div>
               </div>
             </div>
@@ -1115,21 +1134,21 @@ export default function PartsLedgerPage() {
                     <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate block mb-1">Part Name *</Label>
                     <Input ref={itemNameRef} value={batchItemName} onChange={e => setBatchItemName(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addToBatch() } }}
-                      placeholder="e.g. Oil Filter" className="h-10 font-bold bg-white text-slate-900 w-full" />
+                      placeholder="e.g. Oil Filter" className="h-10 font-bold !bg-white border-slate-300 !text-slate-900 w-full" />
                   </div>
                   <div className="flex-[1] min-w-[80px] space-y-1 flex flex-col justify-end">
                     <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate block mb-1">Quantity</Label>
                     <Input type="number" min="1" value={batchQty} onChange={e => setBatchQty(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addToBatch() } }}
-                      className="h-10 font-mono font-black text-slate-900 bg-white text-center text-lg w-full" />
+                      className="h-10 font-mono font-black !text-slate-900 !bg-white border-slate-300 text-center text-lg w-full" />
                   </div>
                   <div className="flex-[2] min-w-[120px] space-y-1 flex flex-col justify-end">
                     <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate block mb-1">Kind</Label>
                     <Select value={batchKind} onValueChange={setBatchKind}>
-                      <SelectTrigger className="h-10 border-slate-200 text-slate-900 bg-white font-medium w-full">
+                      <SelectTrigger className="h-10 border-slate-300 !text-slate-900 !bg-white font-medium w-full">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white border-slate-200 z-[100]">
                         {KIND_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                         <SelectItem value="CUSTOM">CUSTOM...</SelectItem>
                       </SelectContent>
@@ -1139,7 +1158,7 @@ export default function PartsLedgerPage() {
                         value={batchKindCustom}
                         onChange={e => setBatchKindCustom(e.target.value)}
                         placeholder="Type custom kind..."
-                        className="h-8 text-xs mt-1 text-slate-900 bg-white border-emerald-200"
+                        className="h-8 text-xs mt-1 !text-slate-900 !bg-white border-emerald-300"
                       />
                     )}
                   </div>
@@ -1147,7 +1166,7 @@ export default function PartsLedgerPage() {
                     <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate block mb-1">Remarks</Label>
                     <Input value={batchNotes} onChange={e => setBatchNotes(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addToBatch() } }}
-                      placeholder="Optional notes" className="h-10 text-slate-900 bg-white w-full" />
+                      placeholder="Optional notes" className="h-10 !text-slate-900 !bg-white border-slate-300 w-full" />
                   </div>
                   <div className="flex-none w-[46px] space-y-1 flex flex-col justify-end">
                     <Label className="text-[10px] font-black uppercase tracking-widest invisible block mb-1">Add</Label>
@@ -1278,8 +1297,8 @@ export default function PartsLedgerPage() {
             </div>
           </div>
 
-          <DialogFooter className="p-6 bg-slate-50 border-t border-slate-200">
-            <Button type="button" variant="outline" onClick={closeModal} className="h-11 px-8 rounded-xl font-bold border-slate-300">Cancel</Button>
+          <DialogFooter className="p-6 bg-slate-50 border-t border-slate-200 flex flex-row items-center justify-end gap-3">
+            <Button type="button" variant="outline" onClick={closeModal} className="h-11 px-8 rounded-xl font-bold border-slate-300 !bg-white !text-slate-800 hover:!bg-slate-100 shadow-xs">Cancel</Button>
             <Button
               onClick={handleBatchSubmit}
               disabled={isSubmitting || batchItems.length === 0}
@@ -1295,11 +1314,11 @@ export default function PartsLedgerPage() {
       {/* ── STOCK OUT MODAL: Owner Checklist ─────────────────────────────────────── */}
       <Dialog open={modalType === "STOCK_OUT"} onOpenChange={open => { if (!open) closeModal() }}>
         <DialogContent className="max-w-4xl p-0 bg-slate-50 border-slate-200 shadow-2xl flex flex-col h-[90vh] overflow-hidden">
-          <DialogHeader className="p-6 bg-white border-b border-slate-200 shrink-0">
-            <DialogTitle className="text-xl font-black flex items-center gap-3">
+          <DialogHeader className="p-6 bg-[#0f172a] text-white border-b border-slate-800 shrink-0">
+            <DialogTitle className="text-xl font-black flex items-center gap-3 text-white">
               <ArrowDownCircle className="w-6 h-6 text-red-500" />
               <div>
-                <div>Stock OUT (Job Release)</div>
+                <div className="text-white font-extrabold text-xl">STOCK OUT (Job Release)</div>
                 <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">Select previously stocked-in items by Owner</div>
               </div>
             </DialogTitle>
@@ -1309,10 +1328,10 @@ export default function PartsLedgerPage() {
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
               <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">1. Select Job / Owner</Label>
               <Select value={selectedOutOwner} onValueChange={setSelectedOutOwner}>
-                <SelectTrigger className="h-12 bg-slate-50 border-slate-200 text-slate-900 font-bold text-sm">
+                <SelectTrigger className="h-12 !bg-white border-slate-300 !text-slate-900 font-bold text-sm">
                   <SelectValue placeholder="Select an Owner..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border-slate-200 z-[100]">
                   {availableOwnersForOut.length === 0 ? (
                     <div className="p-4 text-xs text-slate-500 text-center">No unreleased stock available.</div>
                   ) : (
@@ -1401,13 +1420,13 @@ export default function PartsLedgerPage() {
                 value={releaseNotes}
                 onChange={e => setReleaseNotes(e.target.value)}
                 placeholder="e.g. Parts released for pickup, completed job..."
-                className="h-11 bg-white border-slate-200 text-slate-900 focus:ring-red-500 shadow-sm"
+                className="h-11 !bg-white border-slate-300 !text-slate-900 focus:ring-red-500 shadow-xs"
               />
             </div>
           </div>
 
-          <DialogFooter className="p-6 bg-slate-50 border-t border-slate-200">
-            <Button type="button" variant="outline" onClick={closeModal} className="h-11 px-8 rounded-xl font-bold border-slate-300">Cancel</Button>
+          <DialogFooter className="p-6 bg-slate-50 border-t border-slate-200 flex flex-row items-center justify-end gap-3">
+            <Button type="button" variant="outline" onClick={closeModal} className="h-11 px-8 rounded-xl font-bold border-slate-300 !bg-white !text-slate-800 hover:!bg-slate-100 shadow-xs">Cancel</Button>
             <Button
               onClick={handleSubmitOwnerStockOut}
               disabled={isSubmitting || !selectedOutOwner || Object.values(outReleaseQtys).every(v => !v || v === 0)}
@@ -1517,7 +1536,14 @@ export default function PartsLedgerPage() {
         </DialogContent>
       </Dialog>
       </div>
-    </AccountingRestrictionOverlay>
+  )
+}
+
+export default function PartsLedgerPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center font-medium text-slate-500">Loading parts module...</div>}>
+      <PartsLedgerContent />
+    </Suspense>
   )
 }
 

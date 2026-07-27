@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, Suspense } from "react"
 import { usePathname } from "next/navigation"
 import { AdminSidebar } from "./admin-sidebar"
 import {
@@ -47,7 +47,9 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
     <>
       <div className="flex min-h-screen bg-background print:bg-white print:min-h-0 print:block">
         {/* Sidebar Component */}
-        <AdminSidebar />
+        <Suspense fallback={<div className="w-64 border-r border-border bg-card hidden md:block" />}>
+          <AdminSidebar />
+        </Suspense>
         
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">

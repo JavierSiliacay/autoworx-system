@@ -1607,4 +1607,121 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment, repo
   return htmlContent
 }
 
+export function generateAccessoriesJobPDF(jobLogs: any[]): string {
+  const generateSlipHtml = (jobLog: any) => {
+    if (!jobLog) return '<div class="sheet" style="visibility: hidden;"></div>';
+    
+    const assigneesHtml = (jobLog.assignees || []).map((a: any) => `
+      <div style="display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; border-bottom: 1px dashed #ccc;">
+        <span style="font-weight: bold;">Assignee — ${a.name}</span>
+        <span style="font-family: monospace; font-weight: bold; color: #1e3a8a;">${a.percentage}%</span>
+      </div>
+    `).join('');
+
+    return `
+    <div class="sheet">
+      <div class="header">
+        <div class="company">AUTOWORX REPAIRS & GEN. MERCHANDISE</div>
+        <div class="title">${jobLog.department || 'ACCESSORIES'}</div>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <span class="label">Unit</span>
+          <span class="value">${jobLog.unit || ''}</span>
+        </div>
+        <div class="field">
+          <span class="label">Plate #</span>
+          <span class="value">${jobLog.plate_number || ''}</span>
+        </div>
+        <div class="field" style="grid-column: span 2;">
+          <span class="label">Assured / Client</span>
+          <span class="value">${jobLog.assured_client || 'N/A'}</span>
+        </div>
+        <div class="field">
+          <span class="label">Date Started</span>
+          <span class="value">${jobLog.date_started || ''}</span>
+        </div>
+        <div class="field">
+          <span class="label">Date Completed</span>
+          <span class="value">${jobLog.date_completed || ''}</span>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="box-title">ASSIGNEE WORK CONTRIBUTION (%)</div>
+        ${assigneesHtml || '<div style="font-style: italic; color: #777;">No assignees recorded</div>'}
+      </div>
+
+      <div class="box">
+        <div class="box-title">SCOPE OF WORKS</div>
+        <div class="scope-text">${jobLog.scope_of_works || ''}</div>
+      </div>
+
+      <div class="footer">
+        <div class="sig-block">
+          <div class="sig-line">Dept Head - ${jobLog.dept_head || 'Cabañez'}</div>
+        </div>
+      </div>
+    </div>
+    `;
+  };
+
+  const titleRef = jobLogs.length === 1 ? `${jobLogs[0]?.unit} (${jobLogs[0]?.plate_number})` : 'MULTIPLE';
+
+  const pagesHtml = jobLogs.map((log, index) => {
+    const slipHtml = generateSlipHtml(log);
+    return `
+      <div class="page-wrapper" ${index < jobLogs.length - 1 ? 'style="page-break-after: always;"' : ''}>
+        ${slipHtml}
+        <div class="cut-line"></div>
+        ${slipHtml}
+      </div>
+    `;
+  }).join('\n');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ACCESSORIES JOB SLIP - ${titleRef}</title>
+  <style>
+    @media print {
+      @page { size: 8.5in 13in; margin: 0; }
+      html, body { height: auto; overflow: visible; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .cut-line { display: block !important; border-top: 1px dashed #666; text-align: center; color: #666; font-size: 10px; font-style: italic; position: relative; }
+      .cut-line::after { content: '✂️ cut here ✂️'; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 10px; }
+      .page-wrapper { height: 13in !important; page-break-after: always; }
+    }
+    * { box-sizing: border-box; }
+    html, body { font-family: 'Courier New', Courier, Arial, sans-serif; margin: 0; padding: 0; color: #000; background: #fff; line-height: 1.2; }
+    .page-wrapper { width: 100%; height: 100vh; padding: 0.2in; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
+    .sheet { width: 100%; height: 48%; margin: 0; border: 2px solid #000; padding: 0.2in 0.3in; position: relative; background: #fff; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; break-inside: avoid; z-index: 1; }
+    .sheet::before { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 350px; height: 350px; background-image: url('/autoworxlogo.png'); background-size: contain; background-repeat: no-repeat; background-position: center; opacity: 0.08; z-index: -1; pointer-events: none; }
+    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 8px; flex-shrink: 0; position: relative; z-index: 1; }
+    .company { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #444; }
+    .title { font-size: 18px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; flex-shrink: 0; position: relative; z-index: 1; }
+    .field { display: flex; flex-direction: column; }
+    .label { font-size: 9px; font-weight: bold; text-transform: uppercase; color: #555; }
+    .value { font-size: 13px; font-weight: bold; border-bottom: 1px solid #000; padding: 1px 0; min-height: 18px; }
+    .box { border: 1px solid #000; padding: 6px 10px; margin-bottom: 8px; background: transparent; flex-shrink: 0; position: relative; z-index: 1; }
+    .box-title { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 2px; }
+    .scope-text { font-size: 12px; font-weight: bold; white-space: pre-wrap; min-height: 20px; }
+    .footer { margin-top: auto; padding-top: 10px; display: flex; justify-content: flex-end; flex-shrink: 0; position: relative; z-index: 1; }
+    .sig-block { text-align: center; width: 200px; }
+    .sig-line { border-top: 1px solid #000; padding-top: 4px; font-size: 11px; font-weight: bold; margin-top: 10px; }
+    .cut-line { display: block; border-top: 1px dashed #666; height: 0; margin: 0; text-align: center; position: relative; flex-shrink: 0; align-self: center; width: 100%; }
+    .cut-line::after { content: '✂️ cut here ✂️'; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 10px; font-size: 10px; font-style: italic; color: #666; }
+  </style>
+</head>
+<body>
+  ${pagesHtml}
+</body>
+</html>
+  `;
+}
+
 

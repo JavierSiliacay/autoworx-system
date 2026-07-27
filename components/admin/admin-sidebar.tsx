@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import {
   LayoutDashboard,
@@ -17,7 +17,10 @@ import {
   UserCircle,
   ChevronLeft,
   ChevronRight,
-  Banknote
+  ChevronDown,
+  Banknote,
+  Award,
+  Boxes
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -25,11 +28,19 @@ import { isDeveloperEmail, isAccountingEmail, isAccountingOnly } from "@/lib/aut
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({ "Parts Room": true })
+
+  const toggleMenu = (title: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setExpandedMenus(prev => ({ ...prev, [title]: !prev[title] }))
+  }
 
   const handleLogout = () => {
     setIsLogoutModalOpen(true)
@@ -52,8 +63,20 @@ export function AdminSidebar() {
     },
     {
       title: "Parts Room",
-      href: "/admin/parts",
+      href: "#",
       icon: Package,
+      subItems: [
+        {
+          title: "Parts Inventory",
+          href: "/admin/parts",
+          icon: Boxes,
+        },
+        {
+          title: "Accessories Job Slips",
+          href: "/admin/parts?tab=accessories",
+          icon: Award,
+        }
+      ]
     },
     {
       title: "Price List",
@@ -115,22 +138,93 @@ export function AdminSidebar() {
           </div>
         )}
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(`${item.href}/`))
+          const currentTab = searchParams?.get("tab")
+          let isActive = false
+          if (item.href === "#") {
+             // Parent is active if any of its subItems is active
+             isActive = item.subItems?.some(subItem => {
+               if (subItem.href.includes("tab=accessories")) {
+                 return pathname === "/admin/parts" && currentTab === "accessories"
+               } else if (subItem.href === "/admin/parts") {
+                 return pathname === "/admin/parts" && currentTab !== "accessories"
+               }
+               return pathname === subItem.href || (subItem.href !== '/admin' && Boolean(pathname?.startsWith(`${subItem.href}/`)))
+             }) || false
+          } else if (item.href === "/admin/parts") {
+            isActive = pathname === "/admin/parts" && currentTab !== "accessories"
+          } else {
+            isActive = pathname === item.href || (item.href !== '/admin' && Boolean(pathname?.startsWith(`${item.href}/`)))
+          }
+
           return (
-            <Link key={item.href} href={item.href} onClick={() => setIsMobileOpen(false)} title={isCollapsed ? item.title : undefined}>
-              <div
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group",
-                  isCollapsed && "justify-center px-0",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                {!isCollapsed && <span className="truncate animate-in fade-in duration-300">{item.title}</span>}
-              </div>
-            </Link>
+            <div key={item.href} className="flex flex-col mb-1">
+              <Link href={item.href} onClick={(e) => {
+                if (item.href === "#") {
+                  e.preventDefault()
+                  toggleMenu(item.title, e)
+                } else {
+                  setIsMobileOpen(false)
+                }
+              }} title={isCollapsed ? item.title : undefined}>
+                <div
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all group",
+                    isCollapsed && "justify-center px-0",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                    {!isCollapsed && <span className="truncate animate-in fade-in duration-300">{item.title}</span>}
+                  </div>
+                  {!isCollapsed && item.subItems && (
+                    <button 
+                      onClick={(e) => toggleMenu(item.title, e)}
+                      className="p-1 rounded-md hover:bg-primary/10 transition-colors"
+                    >
+                      {expandedMenus[item.title] ? (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              </Link>
+              
+              {!isCollapsed && item.subItems && expandedMenus[item.title] && (
+                <div className="flex flex-col gap-1 pl-4 mt-1 border-l-2 border-muted ml-5 animate-in slide-in-from-top-2 duration-200">
+                  {item.subItems.map((subItem) => {
+                    let isSubActive = false
+                    if (subItem.href.includes("tab=accessories")) {
+                      isSubActive = pathname === "/admin/parts" && currentTab === "accessories"
+                    } else if (subItem.href === "/admin/parts") {
+                      isSubActive = pathname === "/admin/parts" && currentTab !== "accessories"
+                    } else {
+                      isSubActive = pathname === subItem.href || (subItem.href !== '/admin' && Boolean(pathname?.startsWith(`${subItem.href}/`)))
+                    }
+                    
+                    return (
+                      <Link key={subItem.href} href={subItem.href} onClick={() => setIsMobileOpen(false)}>
+                        <div
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all group",
+                            isSubActive
+                              ? "bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          )}
+                        >
+                          <subItem.icon className={cn("w-4 h-4 shrink-0 transition-colors", isSubActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                          <span className="truncate">{subItem.title}</span>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )
         })}
 
