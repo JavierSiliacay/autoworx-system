@@ -1301,10 +1301,10 @@ export function AccessoriesJobLogs() {
                     </div>
                   </div>
 
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-3 border-b border-slate-100 pb-2">Recent Activity (Last 5)</span>
-                    <div className="space-y-2">
-                      {profileStats.jobs.slice(0, 5).map(job => {
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col max-h-80">
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-3 border-b border-slate-100 pb-2 shrink-0">ACTIVITY LOG</span>
+                    <div className="space-y-2 overflow-y-auto pr-1">
+                      {profileStats.jobs.map(job => {
                         const share = (job.assignees || []).find(a => a.name.toUpperCase() === profileStats.name.toUpperCase())?.percentage || 0
                         return (
                           <div key={job.id} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-50 last:border-0">
@@ -1314,7 +1314,7 @@ export function AccessoriesJobLogs() {
                         )
                       })}
                       {profileStats.jobs.length === 0 && (
-                        <p className="text-xs text-slate-400 text-center py-2 font-medium">No recent activity found.</p>
+                        <p className="text-xs text-slate-400 text-center py-2 font-medium">No activity found.</p>
                       )}
                     </div>
                   </div>

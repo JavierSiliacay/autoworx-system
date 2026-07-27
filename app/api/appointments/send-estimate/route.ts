@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const data = await resend.emails.send({
       from: 'Autoworx Repairs <notifications@autoworxcagayan.com>',
       to: clientEmail,
-      cc: ['autoworxcagayan2025@gmail.com', 'paulsuazo64@gmail.com'],
+      cc: ['autoworxcagayan2025@gmail.com', 'paulsuazo64@gmail.com', 'alfred_autoworks@yahoo.com'],
       subject: subject || `Repair Estimate - Autoworx [${trackingCode}]`,
       html: `
         <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #eee; border-radius: 8px; overflow: hidden; background-color: #ffffff;">

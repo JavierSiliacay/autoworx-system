@@ -114,7 +114,7 @@ export function SendEstimateModal({ isOpen, onClose, appointmentData }: SendEsti
             Send Repair Estimate
           </DialogTitle>
           <DialogDescription className="text-slate-400">
-            Send the PDF estimate to <span className="font-bold text-slate-300">{appointmentData?.email}</span>. Sir Ryan and Sir Paul will automatically be CC'd.
+            Send the PDF estimate to <span className="font-bold text-slate-300">{appointmentData?.email}</span>. Sir Ryan, Sir Paul, and Sir Alfred will automatically be CC'd.
           </DialogDescription>
         </DialogHeader>
 
