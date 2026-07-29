@@ -22,6 +22,24 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       {/* Avoid build-time Google Fonts fetch (works offline/CI). */}
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "Autoworx Cagayan",
+              "url": "https://www.autoworxcagayan.com/",
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://www.autoworxcagayan.com/track?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+              }
+            })
+          }}
+        />
+      </head>
       <body className="font-sans" suppressHydrationWarning>
         <Providers>{children}</Providers>
         <Analytics />
