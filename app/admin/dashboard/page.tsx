@@ -4395,7 +4395,12 @@ export default function AdminDashboard() {
 
                   const plateRunningIndex: Record<string, number> = {}
 
-                  const paginatedActive = filteredAppointments.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+                  const expandedIds = Array.from(expandedCards);
+                  const visibleAppointments = expandedIds.length > 0 
+                    ? filteredAppointments.filter(apt => expandedCards.has(apt.id))
+                    : filteredAppointments;
+                  
+                  const paginatedActive = visibleAppointments.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
 
                   return paginatedActive.map((appointment) => {
                     const status = statusConfig[appointment.status]
@@ -4437,7 +4442,10 @@ export default function AdminDashboard() {
                           className="flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-primary"
                         >
                           {isExpanded ? (
-                            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                            <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 px-2.5 py-1 rounded-md transition-colors border border-blue-500/20 shadow-sm">
+                              <ChevronLeft className="w-4 h-4" />
+                              <span className="text-[11px] font-bold uppercase tracking-wider">Back</span>
+                            </div>
                           ) : (
                             <ChevronRight className="w-5 h-5 text-muted-foreground" />
                           )}
@@ -6363,7 +6371,13 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredAndSortedHistory.slice((historyPage - 1) * itemsPerPage, historyPage * itemsPerPage).map((record) => {
+                  {(() => {
+                  const expandedIds = Array.from(expandedCards);
+                  const visibleHistory = expandedIds.length > 0 
+                    ? filteredAndSortedHistory.filter(record => expandedCards.has(record.id))
+                    : filteredAndSortedHistory;
+
+                  return visibleHistory.slice((historyPage - 1) * itemsPerPage, historyPage * itemsPerPage).map((record) => {
                     const isExpanded = expandedCards.has(record.id)
 
                     return (
@@ -7009,7 +7023,7 @@ export default function AdminDashboard() {
                         )}
                       </div>
                     )
-                  })}
+                  })})()}
 
                   {/* History List Pagination Controls */}
                   {filteredAndSortedHistory.length > itemsPerPage && (

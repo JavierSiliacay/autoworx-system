@@ -188,7 +188,7 @@ export const getBehavioralBadges = (staff: { totalJobs: number, totalShareUnits:
   return badges
 }
 
-const COMMON_STAFF = ["Norello", "Aldos", "Ronnel", "Cabañez", "Jarry", "Raymund"]
+const COMMON_STAFF = ["Norello", "Aldos", "Ronnel", "Cabañelez", "Jarry", "Raymund"]
 
 export function AccessoriesJobLogs() {
   const { toast } = useToast()
@@ -227,7 +227,7 @@ export function AccessoriesJobLogs() {
     date_started: new Date().toISOString().split("T")[0],
     date_completed: new Date().toISOString().split("T")[0],
     scope_of_works: "",
-    dept_head: "Cabañez",
+    dept_head: "Cabañelez",
     assignees: [
       { name: "Norello", percentage: 30 },
       { name: "Aldos", percentage: 30 },
@@ -264,16 +264,16 @@ export function AccessoriesJobLogs() {
       setJobLogs(parsed)
     } else {
       const samples = [
-        { id: crypto.randomUUID(), unit: "Toyota Hilux", plate_number: "ABC 123", assured_client: "Ryan Doe", date_started: "2026-07-20", date_completed: "2026-07-22", scope_of_works: "Install bedliner\nTint windows", assignees: [{name: "Norello", percentage: 50}, {name: "Aldos", percentage: 50}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() },
-        { id: crypto.randomUUID(), unit: "Honda Civic", plate_number: "XYZ 987", assured_client: "Jane Smith", date_started: "2026-07-21", date_completed: "2026-07-23", scope_of_works: "Audio system upgrade\nReverse camera installation", assignees: [{name: "Ronnel", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() },
-        { id: crypto.randomUUID(), unit: "Ford Ranger", plate_number: "RNG 001", assured_client: "Mike Johnson", date_started: "2026-07-15", date_completed: "2026-07-18", scope_of_works: "Install bullbar\nLED light bars", assignees: [{name: "Norello", percentage: 40}, {name: "Jarry", percentage: 60}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() },
-        { id: crypto.randomUUID(), unit: "Mitsubishi Montero", plate_number: "MNT 555", assured_client: "Sarah Connor", date_started: "2026-07-18", date_completed: "2026-07-21", scope_of_works: "Seat covers\nDashcam installation", assignees: [{name: "Aldos", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() },
-        { id: crypto.randomUUID(), unit: "Nissan Navara", plate_number: "NAV 222", assured_client: "Bruce Wayne", date_started: "2026-07-10", date_completed: "2026-07-14", scope_of_works: "Step boards\nRoof rack", assignees: [{name: "Raymund", percentage: 50}, {name: "Ronnel", percentage: 50}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() },
-        { id: crypto.randomUUID(), unit: "Toyota Fortuner", plate_number: "FRT 999", assured_client: "Bambang", date_started: "2026-07-22", date_completed: "2026-07-24", scope_of_works: "Deep cleaning\nCeramic coating", assignees: [{name: "Norello", percentage: 33}, {name: "Aldos", percentage: 33}, {name: "Ronnel", percentage: 34}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() },
-        { id: crypto.randomUUID(), unit: "Isuzu D-Max", plate_number: "DMX 111", assured_client: "Peter Parker", date_started: "2026-07-05", date_completed: "2026-07-08", scope_of_works: "Canopy installation", assignees: [{name: "Jarry", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() },
-        { id: crypto.randomUUID(), unit: "Suzuki Jimny", plate_number: "JMN 444", assured_client: "Tony Stark", date_started: "2026-07-12", date_completed: "2026-07-15", scope_of_works: "Offroad tires\nSuspension lift", assignees: [{name: "Raymund", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() },
-        { id: crypto.randomUUID(), unit: "Mitsubishi Strada", plate_number: "STR 777", assured_client: "Natasha Romanoff", date_started: "2026-07-19", date_completed: "2026-07-20", scope_of_works: "Window tinting", assignees: [{name: "Aldos", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() },
-        { id: crypto.randomUUID(), unit: "Toyota Wigo", plate_number: "WIG 333", assured_client: "Steve Rogers", date_started: "2026-07-23", date_completed: "2026-07-24", scope_of_works: "Basic accessories package (mats, covers)", assignees: [{name: "Norello", percentage: 50}, {name: "Ronnel", percentage: 50}], department: "ACCESSORIES", dept_head: "Cabañez", created_at: new Date().toISOString() }
+        { id: crypto.randomUUID(), unit: "Toyota Hilux", plate_number: "ABC 123", assured_client: "Ryan Doe", date_started: "2026-07-20", date_completed: "2026-07-22", scope_of_works: "Install bedliner\nTint windows", assignees: [{name: "Norello", percentage: 50}, {name: "Aldos", percentage: 50}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), unit: "Honda Civic", plate_number: "XYZ 987", assured_client: "Jane Smith", date_started: "2026-07-21", date_completed: "2026-07-23", scope_of_works: "Audio system upgrade\nReverse camera installation", assignees: [{name: "Ronnel", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), unit: "Ford Ranger", plate_number: "RNG 001", assured_client: "Mike Johnson", date_started: "2026-07-15", date_completed: "2026-07-18", scope_of_works: "Install bullbar\nLED light bars", assignees: [{name: "Norello", percentage: 40}, {name: "Jarry", percentage: 60}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), unit: "Mitsubishi Montero", plate_number: "MNT 555", assured_client: "Sarah Connor", date_started: "2026-07-18", date_completed: "2026-07-21", scope_of_works: "Seat covers\nDashcam installation", assignees: [{name: "Aldos", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), unit: "Nissan Navara", plate_number: "NAV 222", assured_client: "Bruce Wayne", date_started: "2026-07-10", date_completed: "2026-07-14", scope_of_works: "Step boards\nRoof rack", assignees: [{name: "Raymund", percentage: 50}, {name: "Ronnel", percentage: 50}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), unit: "Toyota Fortuner", plate_number: "FRT 999", assured_client: "Bambang", date_started: "2026-07-22", date_completed: "2026-07-24", scope_of_works: "Deep cleaning\nCeramic coating", assignees: [{name: "Norello", percentage: 33}, {name: "Aldos", percentage: 33}, {name: "Ronnel", percentage: 34}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), unit: "Isuzu D-Max", plate_number: "DMX 111", assured_client: "Peter Parker", date_started: "2026-07-05", date_completed: "2026-07-08", scope_of_works: "Canopy installation", assignees: [{name: "Jarry", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), unit: "Suzuki Jimny", plate_number: "JMN 444", assured_client: "Tony Stark", date_started: "2026-07-12", date_completed: "2026-07-15", scope_of_works: "Offroad tires\nSuspension lift", assignees: [{name: "Raymund", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), unit: "Mitsubishi Strada", plate_number: "STR 777", assured_client: "Natasha Romanoff", date_started: "2026-07-19", date_completed: "2026-07-20", scope_of_works: "Window tinting", assignees: [{name: "Aldos", percentage: 100}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), unit: "Toyota Wigo", plate_number: "WIG 333", assured_client: "Steve Rogers", date_started: "2026-07-23", date_completed: "2026-07-24", scope_of_works: "Basic accessories package (mats, covers)", assignees: [{name: "Norello", percentage: 50}, {name: "Ronnel", percentage: 50}], department: "ACCESSORIES", dept_head: "Cabañelez", created_at: new Date().toISOString() }
       ]
       setJobLogs(samples)
       localStorage.setItem("accessories_job_logs_local", JSON.stringify(samples))
@@ -323,7 +323,7 @@ export function AccessoriesJobLogs() {
       date_started: new Date().toISOString().split("T")[0],
       date_completed: new Date().toISOString().split("T")[0],
       scope_of_works: "",
-      dept_head: "Cabañez",
+      dept_head: "Cabañelez",
       assignees: [
         { name: "Norello", percentage: 30 },
         { name: "Aldos", percentage: 30 },
@@ -344,7 +344,7 @@ export function AccessoriesJobLogs() {
       date_started: log.date_started || "",
       date_completed: log.date_completed || "",
       scope_of_works: log.scope_of_works || "",
-      dept_head: log.dept_head || "Cabañez",
+      dept_head: log.dept_head || "Cabañelez",
       assignees: Array.isArray(log.assignees) ? log.assignees : []
     })
     setIsModalOpen(true)
@@ -760,7 +760,7 @@ export function AccessoriesJobLogs() {
                   {/* Actions & Signature */}
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-2">
                     <span className="text-[11px] font-semibold text-slate-500">
-                      Dept Head: <strong className="text-slate-900 font-bold">{log.dept_head || 'Cabañez'}</strong>
+                      Dept Head: <strong className="text-slate-900 font-bold">{log.dept_head || 'Cabañelez'}</strong>
                     </span>
 
                     <div className="flex items-center gap-1.5">
@@ -1006,7 +1006,7 @@ export function AccessoriesJobLogs() {
                 <Input
                   value={formData.dept_head}
                   onChange={e => setFormData(prev => ({ ...prev, dept_head: e.target.value }))}
-                  placeholder="e.g. Cabañez"
+                  placeholder="e.g. Cabañelez"
                   className="mt-1 !bg-white border-slate-300 !text-slate-900 font-bold shadow-xs focus:!bg-white"
                 />
               </div>
@@ -1224,7 +1224,7 @@ export function AccessoriesJobLogs() {
 
               <div className="pt-6 border-t border-slate-100 mt-2">
                 <span className="text-xs font-semibold text-slate-500">
-                  Dept Head: <strong className="text-slate-900 font-bold">{viewingSlip.dept_head || 'Cabañez'}</strong>
+                  Dept Head: <strong className="text-slate-900 font-bold">{viewingSlip.dept_head || 'Cabañelez'}</strong>
                 </span>
               </div>
             </div>

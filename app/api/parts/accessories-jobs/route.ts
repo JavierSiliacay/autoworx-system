@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       date_started,
       date_completed,
       scope_of_works,
-      dept_head = 'Cabañez',
+      dept_head = 'Cabañelez',
       assignees = []
     } = body
 

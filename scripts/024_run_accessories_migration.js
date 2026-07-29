@@ -30,7 +30,7 @@ async function runMigration() {
             date_started DATE NOT NULL,
             date_completed DATE NOT NULL,
             scope_of_works TEXT NOT NULL,
-            dept_head TEXT DEFAULT 'Cabañez',
+            dept_head TEXT DEFAULT 'Cabañelez',
             assignees JSONB NOT NULL DEFAULT '[]'::jsonb,
             created_at TIMESTAMPTZ DEFAULT NOW(),
             created_by TEXT

@@ -1660,7 +1660,7 @@ export function generateAccessoriesJobPDF(jobLogs: any[]): string {
 
       <div class="footer">
         <div class="sig-block">
-          <div class="sig-line">Dept Head - ${jobLog.dept_head || 'Cabañez'}</div>
+          <div class="sig-line">Dept Head - ${jobLog.dept_head || 'Cabañelez'}</div>
         </div>
       </div>
     </div>
