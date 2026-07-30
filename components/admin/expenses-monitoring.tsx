@@ -41,7 +41,7 @@ const CATEGORIES = [
 "PAYROLL",
 "EMPLOYEES BENEFITS",
 "RENTALS",
-"PROPERTY TAXES",
+"TAXES",
 "UTILITIES",
 "TELEPHONE/INTERNET",
 "REPAIR AND MAINTENANCE",
@@ -63,8 +63,8 @@ const CATEGORIES = [
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   "PAYROLL": "INCLUDING INCENTIVES, CONTRACT BODY BUILDER, CONTRACT PAINTER",
   "EMPLOYEES BENEFITS": "SSS, PHILHEALTH, INSURANCE, HEALTH CARDS",
-  "RENTALS": "",
-  "PROPERTY TAXES": "",
+  "RENTALS": "RENTALS",
+  "TAXES": "BIR, ITR, property taxes, licenses and permits",
   "UTILITIES": "WATER, ELECTRICITY, GAS, GARBAGE COLLECTION, ETC",
   "TELEPHONE/INTERNET": "",
   "REPAIR AND MAINTENANCE": "SHOP, AND OTHERS",
@@ -776,7 +776,7 @@ setSelectedMonth(`${y}-${monthPart}`)
           <tr className="bg-blue-50 border-b border-gray-300 text-gray-900 font-bold uppercase" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
             <th rowSpan={2} className="border border-gray-300 px-2 py-2 text-center w-10">No.</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[160px]">CATEGORY DESCRIPTION</th>
-            <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[200px]">TYPE OF EXPENSE</th>
+            <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[150px]">TYPE OF EXPENSE</th>
             <th colSpan={4} className="border border-gray-300 px-2 py-1 text-center">PAYMENT TYPE</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 text-right min-w-[110px]">TOTAL AMOUNT</th>
             <th rowSpan={2} className="border border-gray-300 px-3 py-2 min-w-[120px]">REMARKS</th>
@@ -809,10 +809,8 @@ setSelectedMonth(`${y}-${monthPart}`)
                   <td className="border border-gray-300 px-3 py-1.5 font-extrabold text-gray-900">
                     {cat}
                   </td>
-                  <td className="border border-gray-300 px-3 py-1.5 text-[10px] text-gray-700 uppercase font-semibold leading-tight max-w-[250px] truncate" title={data.descriptions.length > 0 ? data.descriptions.join(", ") : (CATEGORY_DESCRIPTIONS[cat] || "")}>
-                    {data.descriptions.length > 0
-                      ? data.descriptions.join(", ")
-                      : (CATEGORY_DESCRIPTIONS[cat] || "")}
+                  <td className="border border-gray-300 px-3 py-1.5 text-[10px] text-gray-700 uppercase font-semibold leading-tight" title={CATEGORY_DESCRIPTIONS[cat] || ""}>
+                    {CATEGORY_DESCRIPTIONS[cat] || ""}
                   </td>
                   <td className="border border-gray-300 px-2 py-1.5 text-right text-gray-800 font-mono">
                     {data.cheque > 0 ? `₱${data.cheque.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
@@ -836,39 +834,42 @@ setSelectedMonth(`${y}-${monthPart}`)
               )
             })
           )}
+          {/* FOOTER ROWS MOVED TO TBODY TO PREVENT REPEATING ON EVERY PRINT PAGE */}
+          {CATEGORIES.length > 0 && (
+            <>
+              <tr className="bg-gray-100 border-t-2 border-gray-400 font-bold text-gray-800 text-xs">
+                <td colSpan={3} className="border border-gray-300 px-4 py-2.5 text-right uppercase tracking-wider">
+                  SUB TOTAL PER PAYMENT TYPE
+                </td>
+                <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
+                  ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.cheque || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
+                  ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.cash || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
+                  ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.online || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
+                  ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.po || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-gray-300 px-3 py-2.5 text-right font-mono text-blue-900 font-black">
+                  ₱{totalFilteredAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-gray-300 px-3 py-2.5"></td>
+              </tr>
+              <tr className="bg-gray-200 border-t border-gray-400 font-black text-gray-900 text-sm">
+                <td colSpan={7} className="border border-gray-300 px-4 py-3 text-right uppercase tracking-wider">
+                  GRAND TOTAL OVERHEAD EXPENSES
+                </td>
+                <td className="border border-gray-300 px-3 py-3 text-right font-mono text-base text-blue-950 font-black">
+                  ₱{totalFilteredAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-gray-300 px-3 py-3"></td>
+              </tr>
+            </>
+          )}
         </tbody>
-        <tfoot>
-          <tr className="bg-gray-100 border-t-2 border-gray-400 font-bold text-gray-800 text-xs">
-            <td colSpan={3} className="border border-gray-300 px-4 py-2.5 text-right uppercase tracking-wider">
-              SUB TOTAL PER PAYMENT TYPE
-            </td>
-            <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
-              ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.cheque || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </td>
-            <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
-              ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.cash || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </td>
-            <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
-              ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.online || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </td>
-            <td className="border border-gray-300 px-2 py-2.5 text-right font-mono text-blue-900">
-              ₱{CATEGORIES.reduce((acc, cat) => acc + (categorySummaries[cat]?.po || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </td>
-            <td className="border border-gray-300 px-3 py-2.5 text-right font-mono text-blue-900 font-black">
-              ₱{totalFilteredAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </td>
-            <td className="border border-gray-300 px-3 py-2.5"></td>
-          </tr>
-          <tr className="bg-gray-200 border-t border-gray-400 font-black text-gray-900 text-sm">
-            <td colSpan={7} className="border border-gray-300 px-4 py-3 text-right uppercase tracking-wider">
-              GRAND TOTAL OVERHEAD EXPENSES
-            </td>
-            <td className="border border-gray-300 px-3 py-3 text-right font-mono text-base text-blue-950 font-black">
-              ₱{totalFilteredAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </td>
-            <td className="border border-gray-300 px-3 py-3"></td>
-          </tr>
-        </tfoot>
       </table>
     </div>
 
