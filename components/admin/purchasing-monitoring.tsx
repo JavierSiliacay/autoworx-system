@@ -23,6 +23,13 @@ interface Purchasing {
   date_arrived: string | null
   remarks: string | null
   created_by?: string
+  unit_model?: string
+  plate_number?: string
+  vehicle_owner?: string
+  customer_type?: string
+  insurance_company_name?: string
+  pr_number?: string
+  is_po_synced?: boolean
 }
 
 function calculateAging(datePurchased: string, dateArrived: string | null, status: string) {
@@ -72,9 +79,10 @@ export function PurchasingMonitoring() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingPurchase, setEditingPurchase] = useState<Purchasing | null>(null)
   const [targetPurchase, setTargetPurchase] = useState<Purchasing | null>(null)
+  const [viewingPurchase, setViewingPurchase] = useState<Purchasing | null>(null)
   
   const [arriveFormData, setArriveFormData] = useState({
-    date_arrived: format(new Date(), "yyyy-MM-dd"),
+    date_issued: format(new Date(), "yyyy-MM-dd"), // Replaced date_arrived with date_issued for Expenses
     po_number: "",
     category: "SHOP PARTS AND GOODS",
     customCategory: "",
@@ -95,6 +103,12 @@ export function PurchasingMonitoring() {
 
   const [formData, setFormData] = useState({
     type: "PR",
+    pr_number: "",
+    unit_model: "",
+    plate_number: "",
+    vehicle_owner: "",
+    customer_type: "Personal",
+    insurance_company_name: "",
     item_description: "",
     supplier_name: "",
     date_purchased: format(new Date(), "yyyy-MM-dd"),
@@ -126,12 +140,22 @@ export function PurchasingMonitoring() {
   const filteredPurchases = useMemo(() => {
     let result = purchases
     if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      result = result.filter(p => 
-        (p.item_description?.toLowerCase() || "").includes(q) ||
-        (p.supplier_name?.toLowerCase() || "").includes(q) ||
-        (p.remarks?.toLowerCase() || "").includes(q)
-      )
+      const tokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean)
+      result = result.filter(p => {
+        const searchableText = [
+          p.item_description,
+          p.supplier_name,
+          p.remarks,
+          p.unit_model,
+          p.plate_number,
+          p.vehicle_owner,
+          p.pr_number,
+          p.type,
+          p.status
+        ].filter(Boolean).join(" ").toLowerCase()
+        
+        return tokens.every(token => searchableText.includes(token))
+      })
     }
     if (typeFilter !== "all") {
         result = result.filter(p => p.type === typeFilter)
@@ -142,20 +166,41 @@ export function PurchasingMonitoring() {
     return result
   }, [purchases, searchQuery, typeFilter, statusFilter])
 
+  const handleMarkArrived = async (purchase: Purchasing) => {
+    if (!window.confirm(`Mark ${purchase.item_description} as arrived?`)) return
+    
+    setIsSubmitting(true)
+    try {
+      const arriveTime = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")
+      const res = await fetch(`/api/purchasing?id=${purchase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Arrived", date_arrived: arriveTime })
+      })
+      if (!res.ok) throw new Error("Failed to update status")
+      toast({ title: "Success", description: "Item marked as arrived." })
+      fetchPurchases()
+    } catch (error) {
+      toast({ title: "Error", description: "Could not update status.", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleArriveClick = (purchase: Purchasing) => {
     setTargetPurchase(purchase)
     setArriveFormData({
-      date_arrived: format(new Date(), "yyyy-MM-dd"),
+      date_issued: format(new Date(), "yyyy-MM-dd"), // Defaults to today for expense date
       po_number: "",
       category: "SHOP PARTS AND GOODS",
       customCategory: "",
       total_amount: "",
       description: purchase.item_description || "",
-      charge_to: "",
+      charge_to: purchase.vehicle_owner || "",
       invoice_number: "",
       supplier_name: purchase.supplier_name || "",
-      unit_vehicle: "",
-      plate_number: "",
+      unit_vehicle: purchase.unit_model || "",
+      plate_number: purchase.plate_number || "",
       remarks: purchase.remarks || ""
     })
     setIsArriveModalOpen(true)
@@ -174,12 +219,12 @@ export function PurchasingMonitoring() {
     
     try {
       const arriveTime = format(new Date(), "HH:mm:ss.SSSxxx")
-      const finalDateArrived = `${arriveFormData.date_arrived}T${arriveTime}`
+      const finalDateIssued = `${arriveFormData.date_issued}T${arriveTime}`
 
       const resPurchase = await fetch(`/api/purchasing?id=${targetPurchase.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Arrived", date_arrived: finalDateArrived })
+        body: JSON.stringify({ is_po_synced: true })
       })
       if (!resPurchase.ok) throw new Error("Failed to update purchasing status")
 
@@ -190,7 +235,7 @@ export function PurchasingMonitoring() {
         body: JSON.stringify({
           category: finalCategory,
           description: arriveFormData.description,
-          date_issued: arriveFormData.date_arrived,
+          date_issued: finalDateIssued,
           supplier_name: arriveFormData.supplier_name,
           type_of_payment: arriveFormData.po_number ? `PO - ${arriveFormData.po_number}` : "PO",
           total_amount: parseFloat(arriveFormData.total_amount.replace(/,/g, '')) || 0,
@@ -204,12 +249,12 @@ export function PurchasingMonitoring() {
 
       if (!resExpense.ok) throw new Error("Failed to sync to expenses")
 
-      toast({ title: "Success", description: "Item marked as arrived and synced to Expenses." })
+      toast({ title: "Success", description: "Item synced to Expenses." })
       fetchPurchases()
       setIsArriveModalOpen(false)
       setTargetPurchase(null)
     } catch (error) {
-      toast({ title: "Error", description: "Could not update status.", variant: "destructive" })
+      toast({ title: "Error", description: "Could not sync item.", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }
@@ -255,6 +300,12 @@ export function PurchasingMonitoring() {
       setEditingPurchase(null)
       setFormData({
         type: "PR",
+        pr_number: "",
+        unit_model: "",
+        plate_number: "",
+        vehicle_owner: "",
+        customer_type: "Personal",
+        insurance_company_name: "",
         item_description: "",
         supplier_name: "",
         date_purchased: format(new Date(), "yyyy-MM-dd"),
@@ -275,6 +326,12 @@ export function PurchasingMonitoring() {
     setEditingPurchase(purchase)
     setFormData({
       type: purchase.type,
+      pr_number: purchase.pr_number || "",
+      unit_model: purchase.unit_model || "",
+      plate_number: purchase.plate_number || "",
+      vehicle_owner: purchase.vehicle_owner || "",
+      customer_type: purchase.customer_type || "Personal",
+      insurance_company_name: purchase.insurance_company_name || "",
       item_description: purchase.item_description,
       supplier_name: purchase.supplier_name || "",
       date_purchased: format(new Date(purchase.date_purchased), "yyyy-MM-dd"),
@@ -341,6 +398,12 @@ export function PurchasingMonitoring() {
               setEditingPurchase(null)
               setFormData({
                 type: "PR",
+                pr_number: "",
+                unit_model: "",
+                plate_number: "",
+                vehicle_owner: "",
+                customer_type: "Personal",
+                insurance_company_name: "",
                 item_description: "",
                 supplier_name: "",
                 date_purchased: format(new Date(), "yyyy-MM-dd"),
@@ -398,22 +461,23 @@ export function PurchasingMonitoring() {
           <table className="w-full border-collapse text-sm text-left !text-gray-700 [&_th]:border [&_th]:!border-gray-200 [&_td]:border [&_td]:!border-gray-200 print:text-[10px] print:[&_th]:px-1 print:[&_th]:py-1 print:[&_td]:px-1 print:[&_td]:py-1">
             <thead className="text-xs !text-gray-700 !bg-blue-50 border-b !border-blue-200 uppercase font-bold">
               <tr className="hidden print:table-row bg-white border-0">
-                <th colSpan={9} className="border-0 bg-white px-0 py-4 font-normal normal-case">
+                <th colSpan={10} className="border-0 bg-white px-0 py-4 font-normal normal-case">
                   <div className="flex flex-col w-full mb-4">
                     <h1 className="text-xl font-black uppercase tracking-tight text-black text-center mb-4">PURCHASING MONITORING</h1>
                   </div>
                 </th>
               </tr>
               <tr>
-                <th scope="col" className="px-4 py-3 min-w-[120px]">DATE PURCHASED</th>
-                <th scope="col" className="px-4 py-3 min-w-[80px]">TYPE</th>
-                <th scope="col" className="px-4 py-3 min-w-[200px]">ITEM DESCRIPTION</th>
-                <th scope="col" className="px-4 py-3 min-w-[150px]">SUPPLIER</th>
-                <th scope="col" className="px-4 py-3 min-w-[100px]">STATUS</th>
-                <th scope="col" className="px-4 py-3 min-w-[120px]">DATE ARRIVED</th>
-                <th scope="col" className="px-4 py-3 min-w-[120px]">AGING</th>
-                <th scope="col" className="px-4 py-3 min-w-[150px]">REMARKS</th>
-                <th scope="col" className="px-4 py-3 min-w-[100px] text-center print:hidden">ACTION</th>
+                <th scope="col" className="px-2 py-2 min-w-[90px]">DATE REQ.</th>
+                <th scope="col" className="px-2 py-2 w-[70px]">TYPE/PR</th>
+                <th scope="col" className="px-2 py-2 w-[160px]">DESCRIPTION</th>
+                <th scope="col" className="px-2 py-2 min-w-[110px]">VEHICLE DETAILS</th>
+                <th scope="col" className="px-2 py-2 min-w-[90px]">SUPPLIER</th>
+                <th scope="col" className="px-2 py-2 w-[80px]">STATUS</th>
+                <th scope="col" className="px-2 py-2 min-w-[90px]">DATE ARR.</th>
+                <th scope="col" className="px-2 py-2 min-w-[60px]">AGING</th>
+                <th scope="col" className="px-2 py-2 min-w-[100px]">REMARKS</th>
+                <th scope="col" className="px-1 py-2 w-[80px] text-center print:hidden">ACTION</th>
               </tr>
             </thead>
             <tbody className="divide-y !divide-gray-200 [&_tr]:hover:!bg-gray-50/50 print:[&_tr]:hover:!bg-transparent text-xs sm:text-sm">
@@ -432,55 +496,101 @@ export function PurchasingMonitoring() {
                 </tr>
               ) : (
                 filteredPurchases.map((purchase) => (
-                  <tr key={purchase.id} className="transition-colors font-medium">
-                    <td className="px-4 py-3 font-semibold whitespace-nowrap">{format(new Date(purchase.date_purchased), "MMM d, yyyy h:mm a")}</td>
-                    <td className="px-4 py-3">
-                        <span className={cn("px-2 py-1 rounded text-xs font-bold", purchase.type === "PR" ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800")}>
-                            {purchase.type}
-                        </span>
+                  <tr key={purchase.id} className="transition-colors font-medium hover:bg-blue-50/50 group cursor-pointer" onClick={() => setViewingPurchase(purchase)}>
+                    <td className="px-2 py-2 font-semibold text-xs whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span>{format(new Date(purchase.date_purchased), "MMM d, yyyy")}</span>
+                        <span className="text-[10px] text-gray-500">{format(new Date(purchase.date_purchased), "h:mm a")}</span>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 font-bold text-gray-900">{purchase.item_description}</td>
-                    <td className="px-4 py-3">{purchase.supplier_name || "-"}</td>
-                    <td className="px-4 py-3">
-                        <span className={cn("px-2 py-1 inline-flex items-center gap-1 rounded text-xs font-bold", purchase.status === "Arrived" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")}>
-                            {purchase.status === "Arrived" && <Check className="w-3 h-3" />}
-                            {purchase.status}
-                        </span>
+                    <td className="px-2 py-2">
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", purchase.type === "PR" ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800")}>
+                              {purchase.type}
+                          </span>
+                          {purchase.pr_number && <span className="text-[10px] text-gray-500 font-bold leading-none">{purchase.pr_number}</span>}
+                        </div>
                     </td>
-                    <td className="px-4 py-3 font-semibold whitespace-nowrap text-gray-600">
-                        {purchase.date_arrived ? format(new Date(purchase.date_arrived), "MMM d, yyyy h:mm a") : "-"}
+                    <td className="px-2 py-2 font-bold text-gray-900 text-xs">
+                      <p className="line-clamp-3" title={purchase.item_description}>{purchase.item_description}</p>
                     </td>
-                    <td className="px-4 py-3 text-red-600 font-bold whitespace-nowrap">{calculateAging(purchase.date_purchased, purchase.date_arrived, purchase.status)}</td>
-                    <td className="px-4 py-3 text-xs italic">{purchase.remarks || "-"}</td>
-                    <td className="px-4 py-3 text-center print:hidden">
-                        <div className="flex items-center justify-center gap-2">
+                    <td className="px-2 py-2">
+                      <div className="flex flex-col gap-0.5 text-[11px] leading-tight">
+                        {purchase.unit_model && <span className="font-semibold text-gray-800 truncate">{purchase.unit_model}</span>}
+                        {purchase.plate_number && <span className="text-gray-600 truncate">{purchase.plate_number}</span>}
+                        {purchase.vehicle_owner && <span className="text-gray-500 italic truncate">{purchase.vehicle_owner}</span>}
+                        {purchase.customer_type && (
+                          <span className="text-[9px] uppercase font-bold text-blue-600 truncate mt-0.5">
+                            {purchase.customer_type} {purchase.customer_type === 'Insurance' && purchase.insurance_company_name ? `(${purchase.insurance_company_name})` : ''}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-2 py-2 text-xs truncate max-w-[120px]" title={purchase.supplier_name || ""}>{purchase.supplier_name || "-"}</td>
+                    <td className="px-2 py-2">
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={cn("px-1.5 py-0.5 inline-flex items-center gap-1 rounded text-[10px] font-bold leading-none", purchase.status === "Arrived" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")}>
+                              {purchase.status === "Arrived" && <Check className="w-2.5 h-2.5" />}
+                              {purchase.status}
+                          </span>
+                          {purchase.is_po_synced && (
+                            <span className="text-[9px] font-bold text-blue-600 uppercase flex items-center gap-0.5 leading-none mt-0.5">
+                              <Check className="w-2.5 h-2.5" /> Synced
+                            </span>
+                          )}
+                        </div>
+                    </td>
+                    <td className="px-2 py-2 font-semibold text-gray-600 text-[11px] whitespace-nowrap">
+                        {purchase.date_arrived ? (
+                          <div className="flex flex-col">
+                            <span>{format(new Date(purchase.date_arrived), "MMM d, yyyy")}</span>
+                            <span className="text-[9px] text-gray-400">{format(new Date(purchase.date_arrived), "h:mm a")}</span>
+                          </div>
+                        ) : "-"}
+                    </td>
+                    <td className="px-2 py-2 text-red-600 font-bold text-xs whitespace-nowrap">{calculateAging(purchase.date_purchased, purchase.date_arrived, purchase.status)}</td>
+                    <td className="px-2 py-2 text-[11px] italic text-gray-500">
+                      <p className="line-clamp-2" title={purchase.remarks || ""}>{purchase.remarks || "-"}</p>
+                    </td>
+                    <td className="px-1 py-2 text-center print:hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1 flex-wrap opacity-90 group-hover:opacity-100 transition-opacity">
                           {purchase.status === "Pending" && (
+                              <Button 
+                                onClick={() => handleMarkArrived(purchase)}
+                                size="sm" 
+                                className="bg-green-600 hover:bg-green-700 text-white font-bold h-6 text-[10px] px-1.5"
+                                title="Mark as Arrived"
+                              >
+                                  <Check className="w-3 h-3" /> Arrive
+                              </Button>
+                          )}
+                          {purchase.status === "Arrived" && !purchase.is_po_synced && (
                               <Button 
                                 onClick={() => handleArriveClick(purchase)}
                                 size="sm" 
-                                className="bg-green-600 hover:bg-green-700 text-white font-bold h-7 text-xs px-2"
-                                title="Mark as Arrived"
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-6 text-[10px] px-1.5"
+                                title="Sync PO to Expenses"
                               >
-                                  <Check className="w-3 h-3 mr-1" /> Arrive
+                                  Sync PO
                               </Button>
                           )}
                           <Button
                             onClick={() => handleEdit(purchase)}
                             size="sm"
                             variant="outline"
-                            className="h-7 w-7 p-0 !bg-white !border-blue-200 !text-blue-600 hover:!bg-blue-50 hover:!text-blue-700"
+                            className="h-6 w-6 p-0 !bg-white !border-blue-200 !text-blue-600 hover:!bg-blue-50 hover:!text-blue-700"
                             title="Edit"
                           >
-                            <Edit className="w-3.5 h-3.5" />
+                            <Edit className="w-3 h-3" />
                           </Button>
                           <Button
                             onClick={() => handleDelete(purchase.id)}
                             size="sm"
                             variant="outline"
-                            className="h-7 w-7 p-0 !bg-white !border-red-200 !text-red-600 hover:!bg-red-50 hover:!text-red-700"
+                            className="h-6 w-6 p-0 !bg-white !border-red-200 !text-red-600 hover:!bg-red-50 hover:!text-red-700"
                             title="Delete"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                     </td>
@@ -493,90 +603,168 @@ export function PurchasingMonitoring() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl !bg-white [&>button]:!text-gray-700 [&>button:hover]:!text-gray-900">
-          <DialogHeader className="border-b !border-gray-200 pb-4">
+        <DialogContent className="!bg-white !text-gray-900 !border-gray-200 sm:max-w-[700px] max-h-[95vh] overflow-y-auto shadow-xl [&>button]:!text-gray-700 [&>button:hover]:!text-gray-900">
+          <DialogHeader className="border-b !border-gray-200 pb-2">
             <DialogTitle className="text-xl font-extrabold !text-gray-900 flex items-center gap-2">
               <Plus className="w-5 h-5 text-blue-600" />
               {editingPurchase ? "Edit Purchasing Item" : "Add Purchasing Item"}
             </DialogTitle>
-            <DialogDescription className="text-gray-500 font-medium">
-              Fill in the details for the new purchase request or order.
+            <DialogDescription className="!text-gray-500 font-medium text-sm">
+              Fill in the details below. Required fields are marked with an asterisk (<span className="text-red-500">*</span>).
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="!text-gray-700 font-semibold text-xs uppercase">Type *</Label>
-                <Select 
-                  value={formData.type} 
-                  onValueChange={(val) => setFormData(prev => ({...prev, type: val}))}
-                >
-                  <SelectTrigger className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11">
-                    <SelectValue placeholder="Select Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PR">Purchase Request (PR)</SelectItem>
-                    <SelectItem value="PO">Purchase Order (PO)</SelectItem>
-                  </SelectContent>
-                </Select>
+          <form onSubmit={handleSubmit} className="space-y-2.5 py-1 mt-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+              {/* Left Column */}
+              <div className="space-y-2.5">
+                <div className="space-y-1 relative">
+                  <Label className="!text-gray-700 font-semibold text-xs uppercase">Type <span className="text-red-500">*</span></Label>
+                  <Select 
+                    value={formData.type} 
+                    onValueChange={(val) => setFormData(prev => ({...prev, type: val}))}
+                  >
+                    <SelectTrigger className="w-full !bg-white !border-gray-300 !text-gray-900 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 h-9 font-normal hover:!bg-gray-100 text-sm">
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent className="!bg-white !border-gray-200">
+                      <SelectItem value="PR" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Purchase Request (PR)</SelectItem>
+                      <SelectItem value="PO" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Purchase Order (PO)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="!text-gray-700 font-semibold text-xs uppercase">{formData.type === 'PO' ? 'PO Number' : 'PR Number'} <span className="text-red-500">*</span></Label>
+                  <Input 
+                    required
+                    placeholder={formData.type === 'PO' ? 'e.g. PO-1001' : 'e.g. PR-1001'}
+                    value={formData.pr_number}
+                    onChange={(e) => setFormData(prev => ({...prev, pr_number: e.target.value}))}
+                    className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="!text-gray-700 font-semibold text-xs uppercase">Date Purchased / Requested <span className="text-red-500">*</span></Label>
+                  <Input 
+                    type="date" style={{ colorScheme: "light" }}
+                    required
+                    value={formData.date_purchased}
+                    onChange={(e) => setFormData(prev => ({...prev, date_purchased: e.target.value}))}
+                    className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 [color-scheme:light] h-9 text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1 relative">
+                  <Label className="!text-gray-700 font-semibold text-xs uppercase">Customer Type <span className="text-red-500">*</span></Label>
+                  <Select 
+                    value={formData.customer_type} 
+                    onValueChange={(val) => setFormData(prev => ({...prev, customer_type: val}))}
+                  >
+                    <SelectTrigger className="w-full !bg-white !border-gray-300 !text-gray-900 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 h-9 font-normal hover:!bg-gray-100 text-sm">
+                      <SelectValue placeholder="Select Customer Type" />
+                    </SelectTrigger>
+                    <SelectContent className="!bg-white !border-gray-200">
+                      <SelectItem value="Personal" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Personal</SelectItem>
+                      <SelectItem value="Insurance" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Insurance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.customer_type === "Insurance" && (
+                  <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
+                    <Label className="!text-gray-700 font-semibold text-xs uppercase">Insurance Company <span className="text-red-500">*</span></Label>
+                    <Input 
+                      required
+                      placeholder="e.g. Malayan Insurance"
+                      value={formData.insurance_company_name}
+                      onChange={(e) => setFormData(prev => ({...prev, insurance_company_name: e.target.value}))}
+                      className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <Label className="!text-gray-700 font-semibold text-xs uppercase">Date Purchased / Requested *</Label>
-                <Input 
-                  type="date" 
-                  required
-                  value={formData.date_purchased}
-                  onChange={(e) => setFormData(prev => ({...prev, date_purchased: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
-                />
-              </div>
+              {/* Right Column */}
+              <div className="space-y-2.5">
+                <div className="space-y-1">
+                  <Label className="!text-gray-700 font-semibold text-xs uppercase">Supplier Name</Label>
+                  <Input 
+                    placeholder="Optional supplier name"
+                    value={formData.supplier_name}
+                    onChange={(e) => setFormData(prev => ({...prev, supplier_name: e.target.value}))}
+                    className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
+                  />
+                </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label className="!text-gray-700 font-semibold text-xs uppercase">Item Description *</Label>
-                <Textarea 
-                  required
-                  placeholder="What is being purchased?"
-                  value={formData.item_description}
-                  onChange={(e) => setFormData(prev => ({...prev, item_description: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium min-h-[80px]"
-                />
-              </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="!text-gray-700 font-semibold text-xs uppercase">Unit Model <span className="text-red-500">*</span></Label>
+                    <Input 
+                      required
+                      placeholder="e.g. Toyota Vios"
+                      value={formData.unit_model}
+                      onChange={(e) => setFormData(prev => ({...prev, unit_model: e.target.value}))}
+                      className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="!text-gray-700 font-semibold text-xs uppercase">Plate Number <span className="text-red-500">*</span></Label>
+                    <Input 
+                      required
+                      placeholder="e.g. ABC 1234"
+                      value={formData.plate_number}
+                      onChange={(e) => setFormData(prev => ({...prev, plate_number: e.target.value}))}
+                      className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
+                    />
+                  </div>
+                </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label className="!text-gray-700 font-semibold text-xs uppercase">Supplier Name</Label>
-                <Input 
-                  placeholder="Optional supplier name"
-                  value={formData.supplier_name}
-                  onChange={(e) => setFormData(prev => ({...prev, supplier_name: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label className="!text-gray-700 font-semibold text-xs uppercase">Remarks</Label>
-                <Textarea 
-                  placeholder="Any additional notes..."
-                  value={formData.remarks}
-                  onChange={(e) => setFormData(prev => ({...prev, remarks: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium min-h-[80px]"
-                />
+                <div className="space-y-1">
+                  <Label className="!text-gray-700 font-semibold text-xs uppercase">Vehicle Owner <span className="text-red-500">*</span></Label>
+                  <Input 
+                    required
+                    placeholder="Name of owner"
+                    value={formData.vehicle_owner}
+                    onChange={(e) => setFormData(prev => ({...prev, vehicle_owner: e.target.value}))}
+                    className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
+                  />
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="border-t !border-gray-200 pt-4 mt-6">
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="!bg-white hover:!bg-gray-100 !text-gray-700 font-bold border-gray-300">
+            {/* Full Width */}
+            <div className="space-y-1 mt-3">
+              <Label className="!text-gray-700 font-semibold text-xs uppercase">Item Description <span className="text-red-500">*</span></Label>
+              <Textarea 
+                required
+                placeholder="Detailed description of the purchase..."
+                value={formData.item_description}
+                onChange={(e) => setFormData(prev => ({...prev, item_description: e.target.value}))}
+                className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 resize-none h-14 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="!text-gray-700 font-semibold text-xs uppercase">Remarks</Label>
+              <Textarea 
+                placeholder="Any additional notes (Optional)"
+                value={formData.remarks}
+                onChange={(e) => setFormData(prev => ({...prev, remarks: e.target.value}))}
+                className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 resize-none h-12 text-sm"
+              />
+            </div>
+
+            <DialogFooter className="pt-2 border-t border-gray-100 mt-3">
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="!bg-white !border-gray-300 !text-gray-700 hover:!bg-gray-50">
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="!bg-blue-600 hover:!bg-blue-700 !text-white font-bold px-8">
+              <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
                 {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
                 ) : (
-                  "Save Purchase"
+                  <><Check className="w-4 h-4 mr-2" /> Save Purchase</>
                 )}
               </Button>
             </DialogFooter>
@@ -585,42 +773,42 @@ export function PurchasingMonitoring() {
       </Dialog>
 
       <Dialog open={isArriveModalOpen} onOpenChange={setIsArriveModalOpen}>
-        <DialogContent className="sm:max-w-2xl !bg-white max-h-[90vh] overflow-y-auto [&>button]:!text-gray-700 [&>button:hover]:!text-gray-900">
+        <DialogContent className="sm:max-w-2xl !bg-white max-h-[95vh] overflow-y-auto [&>button]:!text-gray-700 [&>button:hover]:!text-gray-900 p-5">
           <form onSubmit={handleConfirmArrive}>
-            <DialogHeader>
-              <DialogTitle className="!text-gray-900 text-xl font-bold">Item Arrival & Sync</DialogTitle>
-              <DialogDescription>
+            <DialogHeader className="mb-2">
+              <DialogTitle className="!text-gray-900 text-lg font-bold">Item Arrival & Sync</DialogTitle>
+              <DialogDescription className="text-xs">
                 Confirm arrival for <strong>{targetPurchase?.item_description}</strong>. This will automatically sync to Expenses Monitoring.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="date_arrived" className="!text-gray-700 font-semibold">Arrive Date <span className="text-red-500">*</span></Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="date_arrived" className="!text-gray-700 font-semibold text-xs">Expense Date <span className="text-red-500">*</span></Label>
                 <Input 
                   id="date_arrived"
                   type="date" 
                   required
                   style={{ colorScheme: 'light' }}
-                  value={arriveFormData.date_arrived}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, date_arrived: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  value={arriveFormData.date_issued}
+                  onChange={(e) => setArriveFormData(prev => ({...prev, date_issued: e.target.value}))}
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="po_number" className="!text-gray-700 font-semibold">PO Number <span className="text-red-500">*</span></Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="po_number" className="!text-gray-700 font-semibold text-xs">PO Number <span className="text-red-500">*</span></Label>
                 <Input 
                   id="po_number"
                   required
                   placeholder="Enter PO Number"
                   value={arriveFormData.po_number}
                   onChange={(e) => setArriveFormData(prev => ({...prev, po_number: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="category" className="!text-gray-700 font-semibold">Expense Category <span className="text-red-500">*</span></Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="category" className="!text-gray-700 font-semibold text-xs">Expense Category <span className="text-red-500">*</span></Label>
                 <Select required value={arriveFormData.category} onValueChange={(v) => setArriveFormData(prev => ({...prev, category: v}))}>
-                  <SelectTrigger className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11">
+                  <SelectTrigger className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm">
                     <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
                   <SelectContent className="!bg-white">
@@ -630,8 +818,8 @@ export function PurchasingMonitoring() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="total_amount" className="!text-gray-700 font-semibold">Total Amount (₱) <span className="text-red-500">*</span></Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="total_amount" className="!text-gray-700 font-semibold text-xs">Total Amount (₱) <span className="text-red-500">*</span></Label>
                 <Input 
                   id="total_amount"
                   required
@@ -651,11 +839,11 @@ export function PurchasingMonitoring() {
                     val = parts.join('.');
                     setArriveFormData(prev => ({...prev, total_amount: val}));
                   }}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
               {arriveFormData.category === "CUSTOM" && (
-                <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 md:col-span-2">
+                <div className="grid gap-1.5 animate-in fade-in slide-in-from-top-2 md:col-span-2">
                   <Label htmlFor="customCategory" className="!text-gray-700 font-semibold text-xs">Custom Category <span className="text-red-500">*</span></Label>
                   <Input 
                     id="customCategory"
@@ -663,90 +851,90 @@ export function PurchasingMonitoring() {
                     placeholder="Enter custom category"
                     value={arriveFormData.customCategory}
                     onChange={(e) => setArriveFormData(prev => ({...prev, customCategory: e.target.value}))}
-                    className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                    className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                   />
                 </div>
               )}
-              <div className="grid gap-2 md:col-span-2">
-                <Label htmlFor="description" className="!text-gray-700 font-semibold">Expenses Description <span className="text-red-500">*</span></Label>
+              <div className="grid gap-1.5 md:col-span-2">
+                <Label htmlFor="description" className="!text-gray-700 font-semibold text-xs">Expenses Description <span className="text-red-500">*</span></Label>
                 <Input 
                   id="description"
                   required
                   placeholder="Expenses Description"
                   value={arriveFormData.description}
                   onChange={(e) => setArriveFormData(prev => ({...prev, description: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="charge_to" className="!text-gray-700 font-semibold">Charge To <span className="text-red-500">*</span></Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="charge_to" className="!text-gray-700 font-semibold text-xs">Charge To (CLIENT) <span className="text-red-500">*</span></Label>
                 <Input 
                   id="charge_to"
                   required
                   placeholder="Charge To"
                   value={arriveFormData.charge_to}
                   onChange={(e) => setArriveFormData(prev => ({...prev, charge_to: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="invoice_number" className="!text-gray-700 font-semibold">Invoice No.</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="invoice_number" className="!text-gray-700 font-semibold text-xs">Invoice No.</Label>
                 <Input 
                   id="invoice_number"
                   placeholder="Invoice No."
                   value={arriveFormData.invoice_number}
                   onChange={(e) => setArriveFormData(prev => ({...prev, invoice_number: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="supplier_name" className="!text-gray-700 font-semibold">Supplier Name</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="supplier_name" className="!text-gray-700 font-semibold text-xs">Supplier Name</Label>
                 <Input 
                   id="supplier_name"
                   placeholder="Supplier Name"
                   value={arriveFormData.supplier_name}
                   onChange={(e) => setArriveFormData(prev => ({...prev, supplier_name: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="unit_vehicle" className="!text-gray-700 font-semibold">Unit/Vehicle <span className="text-red-500">*</span></Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="unit_vehicle" className="!text-gray-700 font-semibold text-xs">Unit/Vehicle <span className="text-red-500">*</span></Label>
                 <Input 
                   id="unit_vehicle"
                   required
                   placeholder="Unit/Vehicle"
                   value={arriveFormData.unit_vehicle}
                   onChange={(e) => setArriveFormData(prev => ({...prev, unit_vehicle: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="plate_number" className="!text-gray-700 font-semibold">Plate # <span className="text-red-500">*</span></Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="plate_number" className="!text-gray-700 font-semibold text-xs">Plate # <span className="text-red-500">*</span></Label>
                 <Input 
                   id="plate_number"
                   required
                   placeholder="Plate #"
                   value={arriveFormData.plate_number}
                   onChange={(e) => setArriveFormData(prev => ({...prev, plate_number: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
-              <div className="grid gap-2 md:col-span-2">
-                <Label htmlFor="remarks" className="!text-gray-700 font-semibold">Remarks</Label>
+              <div className="grid gap-1.5 md:col-span-2">
+                <Label htmlFor="remarks" className="!text-gray-700 font-semibold text-xs">Remarks</Label>
                 <Input 
                   id="remarks"
                   placeholder="Remarks"
                   value={arriveFormData.remarks}
                   onChange={(e) => setArriveFormData(prev => ({...prev, remarks: e.target.value}))}
-                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-11"
+                  className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsArriveModalOpen(false)} className="!bg-white !border-gray-300 !text-gray-700 hover:bg-gray-50">
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsArriveModalOpen(false)} className="!bg-white !border-gray-300 !text-gray-700 hover:bg-gray-50 h-9">
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white shadow-sm">
+              <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white shadow-sm h-9">
                 {isSubmitting ? (
                   <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Syncing...</span>
                 ) : (
@@ -755,6 +943,117 @@ export function PurchasingMonitoring() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Purchase Modal */}
+      <Dialog open={!!viewingPurchase} onOpenChange={(open) => !open && setViewingPurchase(null)}>
+        <DialogContent className="!bg-white sm:max-w-[650px] !border-gray-200 shadow-2xl overflow-hidden p-0 z-[120]">
+          <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100 shrink-0">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-extrabold text-gray-900">Purchasing Record Inspector</DialogTitle>
+              <DialogDescription className="text-[11px] text-gray-500">
+                Detailed parameters and metadata for this purchasing entry.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          {viewingPurchase && (
+            <div className="p-5 space-y-3">
+              {/* Row 1: Key Summary */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Type & PR/PO No.</p>
+                  <p className="text-xs font-bold text-blue-700 bg-blue-50/80 px-2.5 py-1.5 rounded-md truncate">
+                    {viewingPurchase?.type} {viewingPurchase?.pr_number ? `- ${viewingPurchase?.pr_number}` : ''}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Date Requested</p>
+                  <p className="text-xs font-medium text-gray-900 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">
+                    {viewingPurchase?.date_purchased ? format(new Date(viewingPurchase.date_purchased), "MMM d, yyyy") : ""}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Status</p>
+                  <p className={cn("text-xs font-extrabold px-2.5 py-1.5 rounded-md font-mono truncate", viewingPurchase?.status === 'Arrived' ? "text-green-900 bg-green-100/70" : "text-yellow-900 bg-yellow-100/70")}>
+                    {viewingPurchase?.status}
+                  </p>
+                </div>
+              </div>
+
+              {/* Row 2: Description */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Item Description</p>
+                <p className="text-xs font-semibold text-gray-900 bg-gray-50 p-2 rounded-md border border-gray-100 whitespace-pre-wrap">
+                  {viewingPurchase?.item_description}
+                </p>
+              </div>
+
+              {/* Row 3: Tracking & Suppliers */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Date Arrived</p>
+                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">
+                    {viewingPurchase?.date_arrived ? format(new Date(viewingPurchase.date_arrived), "MMM d, yyyy h:mm a") : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Aging</p>
+                  <p className="text-xs font-extrabold text-red-600 bg-red-50 px-2.5 py-1.5 rounded-md font-mono truncate">
+                    {viewingPurchase ? calculateAging(viewingPurchase.date_purchased, viewingPurchase.date_arrived, viewingPurchase.status) : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Supplier Name</p>
+                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">{viewingPurchase?.supplier_name || "-"}</p>
+                </div>
+              </div>
+
+              {/* Row 4: Vehicle Details */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Unit / Vehicle</p>
+                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">{viewingPurchase?.unit_model || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Plate Number</p>
+                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md font-mono truncate">{viewingPurchase?.plate_number || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Vehicle Owner</p>
+                  <p className="text-xs font-bold text-gray-900 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">
+                    {viewingPurchase?.vehicle_owner || "-"} 
+                    {viewingPurchase?.customer_type === 'Insurance' && <span className="text-[10px] font-normal text-gray-500 ml-1">({viewingPurchase?.insurance_company_name})</span>}
+                  </p>
+                </div>
+              </div>
+
+              {/* Row 5: Remarks */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Remarks</p>
+                <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-md italic">
+                  {viewingPurchase?.remarks || "No remarks provided."}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* Footer Bar with Record Metadata & Back Button */}
+          <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
+            {viewingPurchase && (
+              <div className="text-[10px] text-gray-500 flex flex-wrap items-center gap-x-4 gap-y-0.5 font-sans">
+                <p><span className="font-semibold text-gray-600">ID:</span> <span className="font-mono text-gray-700">{viewingPurchase?.id?.slice(0, 18)}...</span></p>
+                <p><span className="font-semibold text-gray-600">Created By:</span> <span className="text-blue-600 font-medium">{viewingPurchase?.created_by || "System"}</span></p>
+              </div>
+            )}
+            <Button
+              onClick={() => setViewingPurchase(null)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-8 px-4 shrink-0 ml-auto"
+            >
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

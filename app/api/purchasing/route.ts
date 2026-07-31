@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { getToken } from "next-auth/jwt"
+import { isAuthorizedAdminEmail, isDeveloperEmail, isAccountingEmail } from "@/lib/auth"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -7,6 +9,11 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET(req: Request) {
+  const token = await getToken({ req: req as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!token?.email || !(isAuthorizedAdminEmail(token.email) || isDeveloperEmail(token.email) || isAccountingEmail(token.email))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
@@ -36,9 +43,17 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const token = await getToken({ req: req as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!token?.email || !(isAuthorizedAdminEmail(token.email) || isDeveloperEmail(token.email) || isAccountingEmail(token.email))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const body = await req.json()
-    const { type, item_description, supplier_name, status, date_purchased, remarks } = body
+    const { 
+      type, item_description, supplier_name, status, date_purchased, remarks,
+      unit_model, plate_number, vehicle_owner, customer_type, insurance_company_name, pr_number 
+    } = body
 
     if (!type || !item_description || !date_purchased) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -53,7 +68,15 @@ export async function POST(req: Request) {
           supplier_name,
           status: status || 'Pending',
           date_purchased,
-          remarks
+          remarks,
+          unit_model,
+          plate_number,
+          vehicle_owner,
+          customer_type,
+          insurance_company_name,
+          pr_number,
+          is_po_synced: false,
+          created_by: token.email
         }
       ])
       .select()
@@ -67,6 +90,11 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  const token = await getToken({ req: req as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!token?.email || !(isAuthorizedAdminEmail(token.email) || isDeveloperEmail(token.email) || isAccountingEmail(token.email))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
@@ -92,6 +120,11 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const token = await getToken({ req: req as any, secret: process.env.NEXTAUTH_SECRET })
+  if (!token?.email || !(isAuthorizedAdminEmail(token.email) || isDeveloperEmail(token.email) || isAccountingEmail(token.email))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")
