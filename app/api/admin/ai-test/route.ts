@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         if (prompt) {
             contentPayload.push({ type: "text", text: prompt })
         }
-        
+
         if (mediaData) {
             contentPayload.push({
                 type: "image_url",

@@ -18,8 +18,8 @@ export async function GET(request: Request) {
   let query = supabase
     .from("expenses")
     .select("*")
-    .order("date_issued", { ascending: false })
-    .order("created_at", { ascending: false })
+    .order("date_issued", { ascending: true })
+    .order("created_at", { ascending: true })
 
   if (from) {
     query = query.gte("date_issued", from)

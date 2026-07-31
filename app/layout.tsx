@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="print:bg-white" suppressHydrationWarning>
       {/* Avoid build-time Google Fonts fetch (works offline/CI). */}
       <head>
         <script
@@ -40,7 +40,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans" suppressHydrationWarning>
+      <body className="font-sans print:bg-white print:m-0 print:p-0" suppressHydrationWarning>
         <Providers>{children}</Providers>
         <Analytics />
       </body>

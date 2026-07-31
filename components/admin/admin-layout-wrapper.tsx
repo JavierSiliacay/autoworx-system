@@ -45,7 +45,7 @@ export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) 
 
   return (
     <>
-      <div className="flex min-h-screen bg-background print:bg-white print:min-h-0 print:block">
+      <div className="flex min-h-screen bg-background print:!bg-white print:min-h-0 print:block">
         {/* Sidebar Component */}
         <Suspense fallback={<div className="w-64 border-r border-border bg-card hidden md:block" />}>
           <AdminSidebar />

@@ -233,6 +233,12 @@
 }
 
 @media print {
+  :root {
+    --background: #ffffff !important;
+    --card: #ffffff !important;
+    --popover: #ffffff !important;
+    --foreground: #000000 !important;
+  }
   html, body, #__next, body > div, main {
     background-color: #ffffff !important;
     background: #ffffff !important;
