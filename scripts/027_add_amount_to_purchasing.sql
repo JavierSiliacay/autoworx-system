@@ -1,0 +1,2 @@
+ALTER TABLE public.purchasing
+ADD COLUMN IF NOT EXISTS amount NUMERIC DEFAULT 0;

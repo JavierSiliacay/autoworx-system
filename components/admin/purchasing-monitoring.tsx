@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
-import { Search, Plus, Loader2, Check, Printer, FileText, ListChecks, Edit, Trash2 } from "lucide-react"
+import { Search, Plus, Loader2, Check, Printer, FileText, ListChecks, Edit, Trash2, RotateCcw, Undo } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
@@ -11,6 +11,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { format, differenceInDays } from "date-fns"
+
+export interface PurchasingItem {
+  description: string
+  amount: number
+}
 
 interface Purchasing {
   id: string
@@ -29,6 +34,8 @@ interface Purchasing {
   customer_type?: string
   insurance_company_name?: string
   pr_number?: string
+  amount?: number
+  items?: PurchasingItem[]
   is_po_synced?: boolean
 }
 
@@ -39,10 +46,10 @@ function calculateAging(datePurchased: string, dateArrived: string | null, statu
   if (diffDays < 0) return "0 Days"
   if (diffDays === 1) return "1 Day"
   if (diffDays >= 30) {
-      const months = Math.floor(diffDays / 30)
-      const days = diffDays % 30
-      if (days === 0) return `${months} Month${months > 1 ? 's' : ''}`
-      return `${months} Month${months > 1 ? 's' : ''} ${days} Day${days > 1 ? 's' : ''}`
+    const months = Math.floor(diffDays / 30)
+    const days = diffDays % 30
+    if (days === 0) return `${months} Month${months > 1 ? 's' : ''}`
+    return `${months} Month${months > 1 ? 's' : ''} ${days} Day${days > 1 ? 's' : ''}`
   }
   return `${diffDays} Days`
 }
@@ -76,11 +83,15 @@ export function PurchasingMonitoring() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isArriveModalOpen, setIsArriveModalOpen] = useState(false)
+  const [isMarkArrivedModalOpen, setIsMarkArrivedModalOpen] = useState(false)
+
+  const [arriveDate, setArriveDate] = useState(format(new Date(), "yyyy-MM-dd"))
+  const [purchaseToArrive, setPurchaseToArrive] = useState<Purchasing | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingPurchase, setEditingPurchase] = useState<Purchasing | null>(null)
   const [targetPurchase, setTargetPurchase] = useState<Purchasing | null>(null)
   const [viewingPurchase, setViewingPurchase] = useState<Purchasing | null>(null)
-  
+
   const [arriveFormData, setArriveFormData] = useState({
     date_issued: format(new Date(), "yyyy-MM-dd"), // Replaced date_arrived with date_issued for Expenses
     po_number: "",
@@ -95,11 +106,13 @@ export function PurchasingMonitoring() {
     plate_number: "",
     remarks: ""
   })
-  
+
   const [typeFilter, setTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  
+
   const { toast } = useToast()
+
+  const [lastDeletedItem, setLastDeletedItem] = useState<{ index: number, item: { description: string, amount: string } } | null>(null)
 
   const [formData, setFormData] = useState({
     type: "PR",
@@ -108,8 +121,11 @@ export function PurchasingMonitoring() {
     plate_number: "",
     vehicle_owner: "",
     customer_type: "Personal",
+    custom_customer_type: "",
     insurance_company_name: "",
     item_description: "",
+    amount: "",
+    items: [{ description: "", amount: "" }],
     supplier_name: "",
     date_purchased: format(new Date(), "yyyy-MM-dd"),
     remarks: ""
@@ -153,33 +169,43 @@ export function PurchasingMonitoring() {
           p.type,
           p.status
         ].filter(Boolean).join(" ").toLowerCase()
-        
+
         return tokens.every(token => searchableText.includes(token))
       })
     }
     if (typeFilter !== "all") {
-        result = result.filter(p => p.type === typeFilter)
+      result = result.filter(p => p.type === typeFilter)
     }
     if (statusFilter !== "all") {
-        result = result.filter(p => p.status === statusFilter)
+      result = result.filter(p => p.status === statusFilter)
     }
     return result
   }, [purchases, searchQuery, typeFilter, statusFilter])
 
-  const handleMarkArrived = async (purchase: Purchasing) => {
-    if (!window.confirm(`Mark ${purchase.item_description} as arrived?`)) return
-    
+  const handleMarkArrivedClick = (purchase: Purchasing) => {
+    setPurchaseToArrive(purchase)
+    setArriveDate(format(new Date(), "yyyy-MM-dd"))
+    setIsMarkArrivedModalOpen(true)
+  }
+
+  const submitMarkArrived = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!purchaseToArrive) return
+
     setIsSubmitting(true)
     try {
-      const arriveTime = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")
-      const res = await fetch(`/api/purchasing?id=${purchase.id}`, {
+      const timeStr = format(new Date(), "HH:mm:ss.SSSxxx")
+      const finalArriveTime = `${arriveDate}T${timeStr}`
+      const res = await fetch(`/api/purchasing?id=${purchaseToArrive.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Arrived", date_arrived: arriveTime })
+        body: JSON.stringify({ status: "Arrived", date_arrived: finalArriveTime })
       })
       if (!res.ok) throw new Error("Failed to update status")
       toast({ title: "Success", description: "Item marked as arrived." })
       fetchPurchases()
+      setIsMarkArrivedModalOpen(false)
+      setPurchaseToArrive(null)
     } catch (error) {
       toast({ title: "Error", description: "Could not update status.", variant: "destructive" })
     } finally {
@@ -187,15 +213,49 @@ export function PurchasingMonitoring() {
     }
   }
 
+  const handleRevertPending = async (purchase: Purchasing) => {
+    if (!window.confirm(`Are you sure you want to revert "${purchase.item_description}" back to Pending?`)) return
+
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/purchasing?id=${purchase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Pending", date_arrived: null })
+      })
+      if (!res.ok) throw new Error("Failed to revert status")
+      toast({ title: "Success", description: "Item reverted to Pending." })
+      fetchPurchases()
+    } catch (error) {
+      toast({ title: "Error", description: "Could not revert status.", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleArriveClick = (purchase: Purchasing) => {
     setTargetPurchase(purchase)
+    
+    // Generate description from items if available (excluding amounts)
+    const formattedDescription = purchase.items && purchase.items.length > 0
+      ? purchase.items.map((item: any) => item.description).filter(Boolean).join(', ')
+      : purchase.item_description || ""
+
+    // Format the initial amount with commas
+    let initialFormattedAmount = "";
+    if (purchase.amount) {
+      const parts = purchase.amount.toString().split('.');
+      if (parts[0]) parts[0] = parseInt(parts[0], 10).toLocaleString('en-US');
+      initialFormattedAmount = parts.join('.');
+    }
+
     setArriveFormData({
       date_issued: format(new Date(), "yyyy-MM-dd"), // Defaults to today for expense date
       po_number: "",
       category: "SHOP PARTS AND GOODS",
       customCategory: "",
-      total_amount: "",
-      description: purchase.item_description || "",
+      total_amount: initialFormattedAmount,
+      description: formattedDescription,
       charge_to: purchase.vehicle_owner || "",
       invoice_number: "",
       supplier_name: purchase.supplier_name || "",
@@ -216,7 +276,7 @@ export function PurchasingMonitoring() {
     }
 
     setIsSubmitting(true)
-    
+
     try {
       const arriveTime = format(new Date(), "HH:mm:ss.SSSxxx")
       const finalDateIssued = `${arriveFormData.date_issued}T${arriveTime}`
@@ -266,19 +326,28 @@ export function PurchasingMonitoring() {
 
     try {
       let finalDatePurchased = formData.date_purchased;
-      
+
       // If we are NOT editing, or if the date string changed, append time
       if (!editingPurchase || !editingPurchase.date_purchased.startsWith(formData.date_purchased)) {
-          const currentTime = format(new Date(), "HH:mm:ss.SSSxxx")
-          finalDatePurchased = `${formData.date_purchased}T${currentTime}`
+        const currentTime = format(new Date(), "HH:mm:ss.SSSxxx")
+        finalDatePurchased = `${formData.date_purchased}T${currentTime}`
       } else {
-          finalDatePurchased = editingPurchase.date_purchased
+        finalDatePurchased = editingPurchase.date_purchased
       }
+
+      const itemsString = formData.items.filter(i => i.description).map(i => `${i.description} - ₱${i.amount || 0}`).join('\n')
 
       const payload = {
         ...formData,
-        date_purchased: finalDatePurchased
+        customer_type: formData.customer_type === "Custom" ? formData.custom_customer_type : formData.customer_type,
+        date_purchased: finalDatePurchased,
+        item_description: itemsString || formData.item_description || "N/A",
+        items: formData.items.filter(i => i.description).map(i => ({ description: i.description, amount: parseFloat(i.amount.replace(/,/g, "")) || 0 })),
+        amount: formData.items.reduce((sum, item) => sum + (parseFloat(item.amount.replace(/,/g, "")) || 0), 0)
       }
+      // Remove custom_customer_type from payload since the db expects only customer_type
+      // @ts-ignore
+      delete payload.custom_customer_type
 
       const method = editingPurchase ? "PUT" : "POST"
       const url = editingPurchase ? `/api/purchasing?id=${editingPurchase.id}` : "/api/purchasing"
@@ -290,7 +359,7 @@ export function PurchasingMonitoring() {
       })
 
       if (!res.ok) throw new Error("Failed to save purchasing item")
-      
+
       toast({
         title: "Success",
         description: `Purchasing item ${editingPurchase ? 'updated' : 'added'} successfully.`
@@ -298,6 +367,7 @@ export function PurchasingMonitoring() {
       fetchPurchases()
       setIsModalOpen(false)
       setEditingPurchase(null)
+      setLastDeletedItem(null)
       setFormData({
         type: "PR",
         pr_number: "",
@@ -305,8 +375,11 @@ export function PurchasingMonitoring() {
         plate_number: "",
         vehicle_owner: "",
         customer_type: "Personal",
+        custom_customer_type: "",
         insurance_company_name: "",
         item_description: "",
+        amount: "",
+        items: [{ description: "", amount: "" }],
         supplier_name: "",
         date_purchased: format(new Date(), "yyyy-MM-dd"),
         remarks: ""
@@ -324,15 +397,21 @@ export function PurchasingMonitoring() {
 
   const handleEdit = (purchase: Purchasing) => {
     setEditingPurchase(purchase)
+    setLastDeletedItem(null)
     setFormData({
       type: purchase.type,
       pr_number: purchase.pr_number || "",
       unit_model: purchase.unit_model || "",
       plate_number: purchase.plate_number || "",
       vehicle_owner: purchase.vehicle_owner || "",
-      customer_type: purchase.customer_type || "Personal",
+      customer_type: (purchase.customer_type === "Personal" || purchase.customer_type === "Insurance") ? purchase.customer_type : "Custom",
+      custom_customer_type: (purchase.customer_type !== "Personal" && purchase.customer_type !== "Insurance" && purchase.customer_type) ? purchase.customer_type : "",
       insurance_company_name: purchase.insurance_company_name || "",
       item_description: purchase.item_description,
+      amount: purchase.amount ? purchase.amount.toString() : "",
+      items: purchase.items?.length
+        ? purchase.items.map(i => ({ description: i.description, amount: i.amount.toString() }))
+        : (purchase.item_description ? [{ description: purchase.item_description, amount: purchase.amount?.toString() || "" }] : [{ description: "", amount: "" }]),
       supplier_name: purchase.supplier_name || "",
       date_purchased: format(new Date(purchase.date_purchased), "yyyy-MM-dd"),
       remarks: purchase.remarks || ""
@@ -342,7 +421,7 @@ export function PurchasingMonitoring() {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this item?")) return
-    
+
     try {
       const res = await fetch(`/api/purchasing?id=${id}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed to delete")
@@ -390,12 +469,13 @@ export function PurchasingMonitoring() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 print:hidden w-full md:w-auto">
-           <Button onClick={() => window.print()} variant="outline" size="icon" className="!bg-white !border-gray-300 !text-gray-700 hover:bg-gray-100 hidden md:flex" title="Print Log">
+          <Button onClick={() => window.print()} variant="outline" size="icon" className="!bg-white !border-gray-300 !text-gray-700 hover:bg-gray-100 hidden md:flex" title="Print Log">
             <Printer className="w-4 h-4" />
           </Button>
-          <Button 
+          <Button
             onClick={() => {
               setEditingPurchase(null)
+              setLastDeletedItem(null)
               setFormData({
                 type: "PR",
                 pr_number: "",
@@ -403,14 +483,17 @@ export function PurchasingMonitoring() {
                 plate_number: "",
                 vehicle_owner: "",
                 customer_type: "Personal",
+                custom_customer_type: "",
                 insurance_company_name: "",
                 item_description: "",
+                amount: "",
+                items: [{ description: "", amount: "" }],
                 supplier_name: "",
                 date_purchased: format(new Date(), "yyyy-MM-dd"),
                 remarks: ""
               })
               setIsModalOpen(true)
-            }} 
+            }}
             className="!bg-blue-600 hover:!bg-blue-700 !text-white shadow-sm font-bold w-full md:w-auto flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -422,37 +505,37 @@ export function PurchasingMonitoring() {
       <div className="mb-6 flex flex-col md:flex-row gap-4 items-end print:hidden relative z-10">
         <div className="flex-1 w-full relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input 
+          <Input
             type="search"
-            placeholder="Search items, suppliers, remarks..." 
+            placeholder="Search items, suppliers, remarks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 !bg-white !border-gray-300 shadow-sm w-full font-medium"
           />
         </div>
         <div className="w-full md:w-48">
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="!bg-white !border-gray-300 font-medium">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types (PR & PO)</SelectItem>
-                <SelectItem value="PR">Purchase Request (PR)</SelectItem>
-                <SelectItem value="PO">Purchase Order (PO)</SelectItem>
-              </SelectContent>
-            </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="!bg-white !border-gray-300 font-medium">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types (PR & PO)</SelectItem>
+              <SelectItem value="PR">Purchase Request (PR)</SelectItem>
+              <SelectItem value="PO">Purchase Order (PO)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="w-full md:w-48">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="!bg-white !border-gray-300 font-medium">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Arrived">Arrived</SelectItem>
-              </SelectContent>
-            </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="!bg-white !border-gray-300 font-medium">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Arrived">Arrived</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -504,15 +587,33 @@ export function PurchasingMonitoring() {
                       </div>
                     </td>
                     <td className="px-2 py-2">
-                        <div className="flex flex-col gap-1 items-start">
-                          <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", purchase.type === "PR" ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800")}>
-                              {purchase.type}
-                          </span>
-                          {purchase.pr_number && <span className="text-[10px] text-gray-500 font-bold leading-none">{purchase.pr_number}</span>}
-                        </div>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", purchase.type === "PR" ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800")}>
+                          {purchase.type}
+                        </span>
+                        {purchase.pr_number && <span className="text-[10px] text-gray-500 font-bold leading-none">{purchase.pr_number}</span>}
+                      </div>
                     </td>
                     <td className="px-2 py-2 font-bold text-gray-900 text-xs">
-                      <p className="line-clamp-3" title={purchase.item_description}>{purchase.item_description}</p>
+                      {purchase.items && purchase.items.length > 0 ? (
+                        <div className="space-y-1 max-w-[200px]">
+                          {purchase.items.map((item, idx) => (
+                            <div key={idx} className="flex flex-col border-b border-gray-100 last:border-0 pb-1.5 last:pb-0">
+                              <span className="line-clamp-2 leading-tight" title={item.description}>{item.description}</span>
+                              <span className="font-mono text-[10px] text-green-700 bg-green-50 w-max px-1 py-0.5 mt-0.5 rounded">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <>
+                          <p className="line-clamp-3 leading-tight" title={purchase.item_description}>{purchase.item_description}</p>
+                          {purchase.amount !== undefined && purchase.amount !== null && purchase.amount > 0 && (
+                            <span className="block mt-1 font-mono text-[10px] text-green-700 font-bold bg-green-50 px-1 py-0.5 rounded w-max">
+                              ₱{Number(purchase.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          )}
+                        </>
+                      )}
                     </td>
                     <td className="px-2 py-2">
                       <div className="flex flex-col gap-0.5 text-[11px] leading-tight">
@@ -528,71 +629,82 @@ export function PurchasingMonitoring() {
                     </td>
                     <td className="px-2 py-2 text-xs truncate max-w-[120px]" title={purchase.supplier_name || ""}>{purchase.supplier_name || "-"}</td>
                     <td className="px-2 py-2">
-                        <div className="flex flex-col gap-1 items-start">
-                          <span className={cn("px-1.5 py-0.5 inline-flex items-center gap-1 rounded text-[10px] font-bold leading-none", purchase.status === "Arrived" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")}>
-                              {purchase.status === "Arrived" && <Check className="w-2.5 h-2.5" />}
-                              {purchase.status}
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className={cn("px-1.5 py-0.5 inline-flex items-center gap-1 rounded text-[10px] font-bold leading-none", purchase.status === "Arrived" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")}>
+                          {purchase.status === "Arrived" && <Check className="w-2.5 h-2.5" />}
+                          {purchase.status}
+                        </span>
+                        {purchase.is_po_synced && (
+                          <span className="text-[9px] font-bold text-blue-600 uppercase flex items-center gap-0.5 leading-none mt-0.5">
+                            <Check className="w-2.5 h-2.5" /> Synced
                           </span>
-                          {purchase.is_po_synced && (
-                            <span className="text-[9px] font-bold text-blue-600 uppercase flex items-center gap-0.5 leading-none mt-0.5">
-                              <Check className="w-2.5 h-2.5" /> Synced
-                            </span>
-                          )}
-                        </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-2 py-2 font-semibold text-gray-600 text-[11px] whitespace-nowrap">
-                        {purchase.date_arrived ? (
-                          <div className="flex flex-col">
-                            <span>{format(new Date(purchase.date_arrived), "MMM d, yyyy")}</span>
-                            <span className="text-[9px] text-gray-400">{format(new Date(purchase.date_arrived), "h:mm a")}</span>
-                          </div>
-                        ) : "-"}
+                      {purchase.date_arrived ? (
+                        <div className="flex flex-col">
+                          <span>{format(new Date(purchase.date_arrived), "MMM d, yyyy")}</span>
+                          <span className="text-[9px] text-gray-400">{format(new Date(purchase.date_arrived), "h:mm a")}</span>
+                        </div>
+                      ) : "-"}
                     </td>
                     <td className="px-2 py-2 text-red-600 font-bold text-xs whitespace-nowrap">{calculateAging(purchase.date_purchased, purchase.date_arrived, purchase.status)}</td>
                     <td className="px-2 py-2 text-[11px] italic text-gray-500">
                       <p className="line-clamp-2" title={purchase.remarks || ""}>{purchase.remarks || "-"}</p>
                     </td>
                     <td className="px-1 py-2 text-center print:hidden" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1 flex-wrap opacity-90 group-hover:opacity-100 transition-opacity">
-                          {purchase.status === "Pending" && (
-                              <Button 
-                                onClick={() => handleMarkArrived(purchase)}
-                                size="sm" 
-                                className="bg-green-600 hover:bg-green-700 text-white font-bold h-6 text-[10px] px-1.5"
-                                title="Mark as Arrived"
-                              >
-                                  <Check className="w-3 h-3" /> Arrive
-                              </Button>
-                          )}
-                          {purchase.status === "Arrived" && !purchase.is_po_synced && (
-                              <Button 
-                                onClick={() => handleArriveClick(purchase)}
-                                size="sm" 
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-6 text-[10px] px-1.5"
-                                title="Sync PO to Expenses"
-                              >
-                                  Sync PO
-                              </Button>
-                          )}
+                      <div className="flex items-center justify-center gap-1 flex-wrap opacity-90 group-hover:opacity-100 transition-opacity">
+                        {purchase.status === "Pending" && (
                           <Button
-                            onClick={() => handleEdit(purchase)}
+                            onClick={() => handleMarkArrivedClick(purchase)}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white font-bold h-6 text-[10px] px-1.5"
+                            title="Mark as Arrived"
+                          >
+                            <Check className="w-3 h-3" /> Arrive
+                          </Button>
+                        )}
+                        {purchase.status === "Arrived" && !purchase.is_po_synced && (
+                          <Button
+                            onClick={() => handleArriveClick(purchase)}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-6 text-[10px] px-1.5"
+                            title="Sync PO to Expenses"
+                          >
+                            Sync PO
+                          </Button>
+                        )}
+                        {purchase.status === "Arrived" && !purchase.is_po_synced && (
+                          <Button
+                            onClick={() => handleRevertPending(purchase)}
                             size="sm"
                             variant="outline"
-                            className="h-6 w-6 p-0 !bg-white !border-blue-200 !text-blue-600 hover:!bg-blue-50 hover:!text-blue-700"
-                            title="Edit"
+                            className="h-6 w-6 p-0 !bg-white !border-orange-200 !text-orange-600 hover:!bg-orange-50 hover:!text-orange-700"
+                            title="Revert to Pending"
                           >
-                            <Edit className="w-3 h-3" />
+                            <RotateCcw className="w-3 h-3" />
                           </Button>
-                          <Button
-                            onClick={() => handleDelete(purchase.id)}
-                            size="sm"
-                            variant="outline"
-                            className="h-6 w-6 p-0 !bg-white !border-red-200 !text-red-600 hover:!bg-red-50 hover:!text-red-700"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
+                        )}
+                        <Button
+                          onClick={() => handleEdit(purchase)}
+                          size="sm"
+                          variant="outline"
+                          className="h-6 w-6 p-0 !bg-white !border-blue-200 !text-blue-600 hover:!bg-blue-50 hover:!text-blue-700"
+                          title="Edit"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          onClick={() => handleDelete(purchase.id)}
+                          size="sm"
+                          variant="outline"
+                          className="h-6 w-6 p-0 !bg-white !border-red-200 !text-red-600 hover:!bg-red-50 hover:!text-red-700"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -620,9 +732,9 @@ export function PurchasingMonitoring() {
               <div className="space-y-2.5">
                 <div className="space-y-1 relative">
                   <Label className="!text-gray-700 font-semibold text-xs uppercase">Type <span className="text-red-500">*</span></Label>
-                  <Select 
-                    value={formData.type} 
-                    onValueChange={(val) => setFormData(prev => ({...prev, type: val}))}
+                  <Select
+                    value={formData.type}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, type: val }))}
                   >
                     <SelectTrigger className="w-full !bg-white !border-gray-300 !text-gray-900 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 h-9 font-normal hover:!bg-gray-100 text-sm">
                       <SelectValue placeholder="Select Type" />
@@ -636,31 +748,31 @@ export function PurchasingMonitoring() {
 
                 <div className="space-y-1">
                   <Label className="!text-gray-700 font-semibold text-xs uppercase">{formData.type === 'PO' ? 'PO Number' : 'PR Number'} <span className="text-red-500">*</span></Label>
-                  <Input 
+                  <Input
                     required
                     placeholder={formData.type === 'PO' ? 'e.g. PO-1001' : 'e.g. PR-1001'}
                     value={formData.pr_number}
-                    onChange={(e) => setFormData(prev => ({...prev, pr_number: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, pr_number: e.target.value }))}
                     className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
                   />
                 </div>
 
                 <div className="space-y-1">
                   <Label className="!text-gray-700 font-semibold text-xs uppercase">Date Purchased / Requested <span className="text-red-500">*</span></Label>
-                  <Input 
+                  <Input
                     type="date" style={{ colorScheme: "light" }}
                     required
                     value={formData.date_purchased}
-                    onChange={(e) => setFormData(prev => ({...prev, date_purchased: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date_purchased: e.target.value }))}
                     className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 [color-scheme:light] h-9 text-sm"
                   />
                 </div>
 
                 <div className="space-y-1 relative">
                   <Label className="!text-gray-700 font-semibold text-xs uppercase">Customer Type <span className="text-red-500">*</span></Label>
-                  <Select 
-                    value={formData.customer_type} 
-                    onValueChange={(val) => setFormData(prev => ({...prev, customer_type: val}))}
+                  <Select
+                    value={formData.customer_type}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, customer_type: val }))}
                   >
                     <SelectTrigger className="w-full !bg-white !border-gray-300 !text-gray-900 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 h-9 font-normal hover:!bg-gray-100 text-sm">
                       <SelectValue placeholder="Select Customer Type" />
@@ -668,6 +780,7 @@ export function PurchasingMonitoring() {
                     <SelectContent className="!bg-white !border-gray-200">
                       <SelectItem value="Personal" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Personal</SelectItem>
                       <SelectItem value="Insurance" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Insurance</SelectItem>
+                      <SelectItem value="Custom" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 focus:!bg-blue-600 focus:!text-white font-medium">Custom...</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -675,11 +788,24 @@ export function PurchasingMonitoring() {
                 {formData.customer_type === "Insurance" && (
                   <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
                     <Label className="!text-gray-700 font-semibold text-xs uppercase">Insurance Company <span className="text-red-500">*</span></Label>
-                    <Input 
+                    <Input
                       required
                       placeholder="e.g. Malayan Insurance"
                       value={formData.insurance_company_name}
-                      onChange={(e) => setFormData(prev => ({...prev, insurance_company_name: e.target.value}))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, insurance_company_name: e.target.value }))}
+                      className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
+                    />
+                  </div>
+                )}
+
+                {formData.customer_type === "Custom" && (
+                  <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
+                    <Label className="!text-gray-700 font-semibold text-xs uppercase">Custom Type <span className="text-red-500">*</span></Label>
+                    <Input
+                      required
+                      placeholder="e.g. Corporate, Walk-in..."
+                      value={formData.custom_customer_type}
+                      onChange={(e) => setFormData(prev => ({ ...prev, custom_customer_type: e.target.value }))}
                       className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
                     />
                   </div>
@@ -690,10 +816,10 @@ export function PurchasingMonitoring() {
               <div className="space-y-2.5">
                 <div className="space-y-1">
                   <Label className="!text-gray-700 font-semibold text-xs uppercase">Supplier Name</Label>
-                  <Input 
+                  <Input
                     placeholder="Optional supplier name"
                     value={formData.supplier_name}
-                    onChange={(e) => setFormData(prev => ({...prev, supplier_name: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, supplier_name: e.target.value }))}
                     className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
                   />
                 </div>
@@ -701,21 +827,21 @@ export function PurchasingMonitoring() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="!text-gray-700 font-semibold text-xs uppercase">Unit Model <span className="text-red-500">*</span></Label>
-                    <Input 
+                    <Input
                       required
                       placeholder="e.g. Toyota Vios"
                       value={formData.unit_model}
-                      onChange={(e) => setFormData(prev => ({...prev, unit_model: e.target.value}))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, unit_model: e.target.value }))}
                       className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="!text-gray-700 font-semibold text-xs uppercase">Plate Number <span className="text-red-500">*</span></Label>
-                    <Input 
+                    <Input
                       required
                       placeholder="e.g. ABC 1234"
                       value={formData.plate_number}
-                      onChange={(e) => setFormData(prev => ({...prev, plate_number: e.target.value}))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, plate_number: e.target.value }))}
                       className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
                     />
                   </div>
@@ -723,35 +849,148 @@ export function PurchasingMonitoring() {
 
                 <div className="space-y-1">
                   <Label className="!text-gray-700 font-semibold text-xs uppercase">Vehicle Owner <span className="text-red-500">*</span></Label>
-                  <Input 
+                  <Input
                     required
                     placeholder="Name of owner"
                     value={formData.vehicle_owner}
-                    onChange={(e) => setFormData(prev => ({...prev, vehicle_owner: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, vehicle_owner: e.target.value }))}
                     className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Full Width */}
-            <div className="space-y-1 mt-3">
-              <Label className="!text-gray-700 font-semibold text-xs uppercase">Item Description <span className="text-red-500">*</span></Label>
-              <Textarea 
-                required
-                placeholder="Detailed description of the purchase..."
-                value={formData.item_description}
-                onChange={(e) => setFormData(prev => ({...prev, item_description: e.target.value}))}
-                className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 resize-none h-14 text-sm"
-              />
+            {/* Multi-Item Form */}
+            <div className="space-y-2 mt-4 pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Label className="!text-gray-700 font-bold text-xs uppercase">Purchased Items <span className="text-red-500">*</span></Label>
+                  {lastDeletedItem && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        const newItems = [...formData.items]
+                        newItems.splice(lastDeletedItem.index, 0, lastDeletedItem.item)
+                        setFormData(prev => ({ ...prev, items: newItems }))
+                        setLastDeletedItem(null)
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[10px] text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-semibold"
+                    >
+                      <Undo className="w-3 h-3 mr-1" /> Undo Delete
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, items: [...prev.items, { description: "", amount: "" }] }))}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[10px] !bg-white !text-blue-600 !border-blue-200 hover:!bg-blue-50"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Add Item
+                </Button>
+              </div>
+              <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                {formData.items.map((item, index) => (
+                  <div key={index} className="flex gap-2 items-start relative group">
+                    <div className="flex-1 space-y-1">
+                      <Input
+                        id={`item-desc-${index}`}
+                        required
+                        placeholder="Item description"
+                        value={item.description}
+                        onChange={(e) => {
+                          const newItems = [...formData.items]
+                          newItems[index].description = e.target.value
+                          setFormData(prev => ({ ...prev, items: newItems }))
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            if (index === formData.items.length - 1 && item.description) {
+                              setFormData(prev => ({ ...prev, items: [...prev.items, { description: "", amount: "" }] }))
+                              setTimeout(() => {
+                                document.getElementById(`item-desc-${index + 1}`)?.focus()
+                              }, 100)
+                            } else if (index < formData.items.length - 1) {
+                              document.getElementById(`item-desc-${index + 1}`)?.focus()
+                            }
+                          }
+                        }}
+                        className="item-desc-input !bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm"
+                      />
+                    </div>
+                    <div className="w-[120px] space-y-1">
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">₱</span>
+                        <Input
+                          id={`item-amount-${index}`}
+                          placeholder="0.00"
+                          value={item.amount}
+                          onChange={(e) => {
+                            const newItems = [...formData.items]
+                            let val = e.target.value.replace(/[^\d.]/g, '')
+                            const parts = val.split('.')
+                            if (parts[0]) {
+                              parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                            }
+                            val = parts.slice(0, 2).join('.')
+                            newItems[index].amount = val
+                            setFormData(prev => ({ ...prev, items: newItems }))
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              if (index === formData.items.length - 1 && (item.description || item.amount)) {
+                                setFormData(prev => ({ ...prev, items: [...prev.items, { description: "", amount: "" }] }))
+                                setTimeout(() => {
+                                  document.getElementById(`item-desc-${index + 1}`)?.focus()
+                                }, 100)
+                              } else if (index < formData.items.length - 1) {
+                                document.getElementById(`item-desc-${index + 1}`)?.focus()
+                              }
+                            }
+                          }}
+                          className="item-amount-input !bg-white pl-6 !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 h-9 text-sm font-mono"
+                        />
+                      </div>
+                    </div>
+                    {formData.items.length > 1 && (
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setLastDeletedItem({ index, item: formData.items[index] })
+                          const newItems = formData.items.filter((_, i) => i !== index)
+                          setFormData(prev => ({ ...prev, items: newItems }))
+                        }}
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end pt-2 border-t border-gray-100 mt-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-gray-500 uppercase">Total Amount:</span>
+                  <span className="text-sm font-black text-green-600 font-mono">
+                    ₱{formData.items.reduce((sum, item) => sum + (parseFloat(item.amount.replace(/,/g, "")) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1">
               <Label className="!text-gray-700 font-semibold text-xs uppercase">Remarks</Label>
-              <Textarea 
+              <Textarea
                 placeholder="Any additional notes (Optional)"
                 value={formData.remarks}
-                onChange={(e) => setFormData(prev => ({...prev, remarks: e.target.value}))}
+                onChange={(e) => setFormData(prev => ({ ...prev, remarks: e.target.value }))}
                 className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 resize-none h-12 text-sm"
               />
             </div>
@@ -784,30 +1023,30 @@ export function PurchasingMonitoring() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 py-2">
               <div className="grid gap-1.5">
                 <Label htmlFor="date_arrived" className="!text-gray-700 font-semibold text-xs">Expense Date <span className="text-red-500">*</span></Label>
-                <Input 
+                <Input
                   id="date_arrived"
-                  type="date" 
+                  type="date"
                   required
                   style={{ colorScheme: 'light' }}
                   value={arriveFormData.date_issued}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, date_issued: e.target.value}))}
+                  onChange={(e) => setArriveFormData(prev => ({ ...prev, date_issued: e.target.value }))}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="po_number" className="!text-gray-700 font-semibold text-xs">PO Number <span className="text-red-500">*</span></Label>
-                <Input 
+                <Input
                   id="po_number"
                   required
                   placeholder="Enter PO Number"
                   value={arriveFormData.po_number}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, po_number: e.target.value}))}
+                  onChange={(e) => setArriveFormData(prev => ({ ...prev, po_number: e.target.value }))}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="category" className="!text-gray-700 font-semibold text-xs">Expense Category <span className="text-red-500">*</span></Label>
-                <Select required value={arriveFormData.category} onValueChange={(v) => setArriveFormData(prev => ({...prev, category: v}))}>
+                <Select required value={arriveFormData.category} onValueChange={(v) => setArriveFormData(prev => ({ ...prev, category: v }))}>
                   <SelectTrigger className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm">
                     <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
@@ -820,7 +1059,7 @@ export function PurchasingMonitoring() {
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="total_amount" className="!text-gray-700 font-semibold text-xs">Total Amount (₱) <span className="text-red-500">*</span></Label>
-                <Input 
+                <Input
                   id="total_amount"
                   required
                   placeholder="0.00"
@@ -830,14 +1069,14 @@ export function PurchasingMonitoring() {
                   onChange={(e) => {
                     let val = e.target.value.replace(/[^0-9.]/g, '');
                     if (val === '') {
-                      setArriveFormData(prev => ({...prev, total_amount: ''}));
+                      setArriveFormData(prev => ({ ...prev, total_amount: '' }));
                       return;
                     }
                     const parts = val.split('.');
                     if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
                     if (parts[0]) parts[0] = parseInt(parts[0], 10).toLocaleString('en-US');
                     val = parts.join('.');
-                    setArriveFormData(prev => ({...prev, total_amount: val}));
+                    setArriveFormData(prev => ({ ...prev, total_amount: val }));
                   }}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
@@ -845,87 +1084,87 @@ export function PurchasingMonitoring() {
               {arriveFormData.category === "CUSTOM" && (
                 <div className="grid gap-1.5 animate-in fade-in slide-in-from-top-2 md:col-span-2">
                   <Label htmlFor="customCategory" className="!text-gray-700 font-semibold text-xs">Custom Category <span className="text-red-500">*</span></Label>
-                  <Input 
+                  <Input
                     id="customCategory"
                     required
                     placeholder="Enter custom category"
                     value={arriveFormData.customCategory}
-                    onChange={(e) => setArriveFormData(prev => ({...prev, customCategory: e.target.value}))}
+                    onChange={(e) => setArriveFormData(prev => ({ ...prev, customCategory: e.target.value }))}
                     className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                   />
                 </div>
               )}
               <div className="grid gap-1.5 md:col-span-2">
                 <Label htmlFor="description" className="!text-gray-700 font-semibold text-xs">Expenses Description <span className="text-red-500">*</span></Label>
-                <Input 
+                <Input
                   id="description"
                   required
                   placeholder="Expenses Description"
                   value={arriveFormData.description}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, description: e.target.value}))}
+                  onChange={(e) => setArriveFormData(prev => ({ ...prev, description: e.target.value }))}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="charge_to" className="!text-gray-700 font-semibold text-xs">Charge To (CLIENT) <span className="text-red-500">*</span></Label>
-                <Input 
+                <Input
                   id="charge_to"
                   required
                   placeholder="Charge To"
                   value={arriveFormData.charge_to}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, charge_to: e.target.value}))}
+                  onChange={(e) => setArriveFormData(prev => ({ ...prev, charge_to: e.target.value }))}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="invoice_number" className="!text-gray-700 font-semibold text-xs">Invoice No.</Label>
-                <Input 
+                <Input
                   id="invoice_number"
                   placeholder="Invoice No."
                   value={arriveFormData.invoice_number}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, invoice_number: e.target.value}))}
+                  onChange={(e) => setArriveFormData(prev => ({ ...prev, invoice_number: e.target.value }))}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="supplier_name" className="!text-gray-700 font-semibold text-xs">Supplier Name</Label>
-                <Input 
+                <Input
                   id="supplier_name"
                   placeholder="Supplier Name"
                   value={arriveFormData.supplier_name}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, supplier_name: e.target.value}))}
+                  onChange={(e) => setArriveFormData(prev => ({ ...prev, supplier_name: e.target.value }))}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="unit_vehicle" className="!text-gray-700 font-semibold text-xs">Unit/Vehicle <span className="text-red-500">*</span></Label>
-                <Input 
+                <Input
                   id="unit_vehicle"
                   required
                   placeholder="Unit/Vehicle"
                   value={arriveFormData.unit_vehicle}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, unit_vehicle: e.target.value}))}
+                  onChange={(e) => setArriveFormData(prev => ({ ...prev, unit_vehicle: e.target.value }))}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="plate_number" className="!text-gray-700 font-semibold text-xs">Plate # <span className="text-red-500">*</span></Label>
-                <Input 
+                <Input
                   id="plate_number"
                   required
                   placeholder="Plate #"
                   value={arriveFormData.plate_number}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, plate_number: e.target.value}))}
+                  onChange={(e) => setArriveFormData(prev => ({ ...prev, plate_number: e.target.value }))}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
               <div className="grid gap-1.5 md:col-span-2">
                 <Label htmlFor="remarks" className="!text-gray-700 font-semibold text-xs">Remarks</Label>
-                <Input 
+                <Input
                   id="remarks"
                   placeholder="Remarks"
                   value={arriveFormData.remarks}
-                  onChange={(e) => setArriveFormData(prev => ({...prev, remarks: e.target.value}))}
+                  onChange={(e) => setArriveFormData(prev => ({ ...prev, remarks: e.target.value }))}
                   className="w-full !bg-white !border-gray-300 !text-gray-900 font-medium h-9 text-sm"
                 />
               </div>
@@ -957,7 +1196,7 @@ export function PurchasingMonitoring() {
               </DialogDescription>
             </DialogHeader>
           </div>
-          
+
           {viewingPurchase && (
             <div className="p-5 space-y-3">
               {/* Row 1: Key Summary */}
@@ -982,12 +1221,34 @@ export function PurchasingMonitoring() {
                 </div>
               </div>
 
-              {/* Row 2: Description */}
-              <div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Item Description</p>
-                <p className="text-xs font-semibold text-gray-900 bg-gray-50 p-2 rounded-md border border-gray-100 whitespace-pre-wrap">
-                  {viewingPurchase?.item_description}
-                </p>
+              {/* Row 2: Description & Amount */}
+              <div className="bg-white p-2.5 rounded-lg border border-gray-100 shadow-sm space-y-2.5">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Purchased Items</p>
+
+                  {viewingPurchase?.items && viewingPurchase.items.length > 0 ? (
+                    <div className="space-y-2">
+                      {viewingPurchase.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-start gap-3 p-2 bg-gray-50 rounded-md border border-gray-100">
+                          <span className="text-xs font-semibold text-gray-900 whitespace-pre-wrap">{item.description}</span>
+                          <span className="text-xs font-bold text-gray-900 font-mono shrink-0">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs font-semibold text-gray-900 bg-gray-50 p-2 rounded-md border border-gray-100 whitespace-pre-wrap">
+                      {viewingPurchase?.item_description}
+                    </p>
+                  )}
+                </div>
+                {viewingPurchase?.amount !== undefined && viewingPurchase?.amount > 0 && (
+                  <div className="bg-green-50/50 p-2 rounded border border-green-100 flex items-center justify-between mt-2">
+                    <span className="text-[10px] font-bold text-green-800 uppercase tracking-wider">Total Amount</span>
+                    <span className="text-sm font-black text-green-700 font-mono">
+                      ₱{Number(viewingPurchase.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Row 3: Tracking & Suppliers */}
@@ -1011,10 +1272,10 @@ export function PurchasingMonitoring() {
               </div>
 
               {/* Row 4: Vehicle Details */}
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-4 gap-2.5 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
                 <div>
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Unit / Vehicle</p>
-                  <p className="text-xs font-medium text-gray-800 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">{viewingPurchase?.unit_model || "-"}</p>
+                  <p className="text-xs font-medium text-gray-800 bg-white px-2.5 py-1.5 rounded-md border border-gray-100 truncate">{viewingPurchase?.unit_model || "-"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Plate Number</p>
@@ -1023,8 +1284,16 @@ export function PurchasingMonitoring() {
                 <div>
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Vehicle Owner</p>
                   <p className="text-xs font-bold text-gray-900 bg-gray-50 px-2.5 py-1.5 rounded-md truncate">
-                    {viewingPurchase?.vehicle_owner || "-"} 
-                    {viewingPurchase?.customer_type === 'Insurance' && <span className="text-[10px] font-normal text-gray-500 ml-1">({viewingPurchase?.insurance_company_name})</span>}
+                    {viewingPurchase?.vehicle_owner || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Customer Type</p>
+                  <p className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-md truncate uppercase tracking-wide">
+                    {viewingPurchase?.customer_type || "-"}
+                    {viewingPurchase?.customer_type === 'Insurance' && viewingPurchase?.insurance_company_name && (
+                      <span className="text-[10px] font-normal text-blue-600 ml-1">({viewingPurchase?.insurance_company_name})</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1038,7 +1307,7 @@ export function PurchasingMonitoring() {
               </div>
             </div>
           )}
-          
+
           {/* Footer Bar with Record Metadata & Back Button */}
           <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
             {viewingPurchase && (
@@ -1054,6 +1323,42 @@ export function PurchasingMonitoring() {
               Close
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Mark Arrived Modal */}
+      <Dialog open={isMarkArrivedModalOpen} onOpenChange={setIsMarkArrivedModalOpen}>
+        <DialogContent className="!bg-white !text-gray-900 !border-gray-200 sm:max-w-[400px] shadow-xl [&>button]:!text-gray-700 [&>button:hover]:!text-gray-900">
+          <DialogHeader className="border-b !border-gray-200 pb-4">
+            <DialogTitle className="text-xl font-extrabold !text-gray-900 flex items-center gap-2">
+              <Check className="w-5 h-5 text-green-600" />
+              Mark as Arrived
+            </DialogTitle>
+            <DialogDescription className="!text-gray-500 font-medium text-sm">
+              Please specify the date this item arrived.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={submitMarkArrived} className="space-y-4 py-2 mt-2">
+            <div className="space-y-1.5">
+              <Label className="!text-gray-700 font-semibold text-xs uppercase">Date Arrived <span className="text-red-500">*</span></Label>
+              <Input
+                type="date" style={{ colorScheme: "light" }}
+                required
+                value={arriveDate}
+                onChange={(e) => setArriveDate(e.target.value)}
+                className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 [color-scheme:light] h-10"
+              />
+            </div>
+
+            <DialogFooter className="pt-4 border-t border-gray-100 mt-6">
+              <Button type="button" variant="outline" onClick={() => setIsMarkArrivedModalOpen(false)} className="!bg-white !border-gray-300 !text-gray-700 hover:!bg-gray-50">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="!bg-green-600 hover:!bg-green-700 !text-white shadow-sm font-bold">
+                {isSubmitting ? "Saving..." : "Confirm Arrival"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

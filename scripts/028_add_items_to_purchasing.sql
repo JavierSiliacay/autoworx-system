@@ -1,0 +1,3 @@
+ALTER TABLE public.purchasing
+ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb,
+ADD COLUMN IF NOT EXISTS amount NUMERIC;

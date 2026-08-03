@@ -83,17 +83,19 @@ export function AdminSidebar() {
       href: "/admin/parts/prices",
       icon: Tag,
     },
-    {
-      title: "Purchasing",
-      href: "/admin/purchasing",
-      icon: ShoppingCart,
-    },
-    // Conditionally include Expenses Monitoring
-    ...(isAccountingEmail(session?.user?.email) ? [{
-      title: "Expenses Monitoring",
-      href: "/admin/expenses",
-      icon: Banknote,
-    }] : []),
+    // Conditionally include Purchasing and Expenses Monitoring
+    ...(isAccountingEmail(session?.user?.email) ? [
+      {
+        title: "Purchasing",
+        href: "/admin/purchasing",
+        icon: ShoppingCart,
+      },
+      {
+        title: "Expenses Monitoring",
+        href: "/admin/expenses",
+        icon: Banknote,
+      }
+    ] : []),
     {
       title: "System Files",
       href: "/admin/maintenance",

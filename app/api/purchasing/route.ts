@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { 
       type, item_description, supplier_name, status, date_purchased, remarks,
-      unit_model, plate_number, vehicle_owner, customer_type, insurance_company_name, pr_number 
+      unit_model, plate_number, vehicle_owner, customer_type, insurance_company_name, pr_number, amount, items
     } = body
 
     if (!type || !item_description || !date_purchased) {
@@ -75,6 +75,8 @@ export async function POST(req: Request) {
           customer_type,
           insurance_company_name,
           pr_number,
+          amount,
+          items: items || [],
           is_po_synced: false,
           created_by: token.email
         }

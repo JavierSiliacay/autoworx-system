@@ -1,10 +1,14 @@
 import { PurchasingMonitoring } from "@/components/admin/purchasing-monitoring"
-import { AccountingRestrictionOverlay } from "@/components/admin/accounting-restriction-overlay"
+import { getServerSession } from "next-auth"
+import { redirect } from "next/navigation"
+import { authOptions, isAccountingEmail } from "@/lib/auth"
 
-export default function PurchasingPage() {
-  return (
-    <AccountingRestrictionOverlay moduleName="Purchasing">
-      <PurchasingMonitoring />
-    </AccountingRestrictionOverlay>
-  )
+export default async function PurchasingPage() {
+  const session = await getServerSession(authOptions)
+
+  if (!isAccountingEmail(session?.user?.email)) {
+    redirect("/admin/dashboard")
+  }
+
+  return <PurchasingMonitoring />
 }

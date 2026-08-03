@@ -12,7 +12,7 @@ export function AccountingRestrictionOverlay({ moduleName, children }: { moduleN
   const { data: session } = useSession()
 
   // Allow access if they are a full admin OR if they are accounting but trying to access Purchasing
-  if (!isAccountingOnly(session?.user?.email) || moduleName === "Purchasing") {
+  if (!isAccountingOnly(session?.user?.email)) {
     return <>{children}</>
   }
 
