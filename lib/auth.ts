@@ -12,8 +12,8 @@ const AUTHORIZED_EMAILS = [
   "paulsuazo64@gmail.com",
   "alfred_autoworks@yahoo.com",
   //"nainguegenelyn@gmail.com",
-  //"joysayson2512@gmail.com",
-  //"javiersiliacaysiliacay1234@gmail.com",
+  //"joysayson2512@gmail.com",3
+  "javiersiliacaysiliacay1234@gmail.com",
   "ryan.quintos0459@gmail.com",
   //"emelybingat37@gmail.com"
 ]
@@ -62,7 +62,7 @@ export function isAuthorizedForReport(email?: string | null) {
 
 const AUTHORIZED_ACCOUNTING_EMAILS = [
   "siliacay.javier@gmail.com",
-  "javiersiliacaysiliacay1234@gmail.com",
+  //"javiersiliacaysiliacay1234@gmail.com",
   "alfred_autoworks@yahoo.com",
   "alfredagbong76@gmail.com",
   "alfredagbong2@gmail.com",
