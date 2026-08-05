@@ -115,6 +115,31 @@ export async function PUT(req: Request) {
 
     if (error) throw error
 
+    // ONE-WAY SYNC: Automatically push updates to linked expense (if any exists)
+    if (data && data.length > 0) {
+      const updatedPurchase = data[0]
+      const updatePayload: any = {}
+      
+      if (updatedPurchase.item_description !== undefined) updatePayload.description = updatedPurchase.item_description
+      if (updatedPurchase.amount !== undefined) updatePayload.total_amount = updatedPurchase.amount
+      if (updatedPurchase.supplier_name !== undefined) updatePayload.supplier_name = updatedPurchase.supplier_name
+      if (updatedPurchase.remarks !== undefined) updatePayload.remarks = updatedPurchase.remarks
+      if (updatedPurchase.vehicle_owner !== undefined) updatePayload.charge_to = updatedPurchase.vehicle_owner
+      if (updatedPurchase.unit_model !== undefined) updatePayload.unit_vehicle = updatedPurchase.unit_model
+      if (updatedPurchase.plate_number !== undefined) updatePayload.plate_number = updatedPurchase.plate_number
+
+      if (Object.keys(updatePayload).length > 0) {
+        const { error: expenseError } = await supabase
+          .from("expenses")
+          .update(updatePayload)
+          .eq("purchasing_id", updatedPurchase.id)
+          
+        if (expenseError) {
+          console.error("Failed to sync purchasing update to expense:", expenseError)
+        }
+      }
+    }
+
     return NextResponse.json(data)
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

@@ -921,7 +921,7 @@ export function PurchasingMonitoring() {
                   <Plus className="w-3 h-3 mr-1" /> Add Item
                 </Button>
               </div>
-              <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                 {formData.items.map((item, index) => (
                   <div key={index} className="flex gap-2 items-start relative group">
                     <div className="flex-1 space-y-1">
@@ -1216,7 +1216,7 @@ export function PurchasingMonitoring() {
 
       {/* View Purchase Modal */}
       <Dialog open={!!viewingPurchase} onOpenChange={(open) => !open && setViewingPurchase(null)}>
-        <DialogContent className="!bg-white sm:max-w-[650px] !border-gray-200 shadow-2xl overflow-hidden p-0 z-[120]">
+        <DialogContent className="!bg-white sm:max-w-[650px] max-h-[95vh] !border-gray-200 shadow-2xl overflow-hidden p-0 z-[120] flex flex-col">
           <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100 shrink-0">
             <DialogHeader>
               <DialogTitle className="text-lg font-extrabold text-gray-900">Purchasing Record Inspector</DialogTitle>
@@ -1227,7 +1227,7 @@ export function PurchasingMonitoring() {
           </div>
 
           {viewingPurchase && (
-            <div className="p-5 space-y-3">
+            <div className="p-5 space-y-3 overflow-y-auto flex-1">
               {/* Row 1: Key Summary */}
               <div className="grid grid-cols-3 gap-2.5">
                 <div>
