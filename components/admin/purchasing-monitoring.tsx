@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
-import { Search, Plus, Loader2, Check, Printer, FileText, ListChecks, Edit, Trash2, RotateCcw, Undo } from "lucide-react"
+import { Search, Plus, Loader2, Check, Printer, FileText, ListChecks, Edit, Trash2, RotateCcw, Undo, Unlink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
@@ -303,7 +303,8 @@ export function PurchasingMonitoring() {
           charge_to: arriveFormData.charge_to,
           invoice_number: arriveFormData.invoice_number,
           unit_vehicle: arriveFormData.unit_vehicle,
-          plate_number: arriveFormData.plate_number
+          plate_number: arriveFormData.plate_number,
+          purchasing_id: targetPurchase.id
         })
       })
 
@@ -684,6 +685,34 @@ export function PurchasingMonitoring() {
                             title="Revert to Pending"
                           >
                             <RotateCcw className="w-3 h-3" />
+                          </Button>
+                        )}
+                        {purchase.is_po_synced && (
+                          <Button
+                            onClick={async () => {
+                              if (!window.confirm("Force Unsync this item? Use this only if the corresponding expense is missing or if you need to re-sync it manually.")) return;
+                              try {
+                                const res = await fetch(`/api/purchasing?id=${purchase.id}`, {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ is_po_synced: false })
+                                })
+                                if (!res.ok) throw new Error("Failed to force unsync");
+                                // We don't have access to toast here unless it's in scope, but toast is available in the component. Wait, toast is available.
+                                // Actually, let's call a new handleForceUnsync method or just write it inline since we can't easily extract it without scrolling up. I will write it inline.
+                                // wait, I can just use toast here since it's inside the component map loop and toast is in scope.
+                                toast({ title: "Success", description: "Item forcefully un-synced." });
+                                fetchPurchases();
+                              } catch (e) {
+                                toast({ title: "Error", description: "Could not un-sync item.", variant: "destructive" });
+                              }
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="h-6 w-6 p-0 !bg-white !border-gray-300 !text-gray-500 hover:!bg-gray-100 hover:!text-gray-700"
+                            title="Force Unsync"
+                          >
+                            <Unlink className="w-3 h-3" />
                           </Button>
                         )}
                         <Button

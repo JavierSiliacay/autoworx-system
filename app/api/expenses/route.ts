@@ -62,6 +62,7 @@ export async function POST(request: Request) {
         type_of_payment: body.type_of_payment || null,
         total_amount: parseFloat(body.total_amount),
         remarks: body.remarks || null,
+        purchasing_id: body.purchasing_id || null,
         created_by: token.email
       }])
       .select()
@@ -139,6 +140,18 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Missing expense ID" }, { status: 400 })
     }
 
+    // Fetch the expense to see if it has a purchasing_id
+    const { data: expenseData, error: fetchError } = await supabase
+      .from("expenses")
+      .select("purchasing_id")
+      .eq("id", id)
+      .single()
+      
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error("Error fetching expense for deletion:", fetchError)
+      return NextResponse.json({ error: fetchError.message }, { status: 500 })
+    }
+
     const { error } = await supabase
       .from("expenses")
       .delete()
@@ -147,6 +160,19 @@ export async function DELETE(request: Request) {
     if (error) {
       console.error("Supabase delete error:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // If there is an associated purchasing item, unsync it
+    if (expenseData?.purchasing_id) {
+      const { error: purchasingError } = await supabase
+        .from("purchasing")
+        .update({ is_po_synced: false })
+        .eq("id", expenseData.purchasing_id)
+        
+      if (purchasingError) {
+        console.error("Error unsyncing purchasing item:", purchasingError)
+        // We don't fail the deletion if unsyncing fails, but we log it.
+      }
     }
 
     return NextResponse.json({ success: true })
