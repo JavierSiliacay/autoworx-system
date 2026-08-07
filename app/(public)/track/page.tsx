@@ -198,11 +198,14 @@ function TrackingContent() {
     return code.trim().replace(/[\s\-_]+/g, "").toUpperCase()
   }
 
+  const [hasSearched, setHasSearched] = useState(false)
+
   const performSearch = useCallback(async (code: string) => {
     if (!mountedRef.current) return
     setError("")
     setAppointment(null)
     setIsSearching(true)
+    setHasSearched(true)
 
     // Abort previous request if any
     if (abortControllerRef.current) abortControllerRef.current.abort()
@@ -245,11 +248,11 @@ function TrackingContent() {
   // Auto-search if code is in URL
   useEffect(() => {
     const code = searchParams?.get("code")
-    if (code && !appointment && !isSearching) {
+    if (code && !appointment && !isSearching && !hasSearched) {
       setTrackingCode(code.toUpperCase())
       performSearch(code.toUpperCase())
     }
-  }, [searchParams, appointment, isSearching, performSearch])
+  }, [searchParams, appointment, isSearching, hasSearched, performSearch])
 
   // Load total completed units count
   const loadCompletedCount = useCallback(async (signal?: AbortSignal) => {

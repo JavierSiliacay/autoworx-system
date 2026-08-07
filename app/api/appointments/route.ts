@@ -21,13 +21,14 @@ export async function GET(request: Request) {
       let { data, error } = await supabase
         .from("appointments")
         .select("*")
-        .or(`tracking_code.eq.${trackingCode},tracking_code.ilike.${fuzzyPattern}`)
+        .or(`tracking_code.eq.${trackingCode},tracking_code.ilike.${fuzzyPattern},estimate_number.eq.${trackingCode}`)
         .limit(10)
 
       // Filter for best match in JS to handle normalization perfectly
       let bestMatch = data?.find(apt => 
         apt.tracking_code.toUpperCase() === trackingCode.toUpperCase() ||
-        apt.tracking_code.replace(/[\s\-_]+/g, "").toUpperCase() === cleanCode
+        apt.tracking_code.replace(/[\s\-_]+/g, "").toUpperCase() === cleanCode ||
+        apt.estimate_number?.toUpperCase() === trackingCode.toUpperCase()
       )
 
       if (!bestMatch) {
@@ -35,12 +36,13 @@ export async function GET(request: Request) {
         const { data: historyData } = await supabase
           .from("appointment_history")
           .select("*")
-          .or(`tracking_code.eq.${trackingCode},tracking_code.ilike.${fuzzyPattern}`)
+          .or(`tracking_code.eq.${trackingCode},tracking_code.ilike.${fuzzyPattern},estimate_number.eq.${trackingCode}`)
           .limit(10)
 
         const bestHistoryMatch = historyData?.find(h => 
           h.tracking_code.toUpperCase() === trackingCode.toUpperCase() ||
-          h.tracking_code.replace(/[\s\-_]+/g, "").toUpperCase() === cleanCode
+          h.tracking_code.replace(/[\s\-_]+/g, "").toUpperCase() === cleanCode ||
+          h.estimate_number?.toUpperCase() === trackingCode.toUpperCase()
         )
 
         if (bestHistoryMatch) {
@@ -278,6 +280,34 @@ export async function POST(request: Request) {
     } else {
       console.log(`Skipping confirmation email: No valid email provided (${data.email})`);
     }
+
+    // ALK Trucking Webhook Sync (On Create)
+    // If the appointment name contains "ALK", send the data over to the ALK Dashboard
+    if (data.name?.toUpperCase().includes("ALK") && process.env.ALK_TRUCKING_WEBHOOK_URL) {
+      console.log(`Syncing New Job Order ${data.tracking_code} to ALK Trucking Dashboard...`);
+      try {
+        await fetch(process.env.ALK_TRUCKING_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.ALK_TRUCKING_WEBHOOK_SECRET}`
+          },
+          body: JSON.stringify({
+            autoworxJobId: data.tracking_code,
+            description: Array.isArray(data.service) ? data.service.join(", ") : (data.service || "General Repair"),
+            cost: data.costing?.total || 0,
+            status: data.status || "Pending",
+            plateNo: data.vehicle_plate || "UNKNOWN",
+            vehicleDetails: [data.vehicle_year, data.vehicle_make, data.vehicle_model].filter(Boolean).join(" "),
+            repairBreakdown: data.costing || null,
+            dateIncurred: data.created_at || new Date().toISOString()
+          })
+        }).catch(err => console.error("ALK Sync Webhook Fetch failed:", err));
+      } catch (e) {
+        console.error("ALK Sync Webhook failed:", e);
+      }
+    }
+
     return NextResponse.json(data)
   } catch (error) {
     console.error("Error in POST /api/appointments:", error)
@@ -486,6 +516,44 @@ export async function PUT(request: Request) {
     }
   }
 
+  // ALK Trucking Webhook Sync
+  // If the appointment name contains "ALK", send the data over to the ALK Dashboard
+  if (data.name?.toUpperCase().includes("ALK") && process.env.ALK_TRUCKING_WEBHOOK_URL) {
+    console.log(`Syncing Job Order ${data.tracking_code} to ALK Trucking Dashboard...`);
+    try {
+      if (data.deleted_at) {
+        // If it was just soft deleted, we must DELETE it from ALK Trucking
+        await fetch(`${process.env.ALK_TRUCKING_WEBHOOK_URL}?autoworxJobId=${data.tracking_code}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${process.env.ALK_TRUCKING_WEBHOOK_SECRET}`
+          }
+        }).catch(err => console.error("ALK Sync Webhook Soft-DELETE failed:", err));
+      } else {
+        // Otherwise sync the latest data
+        await fetch(process.env.ALK_TRUCKING_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.ALK_TRUCKING_WEBHOOK_SECRET}`
+          },
+          body: JSON.stringify({
+            autoworxJobId: data.tracking_code,
+            description: Array.isArray(data.service) ? data.service.join(", ") : (data.service || "General Repair"),
+            cost: data.costing?.total || 0,
+            status: data.status || "Ongoing",
+            plateNo: data.vehicle_plate || "UNKNOWN",
+            vehicleDetails: [data.vehicle_year, data.vehicle_make, data.vehicle_model].filter(Boolean).join(" "),
+            repairBreakdown: data.costing || null,
+            dateIncurred: data.created_at || new Date().toISOString()
+          })
+        }).catch(err => console.error("ALK Sync Webhook Fetch failed:", err));
+      }
+    } catch (e) {
+      console.error("ALK Sync Webhook failed:", e);
+    }
+  }
+
   return NextResponse.json(data)
 }
 
@@ -508,18 +576,19 @@ export async function DELETE(request: Request) {
 
   const adminSupabase = await createAdminClient().catch(() => supabase)
 
+  // Fetch appointment before deletion for webhook and image cleanup
+  const { data: appointmentToDelete } = await adminSupabase
+    .from("appointments")
+    .select("*")
+    .eq("id", id)
+    .single()
+
   if (isPermanent) {
     console.log(`[API Appointments DELETE] Permanent delete for ID: ${id}`);
-    // Get the appointment to find image URLs for cleanup
-    const { data: appointment } = await supabase
-      .from("appointments")
-      .select("damage_images, orcr_image, orcr_image_2, loa_attachment, loa_attachment_2, loa_attachments")
-      .eq("id", id)
-      .single()
 
     // Delete images from storage if any
-    if (appointment?.damage_images && appointment.damage_images.length > 0) {
-      const imagePaths = appointment.damage_images
+    if (appointmentToDelete?.damage_images && appointmentToDelete.damage_images.length > 0) {
+      const imagePaths = appointmentToDelete.damage_images
         .map((url: string) => {
           const match = url.match(/damage-images\/(.+)$/)
           return match ? match[1] : null
@@ -532,36 +601,36 @@ export async function DELETE(request: Request) {
     }
 
     // Delete ORCR image from storage if exists
-    if (appointment?.orcr_image) {
-      const orcrMatch = appointment.orcr_image.match(/damage-images\/(.+)$/)
+    if (appointmentToDelete?.orcr_image) {
+      const orcrMatch = appointmentToDelete.orcr_image.match(/damage-images\/(.+)$/)
       if (orcrMatch) {
         await adminSupabase.storage.from("damage-images").remove([orcrMatch[1]])
       }
     }
 
-    if (appointment?.orcr_image_2) {
-      const orcrMatch2 = appointment.orcr_image_2.match(/damage-images\/(.+)$/)
+    if (appointmentToDelete?.orcr_image_2) {
+      const orcrMatch2 = appointmentToDelete.orcr_image_2.match(/damage-images\/(.+)$/)
       if (orcrMatch2) {
         await adminSupabase.storage.from("damage-images").remove([orcrMatch2[1]])
       }
     }
 
-    if (appointment?.loa_attachment) {
-      const loaMatch = appointment.loa_attachment.match(/damage-images\/(.+)$/)
+    if (appointmentToDelete?.loa_attachment) {
+      const loaMatch = appointmentToDelete.loa_attachment.match(/damage-images\/(.+)$/)
       if (loaMatch) {
         await adminSupabase.storage.from("damage-images").remove([loaMatch[1]])
       }
     }
 
-    if (appointment?.loa_attachment_2) {
-      const loaMatch2 = appointment.loa_attachment_2.match(/damage-images\/(.+)$/)
+    if (appointmentToDelete?.loa_attachment_2) {
+      const loaMatch2 = appointmentToDelete.loa_attachment_2.match(/damage-images\/(.+)$/)
       if (loaMatch2) {
         await adminSupabase.storage.from("damage-images").remove([loaMatch2[1]])
       }
     }
 
-    if (appointment?.loa_attachments && Array.isArray(appointment.loa_attachments)) {
-      for (const url of appointment.loa_attachments) {
+    if (appointmentToDelete?.loa_attachments && Array.isArray(appointmentToDelete.loa_attachments)) {
+      for (const url of appointmentToDelete.loa_attachments) {
         const match = url.match(/damage-images\/(.+)$/)
         if (match) {
           await adminSupabase.storage.from("damage-images").remove([match[1]])
@@ -589,6 +658,21 @@ export async function DELETE(request: Request) {
     if (error) {
       console.error(`[API Appointments DELETE] Error:`, error);
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+  }
+
+  // ALK Trucking Webhook Sync (On Delete)
+  if (appointmentToDelete?.name?.toUpperCase().includes("ALK") && process.env.ALK_TRUCKING_WEBHOOK_URL) {
+    console.log(`Syncing Deletion for Job Order ${appointmentToDelete.tracking_code} to ALK Trucking Dashboard...`);
+    try {
+      await fetch(`${process.env.ALK_TRUCKING_WEBHOOK_URL}?autoworxJobId=${appointmentToDelete.tracking_code}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${process.env.ALK_TRUCKING_WEBHOOK_SECRET}`
+        }
+      }).catch(err => console.error("ALK Sync Webhook DELETE failed:", err));
+    } catch (e) {
+      console.error("ALK Sync Webhook DELETE failed:", e);
     }
   }
 
