@@ -113,6 +113,7 @@ export interface JobOrderHistoryEntry {
   serviceAdvisor: string
   targetDate?: string
   insuranceName?: string
+  mechanicNotes?: string
 }
 
 export interface CostingData {

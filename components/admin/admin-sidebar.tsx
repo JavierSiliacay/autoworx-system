@@ -143,15 +143,15 @@ export function AdminSidebar() {
           const currentTab = searchParams?.get("tab")
           let isActive = false
           if (item.href === "#") {
-             // Parent is active if any of its subItems is active
-             isActive = item.subItems?.some(subItem => {
-               if (subItem.href.includes("tab=accessories")) {
-                 return pathname === "/admin/parts" && currentTab === "accessories"
-               } else if (subItem.href === "/admin/parts") {
-                 return pathname === "/admin/parts" && currentTab !== "accessories"
-               }
-               return pathname === subItem.href || (subItem.href !== '/admin' && Boolean(pathname?.startsWith(`${subItem.href}/`)))
-             }) || false
+            // Parent is active if any of its subItems is active
+            isActive = item.subItems?.some(subItem => {
+              if (subItem.href.includes("tab=accessories")) {
+                return pathname === "/admin/parts" && currentTab === "accessories"
+              } else if (subItem.href === "/admin/parts") {
+                return pathname === "/admin/parts" && currentTab !== "accessories"
+              }
+              return pathname === subItem.href || (subItem.href !== '/admin' && Boolean(pathname?.startsWith(`${subItem.href}/`)))
+            }) || false
           } else if (item.href === "/admin/parts") {
             isActive = pathname === "/admin/parts" && currentTab !== "accessories"
           } else {
@@ -182,7 +182,7 @@ export function AdminSidebar() {
                     {!isCollapsed && <span className="truncate animate-in fade-in duration-300">{item.title}</span>}
                   </div>
                   {!isCollapsed && item.subItems && (
-                    <button 
+                    <button
                       onClick={(e) => toggleMenu(item.title, e)}
                       className="p-1 rounded-md hover:bg-primary/10 transition-colors"
                     >
@@ -195,7 +195,7 @@ export function AdminSidebar() {
                   )}
                 </div>
               </Link>
-              
+
               {!isCollapsed && item.subItems && expandedMenus[item.title] && (
                 <div className="flex flex-col gap-1 pl-4 mt-1 border-l-2 border-muted ml-5 animate-in slide-in-from-top-2 duration-200">
                   {item.subItems.map((subItem) => {
@@ -207,7 +207,7 @@ export function AdminSidebar() {
                     } else {
                       isSubActive = pathname === subItem.href || (subItem.href !== '/admin' && Boolean(pathname?.startsWith(`${subItem.href}/`)))
                     }
-                    
+
                     return (
                       <Link key={subItem.href} href={subItem.href} onClick={() => setIsMobileOpen(false)}>
                         <div

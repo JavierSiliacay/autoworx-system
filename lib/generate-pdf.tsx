@@ -1376,6 +1376,13 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment, repo
 
   const scopeOfWorksHtml = parseScopeText(appointment.costing?.scopeOfWorks || appointment.scopeOfWorks || "");
   const partsHtml = parsePartsText(appointment.costing?.partsText || "", categorized["Parts"] || []);
+  const mechanicNotesRaw = appointment.costing?.jobOrderHistory?.slice(-1)[0]?.mechanicNotes || "";
+  const mechanicNotesHtml = mechanicNotesRaw.trim() ? `
+    <div style="margin-top: 15px; padding: 10px; border: 2px dashed #c00; background: #fffaf9; width: 100%; box-sizing: border-box; page-break-inside: avoid;">
+      <strong style="color: #c00; font-size: 11px; text-transform: uppercase; display: block; margin-bottom: 4px;">⚠ Instructions / Notes:</strong>
+      <p style="font-size: 10px; font-weight: bold; white-space: pre-wrap; color: #000;">${mechanicNotesRaw.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+    </div>
+  ` : "";
 
   const insuranceRaw = appointment.insurance || '';
   const insuranceUpper = insuranceRaw.toUpperCase();
@@ -1564,8 +1571,6 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment, repo
       </div>
     </div>
 
-
-
     <div class="footer-sections">
       <div class="terms-section">
         <h4>TERMS AND CONDITIONS:</h4>
@@ -1590,6 +1595,9 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment, repo
       --- END OF JOB ORDER (PAGE 1 OF 1) ---
     </div>
   </div>
+  
+  ${mechanicNotesHtml}
+  
   ${(appointment.service && appointment.service.toLowerCase().includes('painting')) || activeCategories.includes('Painting') ? `
   <div style="margin-top: 30px; padding: 0 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: bold; font-size: 14px; color: #000; display: flex; flex-direction: column; gap: 40px;">
     <div style="text-align: center;">
