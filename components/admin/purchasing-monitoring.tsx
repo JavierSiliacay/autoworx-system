@@ -15,7 +15,8 @@ import { format, differenceInDays } from "date-fns"
 export interface PurchasingItem {
   description: string
   amount: number
-  status?: "Pending" | "Arrived"
+  status?: "Pending" | "Arrived" | "Cancelled"
+  cancel_reason?: string | null
   date_arrived?: string | null
 }
 
@@ -87,6 +88,8 @@ export function PurchasingMonitoring() {
   const [isArriveModalOpen, setIsArriveModalOpen] = useState(false)
   const [isMarkArrivedModalOpen, setIsMarkArrivedModalOpen] = useState(false)
   const [selectedItemsToArrive, setSelectedItemsToArrive] = useState<number[]>([])
+  const [cancellingItemIndex, setCancellingItemIndex] = useState<number | null>(null)
+  const [cancelReason, setCancelReason] = useState("")
 
   const [arriveDate, setArriveDate] = useState(format(new Date(), "yyyy-MM-dd"))
   const [purchaseToArrive, setPurchaseToArrive] = useState<Purchasing | null>(null)
@@ -115,7 +118,7 @@ export function PurchasingMonitoring() {
 
   const { toast } = useToast()
 
-  const [lastDeletedItem, setLastDeletedItem] = useState<{ index: number, item: { description: string, amount: string, status: "Pending" | "Arrived", date_arrived: string | null } } | null>(null)
+  const [lastDeletedItem, setLastDeletedItem] = useState<{ index: number, item: { description: string, amount: string, status: "Pending" | "Arrived" | "Cancelled", date_arrived: string | null } } | null>(null)
 
   const [formData, setFormData] = useState({
     type: "PR",
@@ -128,7 +131,7 @@ export function PurchasingMonitoring() {
     insurance_company_name: "",
     item_description: "",
     amount: "",
-    items: [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }],
+    items: [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived" | "Cancelled", date_arrived: null as string | null }],
     supplier_name: "",
     date_purchased: format(new Date(), "yyyy-MM-dd"),
     remarks: ""
@@ -212,18 +215,18 @@ export function PurchasingMonitoring() {
           return
         }
 
-        let allArrived = true
+        let allProcessed = true
         newItems = newItems.map((item, idx) => {
           if (selectedItemsToArrive.includes(idx)) {
             return { ...item, status: "Arrived", date_arrived: finalArriveTime }
           }
-          if (item.status !== "Arrived" && !(!item.status && purchaseToArrive.status === "Arrived")) {
-             allArrived = false
+          if (item.status !== "Arrived" && item.status !== "Cancelled" && !(!item.status && purchaseToArrive.status === "Arrived")) {
+             allProcessed = false
           }
           return { ...item, status: item.status || "Pending", date_arrived: item.date_arrived || null }
         })
 
-        if (!allArrived) {
+        if (!allProcessed) {
            newStatus = "Partially Arrived"
            newDateArrived = null
         }
@@ -249,25 +252,77 @@ export function PurchasingMonitoring() {
     }
   }
 
-  const handleUndoItemArrival = async (purchase: Purchasing, itemIndex: number) => {
-    if (!window.confirm("Are you sure you want to undo this arrived item?")) return;
+  const handleCancelItem = async (purchase: Purchasing, itemIndex: number, reason: string) => {
+    if (!reason.trim()) {
+      toast({ title: "Reason Required", description: "Please provide a reason for cancellation.", variant: "destructive" })
+      return
+    }
+    setIsSubmitting(true)
+    try {
+      let newItems = [...purchase.items!]
+      const itemToCancel = newItems[itemIndex]
+      newItems[itemIndex] = { ...itemToCancel, status: "Cancelled", cancel_reason: reason }
+
+      let allProcessed = true
+      let anyArrived = false
+      newItems.forEach(item => {
+        if (item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) anyArrived = true
+        if (item.status !== "Arrived" && item.status !== "Cancelled" && (item.status || purchase.status !== "Arrived")) allProcessed = false
+      })
+
+      let newStatus = allProcessed ? "Arrived" : anyArrived ? "Partially Arrived" : "Pending"
+      let newDateArrived = newStatus === "Arrived" ? purchase.date_arrived : null
+      
+      const newAmount = Math.max(0, (purchase.amount || 0) - Number(itemToCancel.amount))
+
+      const payload: any = { status: newStatus, date_arrived: newDateArrived, items: newItems, amount: newAmount }
+
+      const res = await fetch(`/api/purchasing?id=${purchase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      if (!res.ok) throw new Error("Failed to cancel item")
+      toast({ title: "Success", description: "Item cancelled." })
+      
+      setCancellingItemIndex(null)
+      setCancelReason("")
+      if (purchaseToArrive && purchaseToArrive.id === purchase.id) {
+        setPurchaseToArrive({ ...purchase, ...payload })
+      }
+      fetchPurchases()
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to cancel item.", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleUndoItemArrival = async (purchase: Purchasing, itemIndex: number, isCancelUndo: boolean = false) => {
+    if (!window.confirm(`Are you sure you want to undo this ${isCancelUndo ? 'cancelled' : 'arrived'} item?`)) return;
 
     setIsSubmitting(true);
     try {
       let newItems = [...purchase.items!];
-      newItems[itemIndex] = { ...newItems[itemIndex], status: "Pending", date_arrived: null };
+      const itemToUndo = newItems[itemIndex];
+      newItems[itemIndex] = { ...itemToUndo, status: "Pending", date_arrived: null, cancel_reason: null };
 
-      let allArrived = true;
+      let allProcessed = true;
       let anyArrived = false;
       newItems.forEach(item => {
         if (item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) anyArrived = true;
-        else allArrived = false;
+        if (item.status !== "Arrived" && item.status !== "Cancelled" && (item.status || purchase.status !== "Arrived")) allProcessed = false;
       });
 
-      let newStatus = allArrived ? "Arrived" : anyArrived ? "Partially Arrived" : "Pending";
+      let newStatus = allProcessed ? "Arrived" : anyArrived ? "Partially Arrived" : "Pending";
       let newDateArrived = newStatus === "Arrived" ? purchase.date_arrived : null;
 
-      const payload: any = { status: newStatus, date_arrived: newDateArrived, items: newItems };
+      let newAmount = purchase.amount;
+      if (isCancelUndo) {
+        newAmount = (purchase.amount || 0) + Number(itemToUndo.amount);
+      }
+
+      const payload: any = { status: newStatus, date_arrived: newDateArrived, items: newItems, amount: newAmount };
 
       const res = await fetch(`/api/purchasing?id=${purchase.id}`, {
         method: "PUT",
@@ -319,7 +374,7 @@ export function PurchasingMonitoring() {
     
     // Generate description from items if available (excluding amounts)
     const formattedDescription = purchase.items && purchase.items.length > 0
-      ? purchase.items.map((item: any) => item.description).filter(Boolean).join(', ')
+      ? purchase.items.map((item: any) => item.status === 'Cancelled' ? `${item.description}(CANCELLED)` : item.description).filter(Boolean).join(', ')
       : purchase.item_description || ""
 
     // Format the initial amount with commas
@@ -461,7 +516,7 @@ export function PurchasingMonitoring() {
         insurance_company_name: "",
         item_description: "",
         amount: "",
-        items: [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }],
+        items: [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived" | "Cancelled", date_arrived: null as string | null }],
         supplier_name: "",
         date_purchased: format(new Date(), "yyyy-MM-dd"),
         remarks: ""
@@ -493,7 +548,7 @@ export function PurchasingMonitoring() {
       amount: purchase.amount ? purchase.amount.toString() : "",
       items: purchase.items?.length
         ? purchase.items.map(i => ({ description: i.description, amount: i.amount.toString(), status: i.status || "Pending", date_arrived: i.date_arrived || null }))
-        : (purchase.item_description ? [{ description: purchase.item_description, amount: purchase.amount?.toString() || "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }] : [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }]),
+        : (purchase.item_description ? [{ description: purchase.item_description, amount: purchase.amount?.toString() || "", status: "Pending" as "Pending" | "Arrived" | "Cancelled", date_arrived: null as string | null }] : [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived" | "Cancelled", date_arrived: null as string | null }]),
       supplier_name: purchase.supplier_name || "",
       date_purchased: format(new Date(purchase.date_purchased), "yyyy-MM-dd"),
       remarks: purchase.remarks || ""
@@ -569,7 +624,7 @@ export function PurchasingMonitoring() {
                 insurance_company_name: "",
                 item_description: "",
                 amount: "",
-                items: [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }],
+                items: [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived" | "Cancelled", date_arrived: null as string | null }],
                 supplier_name: "",
                 date_purchased: format(new Date(), "yyyy-MM-dd"),
                 remarks: ""
@@ -683,14 +738,19 @@ export function PurchasingMonitoring() {
                           {purchase.items.map((item, idx) => (
                             <div key={idx} className="flex flex-col border-b border-gray-100 last:border-0 pb-1.5 last:pb-0">
                               <div className="flex items-start gap-1">
-                                {(item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) ? <Check className="w-3 h-3 text-green-600 mt-0.5 shrink-0" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-1 shrink-0" />}
-                                <span className="line-clamp-2 leading-tight" title={item.description}>{item.description}</span>
+                                {(item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) ? <Check className="w-3 h-3 text-green-600 mt-0.5 shrink-0" /> : item.status === "Cancelled" ? <div className="w-3 h-3 text-red-600 mt-0.5 shrink-0 flex items-center justify-center font-bold">×</div> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-1 shrink-0" />}
+                                <span className={cn("line-clamp-2 leading-tight", item.status === 'Cancelled' && 'line-through text-gray-400')} title={item.description}>{item.description}</span>
                               </div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="font-mono text-[10px] text-green-700 bg-green-50 w-max px-1 py-0.5 rounded">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded", (item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50")}>
-                                  {calculateAging(purchase.date_purchased, item.date_arrived || purchase.date_arrived, (item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) ? "Arrived" : "Pending")}
-                                </span>
+                              <div className="flex items-center gap-2 mt-0.5 ml-4">
+                                <span className={cn("font-mono text-[10px] w-max px-1 py-0.5 rounded", item.status === 'Cancelled' ? 'text-gray-400 line-through bg-gray-50' : 'text-green-700 bg-green-50')}>₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                {item.status !== 'Cancelled' && (
+                                  <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded", (item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50")}>
+                                    {calculateAging(purchase.date_purchased, item.date_arrived || purchase.date_arrived, (item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) ? "Arrived" : "Pending")}
+                                  </span>
+                                )}
+                                {item.status === 'Cancelled' && (
+                                  <span className="text-[9px] font-bold px-1 py-0.5 rounded text-red-600 bg-red-50">Cancelled</span>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -1350,22 +1410,27 @@ export function PurchasingMonitoring() {
                   {viewingPurchase?.items && viewingPurchase.items.length > 0 ? (
                     <div className="space-y-2">
                       {viewingPurchase.items.map((item, idx) => (
-                        <div key={idx} className="flex flex-col p-2 bg-gray-50 rounded-md border border-gray-100">
+                        <div key={idx} className={cn("flex flex-col p-2 rounded-md border", item.status === 'Cancelled' ? 'bg-red-50/30 border-red-100' : 'bg-gray-50 border-gray-100')}>
                           <div className="flex justify-between items-start gap-3">
                             <div className="flex items-start gap-1.5">
-                              {(item.status === "Arrived" || (!item.status && viewingPurchase.status === "Arrived")) ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <div className="w-2 h-2 rounded-full bg-yellow-400 mt-1 shrink-0" />}
-                              <span className="text-xs font-semibold text-gray-900 whitespace-pre-wrap">{item.description}</span>
+                              {(item.status === "Arrived" || (!item.status && viewingPurchase.status === "Arrived")) ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : item.status === 'Cancelled' ? <div className="w-4 h-4 text-red-600 shrink-0 flex items-center justify-center font-bold">×</div> : <div className="w-2 h-2 rounded-full bg-yellow-400 mt-1 shrink-0" />}
+                              <span className={cn("text-xs font-semibold whitespace-pre-wrap", item.status === 'Cancelled' ? 'text-gray-500 line-through' : 'text-gray-900')}>{item.description}</span>
                             </div>
-                            <span className="text-xs font-bold text-gray-900 font-mono shrink-0">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className={cn("text-xs font-bold font-mono shrink-0", item.status === 'Cancelled' ? 'text-gray-400 line-through' : 'text-gray-900')}>₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </div>
-                          <div className="mt-2 text-[10px] flex gap-3 text-gray-500 font-medium">
-                            <span>Status: <span className={(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? 'text-green-600 font-bold' : 'text-yellow-600 font-bold'}>{(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? 'Arrived' : 'Pending'}</span></span>
+                          <div className="mt-2 text-[10px] flex gap-3 font-medium">
+                            <span>Status: <span className={(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? 'text-green-600 font-bold' : item.status === 'Cancelled' ? 'text-red-600 font-bold' : 'text-yellow-600 font-bold'}>{(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? 'Arrived' : item.status === 'Cancelled' ? 'Cancelled' : 'Pending'}</span></span>
                             {(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) && (item.date_arrived || viewingPurchase.date_arrived) && (
                               <span>Arrived: {format(new Date(item.date_arrived || viewingPurchase.date_arrived!), "MMM d, yyyy")}</span>
                             )}
-                            <span>Aging: <span className={(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
-                              {calculateAging(viewingPurchase.date_purchased, item.date_arrived || viewingPurchase.date_arrived, (item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? "Arrived" : "Pending")}
-                            </span></span>
+                            {item.status === 'Cancelled' && item.cancel_reason && (
+                              <span className="text-red-600">Reason: {item.cancel_reason}</span>
+                            )}
+                            {item.status !== 'Cancelled' && (
+                              <span>Aging: <span className={(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
+                                {calculateAging(viewingPurchase.date_purchased, item.date_arrived || viewingPurchase.date_arrived, (item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? "Arrived" : "Pending")}
+                              </span></span>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1490,12 +1555,13 @@ export function PurchasingMonitoring() {
                 <Label className="!text-gray-700 font-semibold text-xs uppercase">Select Items that Arrived</Label>
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-2 border border-gray-100 rounded-md p-2 bg-gray-50/50">
                   {purchaseToArrive.items.map((item, idx) => (
-                     <div key={idx} className={cn("flex items-start justify-between gap-2 p-2 rounded transition-colors", (item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')) ? 'bg-green-50/50' : 'hover:bg-gray-100')}>
-                        <label className="flex items-start gap-2 cursor-pointer flex-1">
+                   <div key={idx} className={cn("flex items-start justify-between gap-2 p-2 rounded transition-colors", (item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')) ? 'bg-green-50/50' : item.status === 'Cancelled' ? 'bg-red-50/50' : 'hover:bg-gray-100')}>
+                      <div className="flex-1 space-y-2">
+                        <label className="flex items-start gap-2 cursor-pointer">
                            <input
                               type="checkbox"
                               className="mt-1 shrink-0 cursor-pointer disabled:cursor-not-allowed"
-                              disabled={item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')}
+                              disabled={item.status === 'Arrived' || item.status === 'Cancelled' || (!item.status && purchaseToArrive?.status === 'Arrived')}
                               checked={item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived') || selectedItemsToArrive.includes(idx)}
                               onChange={(e) => {
                                 if (e.target.checked) {
@@ -1506,8 +1572,8 @@ export function PurchasingMonitoring() {
                               }}
                            />
                            <div className="flex flex-col">
-                              <span className={cn("text-sm font-semibold leading-tight", (item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')) ? 'text-gray-500' : 'text-gray-900')}>{item.description}</span>
-                              <span className="text-[10px] text-gray-500 font-mono mt-0.5">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              <span className={cn("text-sm font-semibold leading-tight", (item.status === 'Arrived' || item.status === 'Cancelled' || (!item.status && purchaseToArrive?.status === 'Arrived')) ? 'text-gray-500' : 'text-gray-900', item.status === 'Cancelled' && 'line-through')}>{item.description}</span>
+                              <span className={cn("text-[10px] text-gray-500 font-mono mt-0.5", item.status === 'Cancelled' && 'line-through')}>₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               {(item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')) && (item.date_arrived || purchaseToArrive?.date_arrived) && (
                                 <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold text-green-700 bg-green-100/50 px-1.5 py-0.5 rounded w-max">
                                   <span>Arrived: {format(new Date(item.date_arrived || purchaseToArrive?.date_arrived!), "MMM d, yyyy")}</span>
@@ -1515,24 +1581,84 @@ export function PurchasingMonitoring() {
                                   <span>{calculateAging(purchaseToArrive.date_purchased, item.date_arrived || purchaseToArrive?.date_arrived, "Arrived")}</span>
                                 </div>
                               )}
+                              {item.status === 'Cancelled' && (
+                                <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold text-red-700 bg-red-100/50 px-1.5 py-0.5 rounded w-max">
+                                  <span>Cancelled: {item.cancel_reason}</span>
+                                </div>
+                              )}
                            </div>
                         </label>
+                        
+                        {cancellingItemIndex === idx && (
+                          <div className="flex items-center gap-2 mt-2 ml-6">
+                            <Input 
+                              className="h-7 text-xs" 
+                              placeholder="Reason for cancellation..." 
+                              value={cancelReason}
+                              onChange={e => setCancelReason(e.target.value)}
+                              autoFocus
+                            />
+                            <Button size="sm" className="h-7 px-3 text-xs bg-red-600 hover:bg-red-700 text-white" onClick={(e) => {
+                              e.preventDefault();
+                              handleCancelItem(purchaseToArrive, idx, cancelReason);
+                            }} disabled={isSubmitting}>Confirm</Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={(e) => {
+                              e.preventDefault();
+                              setCancellingItemIndex(null);
+                              setCancelReason("");
+                            }} disabled={isSubmitting}>Cancel</Button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-1 items-end shrink-0">
                         {(item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')) && (
                           <Button 
                              type="button"
                              size="sm"
                              variant="ghost" 
-                             className="h-6 px-2 text-[10px] text-orange-600 hover:text-orange-700 hover:bg-orange-100 shrink-0"
+                             className="h-6 px-2 text-[10px] text-orange-600 hover:text-orange-700 hover:bg-orange-100"
                              onClick={(e) => {
                                e.preventDefault();
-                               handleUndoItemArrival(purchaseToArrive, idx);
+                               handleUndoItemArrival(purchaseToArrive, idx, false);
                              }}
                              title="Undo Arrival"
                           >
-                             <Undo className="w-3 h-3 mr-1" /> Undo
+                             <Undo className="w-3 h-3 mr-1" /> Undo Arrival
                           </Button>
                         )}
-                     </div>
+                        {item.status === 'Cancelled' && (
+                          <Button 
+                             type="button"
+                             size="sm"
+                             variant="ghost" 
+                             className="h-6 px-2 text-[10px] text-orange-600 hover:text-orange-700 hover:bg-orange-100"
+                             onClick={(e) => {
+                               e.preventDefault();
+                               handleUndoItemArrival(purchaseToArrive, idx, true);
+                             }}
+                             title="Undo Cancel"
+                          >
+                             <Undo className="w-3 h-3 mr-1" /> Undo Cancel
+                          </Button>
+                        )}
+                        {item.status !== 'Arrived' && item.status !== 'Cancelled' && (!(!item.status && purchaseToArrive?.status === 'Arrived')) && cancellingItemIndex !== idx && (
+                          <Button
+                             type="button"
+                             size="sm"
+                             variant="ghost"
+                             className="h-6 px-2 text-[10px] text-red-600 hover:text-red-700 hover:bg-red-100"
+                             onClick={(e) => {
+                               e.preventDefault();
+                               setCancellingItemIndex(idx);
+                               setCancelReason("");
+                             }}
+                          >
+                             Cancel Item
+                          </Button>
+                        )}
+                      </div>
+                   </div>
                   ))}
                 </div>
               </div>
