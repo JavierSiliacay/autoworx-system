@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { isAuthorizedAdminEmail } from "@/lib/auth"
+import { isAuthorizedAdminEmail, isAccountingEmail } from "@/lib/auth"
 import { NextResponse, NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 
@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     try {
         const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
 
-        if (!isAuthorizedAdminEmail(token?.email)) {
+        if (!isAuthorizedAdminEmail(token?.email) && !isAccountingEmail(token?.email)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     try {
         const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
 
-        if (!isAuthorizedAdminEmail(token?.email)) {
+        if (!isAuthorizedAdminEmail(token?.email) && !isAccountingEmail(token?.email)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
@@ -67,7 +67,7 @@ export async function PUT(request: NextRequest) {
     try {
         const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
 
-        if (!isAuthorizedAdminEmail(token?.email)) {
+        if (!isAuthorizedAdminEmail(token?.email) && !isAccountingEmail(token?.email)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
@@ -111,7 +111,7 @@ export async function DELETE(request: NextRequest) {
     try {
         const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
 
-        if (!isAuthorizedAdminEmail(token?.email)) {
+        if (!isAuthorizedAdminEmail(token?.email) && !isAccountingEmail(token?.email)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 

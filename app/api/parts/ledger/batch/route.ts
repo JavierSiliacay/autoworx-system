@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { isAuthorizedAdminEmail } from "@/lib/auth"
+import { isAuthorizedAdminEmail, isAccountingEmail } from "@/lib/auth"
 
 export async function PATCH(request: NextRequest) {
   try {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-    if (!isAuthorizedAdminEmail(token?.email)) {
+    if (!isAuthorizedAdminEmail(token?.email) && !isAccountingEmail(token?.email)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
