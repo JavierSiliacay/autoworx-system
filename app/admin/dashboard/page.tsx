@@ -8460,7 +8460,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div className="space-y-2 pt-2 border-t border-border">
-                <Label htmlFor="jo-notes" className="text-xs font-bold text-red-600 uppercase tracking-wider">Note / Instructions for Assigned</Label>
+                <Label htmlFor="jo-notes" className="text-xs font-bold text-red-600 uppercase tracking-wider">Note / Instructions for Assignedb</Label>
                 <Textarea
                   id="jo-notes"
                   placeholder="E.g., Ensure the client's dashboard camera is re-plugged."

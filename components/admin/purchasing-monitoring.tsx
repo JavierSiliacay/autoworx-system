@@ -15,6 +15,8 @@ import { format, differenceInDays } from "date-fns"
 export interface PurchasingItem {
   description: string
   amount: number
+  status?: "Pending" | "Arrived"
+  date_arrived?: string | null
 }
 
 interface Purchasing {
@@ -84,6 +86,7 @@ export function PurchasingMonitoring() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isArriveModalOpen, setIsArriveModalOpen] = useState(false)
   const [isMarkArrivedModalOpen, setIsMarkArrivedModalOpen] = useState(false)
+  const [selectedItemsToArrive, setSelectedItemsToArrive] = useState<number[]>([])
 
   const [arriveDate, setArriveDate] = useState(format(new Date(), "yyyy-MM-dd"))
   const [purchaseToArrive, setPurchaseToArrive] = useState<Purchasing | null>(null)
@@ -112,7 +115,7 @@ export function PurchasingMonitoring() {
 
   const { toast } = useToast()
 
-  const [lastDeletedItem, setLastDeletedItem] = useState<{ index: number, item: { description: string, amount: string } } | null>(null)
+  const [lastDeletedItem, setLastDeletedItem] = useState<{ index: number, item: { description: string, amount: string, status: "Pending" | "Arrived", date_arrived: string | null } } | null>(null)
 
   const [formData, setFormData] = useState({
     type: "PR",
@@ -125,7 +128,7 @@ export function PurchasingMonitoring() {
     insurance_company_name: "",
     item_description: "",
     amount: "",
-    items: [{ description: "", amount: "" }],
+    items: [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }],
     supplier_name: "",
     date_purchased: format(new Date(), "yyyy-MM-dd"),
     remarks: ""
@@ -185,6 +188,7 @@ export function PurchasingMonitoring() {
   const handleMarkArrivedClick = (purchase: Purchasing) => {
     setPurchaseToArrive(purchase)
     setArriveDate(format(new Date(), "yyyy-MM-dd"))
+    setSelectedItemsToArrive([])
     setIsMarkArrivedModalOpen(true)
   }
 
@@ -196,13 +200,45 @@ export function PurchasingMonitoring() {
     try {
       const timeStr = format(new Date(), "HH:mm:ss.SSSxxx")
       const finalArriveTime = `${arriveDate}T${timeStr}`
+      
+      let newStatus = "Arrived"
+      let newDateArrived: string | null = finalArriveTime
+      let newItems = purchaseToArrive.items ? [...purchaseToArrive.items] : null
+
+      if (newItems && newItems.length > 0) {
+        if (selectedItemsToArrive.length === 0) {
+          toast({ title: "No Items Selected", description: "Please select at least one item that arrived.", variant: "destructive" })
+          setIsSubmitting(false)
+          return
+        }
+
+        let allArrived = true
+        newItems = newItems.map((item, idx) => {
+          if (selectedItemsToArrive.includes(idx)) {
+            return { ...item, status: "Arrived", date_arrived: finalArriveTime }
+          }
+          if (item.status !== "Arrived" && !(!item.status && purchaseToArrive.status === "Arrived")) {
+             allArrived = false
+          }
+          return { ...item, status: item.status || "Pending", date_arrived: item.date_arrived || null }
+        })
+
+        if (!allArrived) {
+           newStatus = "Partially Arrived"
+           newDateArrived = null
+        }
+      }
+
+      const payload: any = { status: newStatus, date_arrived: newDateArrived }
+      if (newItems) payload.items = newItems
+
       const res = await fetch(`/api/purchasing?id=${purchaseToArrive.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Arrived", date_arrived: finalArriveTime })
+        body: JSON.stringify(payload)
       })
       if (!res.ok) throw new Error("Failed to update status")
-      toast({ title: "Success", description: "Item marked as arrived." })
+      toast({ title: "Success", description: `Item marked as ${newStatus}.` })
       fetchPurchases()
       setIsMarkArrivedModalOpen(false)
       setPurchaseToArrive(null)
@@ -213,15 +249,60 @@ export function PurchasingMonitoring() {
     }
   }
 
+  const handleUndoItemArrival = async (purchase: Purchasing, itemIndex: number) => {
+    if (!window.confirm("Are you sure you want to undo this arrived item?")) return;
+
+    setIsSubmitting(true);
+    try {
+      let newItems = [...purchase.items!];
+      newItems[itemIndex] = { ...newItems[itemIndex], status: "Pending", date_arrived: null };
+
+      let allArrived = true;
+      let anyArrived = false;
+      newItems.forEach(item => {
+        if (item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) anyArrived = true;
+        else allArrived = false;
+      });
+
+      let newStatus = allArrived ? "Arrived" : anyArrived ? "Partially Arrived" : "Pending";
+      let newDateArrived = newStatus === "Arrived" ? purchase.date_arrived : null;
+
+      const payload: any = { status: newStatus, date_arrived: newDateArrived, items: newItems };
+
+      const res = await fetch(`/api/purchasing?id=${purchase.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      toast({ title: "Success", description: "Item reverted to Pending." });
+      
+      setPurchaseToArrive({ ...purchase, ...payload });
+      fetchPurchases();
+    } catch (error) {
+      toast({ title: "Error", description: "Could not revert status.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleRevertPending = async (purchase: Purchasing) => {
     if (!window.confirm(`Are you sure you want to revert "${purchase.item_description}" back to Pending?`)) return
 
     setIsSubmitting(true)
     try {
+      let newItems = purchase.items ? [...purchase.items] : null
+      if (newItems) {
+        newItems = newItems.map(item => ({ ...item, status: "Pending", date_arrived: null }))
+      }
+
+      const payload: any = { status: "Pending", date_arrived: null }
+      if (newItems) payload.items = newItems
+
       const res = await fetch(`/api/purchasing?id=${purchase.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Pending", date_arrived: null })
+        body: JSON.stringify(payload)
       })
       if (!res.ok) throw new Error("Failed to revert status")
       toast({ title: "Success", description: "Item reverted to Pending." })
@@ -343,7 +424,7 @@ export function PurchasingMonitoring() {
         customer_type: formData.customer_type === "Custom" ? formData.custom_customer_type : formData.customer_type,
         date_purchased: finalDatePurchased,
         item_description: itemsString || formData.item_description || "N/A",
-        items: formData.items.filter(i => i.description).map(i => ({ description: i.description, amount: parseFloat(i.amount.replace(/,/g, "")) || 0 })),
+        items: formData.items.filter(i => i.description).map((i: any) => ({ description: i.description, amount: parseFloat(i.amount.replace(/,/g, "")) || 0, status: i.status || "Pending", date_arrived: i.date_arrived || null })),
         amount: formData.items.reduce((sum, item) => sum + (parseFloat(item.amount.replace(/,/g, "")) || 0), 0)
       }
       // Remove custom_customer_type from payload since the db expects only customer_type
@@ -380,7 +461,7 @@ export function PurchasingMonitoring() {
         insurance_company_name: "",
         item_description: "",
         amount: "",
-        items: [{ description: "", amount: "" }],
+        items: [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }],
         supplier_name: "",
         date_purchased: format(new Date(), "yyyy-MM-dd"),
         remarks: ""
@@ -411,8 +492,8 @@ export function PurchasingMonitoring() {
       item_description: purchase.item_description,
       amount: purchase.amount ? purchase.amount.toString() : "",
       items: purchase.items?.length
-        ? purchase.items.map(i => ({ description: i.description, amount: i.amount.toString() }))
-        : (purchase.item_description ? [{ description: purchase.item_description, amount: purchase.amount?.toString() || "" }] : [{ description: "", amount: "" }]),
+        ? purchase.items.map(i => ({ description: i.description, amount: i.amount.toString(), status: i.status || "Pending", date_arrived: i.date_arrived || null }))
+        : (purchase.item_description ? [{ description: purchase.item_description, amount: purchase.amount?.toString() || "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }] : [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }]),
       supplier_name: purchase.supplier_name || "",
       date_purchased: format(new Date(purchase.date_purchased), "yyyy-MM-dd"),
       remarks: purchase.remarks || ""
@@ -488,7 +569,7 @@ export function PurchasingMonitoring() {
                 insurance_company_name: "",
                 item_description: "",
                 amount: "",
-                items: [{ description: "", amount: "" }],
+                items: [{ description: "", amount: "", status: "Pending" as "Pending" | "Arrived", date_arrived: null as string | null }],
                 supplier_name: "",
                 date_purchased: format(new Date(), "yyyy-MM-dd"),
                 remarks: ""
@@ -534,6 +615,7 @@ export function PurchasingMonitoring() {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Partially Arrived">Partially Arrived</SelectItem>
               <SelectItem value="Arrived">Arrived</SelectItem>
             </SelectContent>
           </Select>
@@ -600,8 +682,16 @@ export function PurchasingMonitoring() {
                         <div className="space-y-1 max-w-[200px]">
                           {purchase.items.map((item, idx) => (
                             <div key={idx} className="flex flex-col border-b border-gray-100 last:border-0 pb-1.5 last:pb-0">
-                              <span className="line-clamp-2 leading-tight" title={item.description}>{item.description}</span>
-                              <span className="font-mono text-[10px] text-green-700 bg-green-50 w-max px-1 py-0.5 mt-0.5 rounded">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              <div className="flex items-start gap-1">
+                                {(item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) ? <Check className="w-3 h-3 text-green-600 mt-0.5 shrink-0" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-1 shrink-0" />}
+                                <span className="line-clamp-2 leading-tight" title={item.description}>{item.description}</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="font-mono text-[10px] text-green-700 bg-green-50 w-max px-1 py-0.5 rounded">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span className={cn("text-[9px] font-bold px-1 py-0.5 rounded", (item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50")}>
+                                  {calculateAging(purchase.date_purchased, item.date_arrived || purchase.date_arrived, (item.status === "Arrived" || (!item.status && purchase.status === "Arrived")) ? "Arrived" : "Pending")}
+                                </span>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -631,7 +721,7 @@ export function PurchasingMonitoring() {
                     <td className="px-2 py-2 text-xs truncate max-w-[120px]" title={purchase.supplier_name || ""}>{purchase.supplier_name || "-"}</td>
                     <td className="px-2 py-2">
                       <div className="flex flex-col gap-1 items-start">
-                        <span className={cn("px-1.5 py-0.5 inline-flex items-center gap-1 rounded text-[10px] font-bold leading-none", purchase.status === "Arrived" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")}>
+                        <span className={cn("px-1.5 py-0.5 inline-flex items-center gap-1 rounded text-[10px] font-bold leading-none", purchase.status === "Arrived" ? "bg-green-100 text-green-800" : (purchase.status === "Partially Arrived" ? "bg-orange-100 text-orange-800" : "bg-yellow-100 text-yellow-800"))}>
                           {purchase.status === "Arrived" && <Check className="w-2.5 h-2.5" />}
                           {purchase.status}
                         </span>
@@ -650,13 +740,15 @@ export function PurchasingMonitoring() {
                         </div>
                       ) : "-"}
                     </td>
-                    <td className="px-2 py-2 text-red-600 font-bold text-xs whitespace-nowrap">{calculateAging(purchase.date_purchased, purchase.date_arrived, purchase.status)}</td>
+                    <td className="px-2 py-2 text-red-600 font-bold text-xs whitespace-nowrap">
+                      {purchase.status === "Partially Arrived" ? "Partial" : calculateAging(purchase.date_purchased, purchase.date_arrived, purchase.status)}
+                    </td>
                     <td className="px-2 py-2 text-[11px] italic text-gray-500">
                       <p className="line-clamp-2" title={purchase.remarks || ""}>{purchase.remarks || "-"}</p>
                     </td>
                     <td className="px-1 py-2 text-center print:hidden" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1 flex-wrap opacity-90 group-hover:opacity-100 transition-opacity">
-                        {purchase.status === "Pending" && (
+                        {(purchase.status === "Pending" || purchase.status === "Partially Arrived") && (
                           <Button
                             onClick={() => handleMarkArrivedClick(purchase)}
                             size="sm"
@@ -913,7 +1005,7 @@ export function PurchasingMonitoring() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, items: [...prev.items, { description: "", amount: "" }] }))}
+                  onClick={() => setFormData(prev => ({ ...prev, items: [...prev.items, { description: "", amount: "", status: "Pending", date_arrived: null }] }))}
                   variant="outline"
                   size="sm"
                   className="h-7 text-[10px] !bg-white !text-blue-600 !border-blue-200 hover:!bg-blue-50"
@@ -939,7 +1031,7 @@ export function PurchasingMonitoring() {
                           if (e.key === 'Enter') {
                             e.preventDefault()
                             if (index === formData.items.length - 1 && item.description) {
-                              setFormData(prev => ({ ...prev, items: [...prev.items, { description: "", amount: "" }] }))
+                              setFormData(prev => ({ ...prev, items: [...prev.items, { description: "", amount: "", status: "Pending", date_arrived: null }] }))
                               setTimeout(() => {
                                 document.getElementById(`item-desc-${index + 1}`)?.focus()
                               }, 100)
@@ -973,7 +1065,7 @@ export function PurchasingMonitoring() {
                             if (e.key === 'Enter') {
                               e.preventDefault()
                               if (index === formData.items.length - 1 && (item.description || item.amount)) {
-                                setFormData(prev => ({ ...prev, items: [...prev.items, { description: "", amount: "" }] }))
+                                setFormData(prev => ({ ...prev, items: [...prev.items, { description: "", amount: "", status: "Pending", date_arrived: null }] }))
                                 setTimeout(() => {
                                   document.getElementById(`item-desc-${index + 1}`)?.focus()
                                 }, 100)
@@ -1258,9 +1350,23 @@ export function PurchasingMonitoring() {
                   {viewingPurchase?.items && viewingPurchase.items.length > 0 ? (
                     <div className="space-y-2">
                       {viewingPurchase.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-start gap-3 p-2 bg-gray-50 rounded-md border border-gray-100">
-                          <span className="text-xs font-semibold text-gray-900 whitespace-pre-wrap">{item.description}</span>
-                          <span className="text-xs font-bold text-gray-900 font-mono shrink-0">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <div key={idx} className="flex flex-col p-2 bg-gray-50 rounded-md border border-gray-100">
+                          <div className="flex justify-between items-start gap-3">
+                            <div className="flex items-start gap-1.5">
+                              {(item.status === "Arrived" || (!item.status && viewingPurchase.status === "Arrived")) ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <div className="w-2 h-2 rounded-full bg-yellow-400 mt-1 shrink-0" />}
+                              <span className="text-xs font-semibold text-gray-900 whitespace-pre-wrap">{item.description}</span>
+                            </div>
+                            <span className="text-xs font-bold text-gray-900 font-mono shrink-0">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="mt-2 text-[10px] flex gap-3 text-gray-500 font-medium">
+                            <span>Status: <span className={(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? 'text-green-600 font-bold' : 'text-yellow-600 font-bold'}>{(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? 'Arrived' : 'Pending'}</span></span>
+                            {(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) && (item.date_arrived || viewingPurchase.date_arrived) && (
+                              <span>Arrived: {format(new Date(item.date_arrived || viewingPurchase.date_arrived!), "MMM d, yyyy")}</span>
+                            )}
+                            <span>Aging: <span className={(item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
+                              {calculateAging(viewingPurchase.date_purchased, item.date_arrived || viewingPurchase.date_arrived, (item.status === 'Arrived' || (!item.status && viewingPurchase.status === "Arrived")) ? "Arrived" : "Pending")}
+                            </span></span>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1378,6 +1484,59 @@ export function PurchasingMonitoring() {
                 className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 [color-scheme:light] h-10"
               />
             </div>
+
+            {purchaseToArrive?.items && purchaseToArrive.items.length > 0 && (
+              <div className="space-y-1.5 mt-4">
+                <Label className="!text-gray-700 font-semibold text-xs uppercase">Select Items that Arrived</Label>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 border border-gray-100 rounded-md p-2 bg-gray-50/50">
+                  {purchaseToArrive.items.map((item, idx) => (
+                     <div key={idx} className={cn("flex items-start justify-between gap-2 p-2 rounded transition-colors", (item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')) ? 'bg-green-50/50' : 'hover:bg-gray-100')}>
+                        <label className="flex items-start gap-2 cursor-pointer flex-1">
+                           <input
+                              type="checkbox"
+                              className="mt-1 shrink-0 cursor-pointer disabled:cursor-not-allowed"
+                              disabled={item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')}
+                              checked={item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived') || selectedItemsToArrive.includes(idx)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedItemsToArrive(prev => [...prev, idx])
+                                } else {
+                                  setSelectedItemsToArrive(prev => prev.filter(i => i !== idx))
+                                }
+                              }}
+                           />
+                           <div className="flex flex-col">
+                              <span className={cn("text-sm font-semibold leading-tight", (item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')) ? 'text-gray-500' : 'text-gray-900')}>{item.description}</span>
+                              <span className="text-[10px] text-gray-500 font-mono mt-0.5">₱{Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              {(item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')) && (item.date_arrived || purchaseToArrive?.date_arrived) && (
+                                <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold text-green-700 bg-green-100/50 px-1.5 py-0.5 rounded w-max">
+                                  <span>Arrived: {format(new Date(item.date_arrived || purchaseToArrive?.date_arrived!), "MMM d, yyyy")}</span>
+                                  <span className="text-green-900">•</span>
+                                  <span>{calculateAging(purchaseToArrive.date_purchased, item.date_arrived || purchaseToArrive?.date_arrived, "Arrived")}</span>
+                                </div>
+                              )}
+                           </div>
+                        </label>
+                        {(item.status === 'Arrived' || (!item.status && purchaseToArrive?.status === 'Arrived')) && (
+                          <Button 
+                             type="button"
+                             size="sm"
+                             variant="ghost" 
+                             className="h-6 px-2 text-[10px] text-orange-600 hover:text-orange-700 hover:bg-orange-100 shrink-0"
+                             onClick={(e) => {
+                               e.preventDefault();
+                               handleUndoItemArrival(purchaseToArrive, idx);
+                             }}
+                             title="Undo Arrival"
+                          >
+                             <Undo className="w-3 h-3 mr-1" /> Undo
+                          </Button>
+                        )}
+                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <DialogFooter className="pt-4 border-t border-gray-100 mt-6">
               <Button type="button" variant="outline" onClick={() => setIsMarkArrivedModalOpen(false)} className="!bg-white !border-gray-300 !text-gray-700 hover:!bg-gray-50">
