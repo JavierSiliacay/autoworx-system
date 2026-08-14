@@ -34,7 +34,17 @@ import {
   Crown,
   Trophy,
   PawPrint,
-  Wrench
+  Wrench,
+  Key,
+  Zap,
+  Timer,
+  UserCheck,
+  Briefcase,
+  BarChart,
+  Layers,
+  ShieldCheck,
+  Target,
+  Flag
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -112,6 +122,19 @@ export const getMilestoneBadges = (totalUnits: number) => {
   if (totalUnits >= 1) badges.push({ id: "iron", icon: <Medal className="w-5 h-5 text-stone-200" />, iconSmall: <Medal className="w-3 h-3 text-stone-200" />, title: "Iron Tier", desc: "1+ Units Completed", color: "bg-stone-700 border-stone-600 text-stone-100" })
   
   return badges.reverse() // Display lowest tier first, up to highest
+}
+
+export const getVolumeBadges = (totalJobs: number) => {
+  const badges = []
+  if (totalJobs >= 100) badges.push({ id: "master-tech", icon: <Flag className="w-5 h-5 text-purple-400" />, iconSmall: <Flag className="w-3 h-3 text-purple-400" />, title: "Master Technician", desc: "100+ Slips Completed", color: "bg-slate-900 border-purple-500 text-purple-400" })
+  else if (totalJobs >= 80) badges.push({ id: "principal-spec", icon: <Target className="w-5 h-5 text-white" />, iconSmall: <Target className="w-3 h-3 text-white" />, title: "Principal Specialist", desc: "80+ Slips Completed", color: "bg-red-600 border-red-500 text-white" })
+  else if (totalJobs >= 60) badges.push({ id: "senior-op", icon: <ShieldCheck className="w-5 h-5 text-white" />, iconSmall: <ShieldCheck className="w-3 h-3 text-white" />, title: "Senior Operator", desc: "60+ Slips Completed", color: "bg-emerald-600 border-emerald-500 text-white" })
+  else if (totalJobs >= 50) badges.push({ id: "op-expert", icon: <Layers className="w-5 h-5 text-white" />, iconSmall: <Layers className="w-3 h-3 text-white" />, title: "Operational Expert", desc: "50+ Slips Completed", color: "bg-orange-500 border-orange-400 text-white" })
+  else if (totalJobs >= 30) badges.push({ id: "vol-achiever", icon: <BarChart className="w-5 h-5 text-white" />, iconSmall: <BarChart className="w-3 h-3 text-white" />, title: "Volume Achiever", desc: "30+ Slips Completed", color: "bg-blue-600 border-blue-500 text-white" })
+  else if (totalJobs >= 10) badges.push({ id: "consistent-perf", icon: <Briefcase className="w-5 h-5 text-amber-950" />, iconSmall: <Briefcase className="w-3 h-3 text-amber-950" />, title: "Consistent Performer", desc: "10+ Slips Completed", color: "bg-amber-400 border-amber-300 text-amber-950" })
+  else if (totalJobs >= 1) badges.push({ id: "active-contrib", icon: <UserCheck className="w-5 h-5 text-slate-700" />, iconSmall: <UserCheck className="w-3 h-3 text-slate-700" />, title: "Active Contributor", desc: "1+ Slips Completed", color: "bg-slate-200 border-slate-300 text-slate-700" })
+  
+  return badges // Only return the highest tier achieved
 }
 
 export const getBehavioralBadges = (staff: { totalJobs: number, totalShareUnits: number, jobs: any[], name: string }) => {
@@ -512,9 +535,13 @@ export function AccessoriesJobLogs() {
       if (Array.isArray(log.assignees)) {
         log.assignees.forEach(a => {
           if (a.name && a.name.trim()) {
-            const key = a.name.trim().toUpperCase()
+            let normalizedName = a.name.trim()
+            if (normalizedName.toUpperCase() === "NORELO") {
+              normalizedName = "Norello"
+            }
+            const key = normalizedName.toUpperCase()
             if (!statsMap[key]) {
-              statsMap[key] = { name: a.name.trim(), totalJobs: 0, totalShareUnits: 0, jobs: [] }
+              statsMap[key] = { name: normalizedName, totalJobs: 0, totalShareUnits: 0, jobs: [] }
             }
             statsMap[key].totalJobs += 1
             statsMap[key].totalShareUnits += (Number(a.percentage) || 0) / 100
@@ -892,6 +919,22 @@ export function AccessoriesJobLogs() {
                           </Tooltip>
                         ))}
                         {(() => {
+                          const volumeBadges = getVolumeBadges(staff.totalJobs)
+                          return volumeBadges.map(badge => (
+                            <Tooltip key={badge.id}>
+                              <TooltipTrigger asChild>
+                                <span 
+                                  onClick={(e) => { e.stopPropagation(); setIsBadgeGuideOpen(true); }}
+                                  className={`text-[10px] ${badge.color} px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm cursor-pointer flex items-center justify-center hover:scale-110 transition-transform`}
+                                >
+                                  {badge.iconSmall}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent><strong className="block">{badge.title}</strong>{badge.desc}</TooltipContent>
+                            </Tooltip>
+                          ))
+                        })()}
+                        {(() => {
                           const milestones = getMilestoneBadges(staff.totalShareUnits)
                           return milestones.map(milestone => (
                             <Tooltip key={milestone.id}>
@@ -1231,7 +1274,7 @@ export function AccessoriesJobLogs() {
           )}
           
           <DialogFooter className="mt-6">
-            <Button onClick={() => setViewingSlip(null)} variant="outline" className="w-full font-bold">
+            <Button onClick={() => setViewingSlip(null)} variant="outline" className="w-full font-bold border-blue-200 bg-white text-blue-700 hover:bg-blue-50 hover:text-blue-800 hover:border-blue-300 transition-colors">
               Close
             </Button>
           </DialogFooter>
@@ -1272,6 +1315,22 @@ export function AccessoriesJobLogs() {
                         <TooltipContent><strong className="block">{b.title}</strong>{b.desc}</TooltipContent>
                       </Tooltip>
                     ))}
+                    {(() => {
+                      const volumeBadges = getVolumeBadges(profileStats.totalJobs)
+                      return volumeBadges.map(badge => (
+                        <Tooltip key={badge.id}>
+                          <TooltipTrigger asChild>
+                            <div 
+                              onClick={() => setIsBadgeGuideOpen(true)}
+                              className={`${badge.color} border-2 w-10 h-10 flex items-center justify-center rounded-full shadow-lg cursor-pointer hover:scale-110 transition-transform`}
+                            >
+                              {badge.icon}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent><strong className="block">{badge.title}</strong>{badge.desc}</TooltipContent>
+                        </Tooltip>
+                      ))
+                    })()}
                     {(() => {
                       const milestones = getMilestoneBadges(profileStats.totalShareUnits)
                       return milestones.map(milestone => (
@@ -1378,6 +1437,37 @@ export function AccessoriesJobLogs() {
                     <p className="text-xs text-slate-500 mt-0.5 font-medium">Incredible overall activity! Touch at least 20 separate vehicles.</p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* VOLUME BADGES */}
+            <div>
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <BarChart className="w-4 h-4 text-slate-400" /> Volume Badges
+              </h3>
+              <div className="space-y-2">
+                {[
+                  { color: "bg-slate-900 border-purple-500", icon: <Flag className="w-5 h-5 text-purple-400"/>, title: "Master Technician", req: "100+ Slips", desc: "Maximum volume tier reached." },
+                  { color: "bg-red-600 border-red-500", icon: <Target className="w-5 h-5 text-white"/>, title: "Principal Specialist", req: "80+ Slips", desc: "Principal tier volume." },
+                  { color: "bg-emerald-600 border-emerald-500", icon: <ShieldCheck className="w-5 h-5 text-white"/>, title: "Senior Operator", req: "60+ Slips", desc: "Senior tier volume." },
+                  { color: "bg-orange-500 border-orange-400", icon: <Layers className="w-5 h-5 text-white"/>, title: "Operational Expert", req: "50+ Slips", desc: "Expert level throughput." },
+                  { color: "bg-blue-600 border-blue-500", icon: <BarChart className="w-5 h-5 text-white"/>, title: "Volume Achiever", req: "30+ Slips", desc: "High volume processing." },
+                  { color: "bg-amber-400 border-amber-300", icon: <Briefcase className="w-5 h-5 text-amber-950"/>, title: "Consistent Performer", req: "10+ Slips", desc: "Steady volume output." },
+                  { color: "bg-slate-200 border-slate-300", icon: <UserCheck className="w-5 h-5 text-slate-700"/>, title: "Active Contributor", req: "1+ Slips", desc: "Registered first unit." },
+                ].map((m, i) => (
+                  <div key={i} className="flex items-center gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:shadow hover:border-slate-300 transition-all cursor-default">
+                    <div className={`${m.color} border-2 w-10 h-10 shrink-0 flex items-center justify-center rounded-full shadow-md`}>
+                      {m.icon}
+                    </div>
+                    <div className="flex-1">
+                      <strong className="text-slate-900 block text-sm font-extrabold">{m.title}</strong>
+                      <p className="text-xs text-slate-500 mt-0.5 font-medium">{m.desc}</p>
+                    </div>
+                    <div className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-md border border-slate-200">
+                      {m.req}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
