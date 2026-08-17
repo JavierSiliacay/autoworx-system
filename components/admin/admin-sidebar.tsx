@@ -20,7 +20,8 @@ import {
   ChevronDown,
   Banknote,
   Award,
-  Boxes
+  Boxes,
+  PaintBucket
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -80,8 +81,20 @@ export function AdminSidebar() {
     },
     {
       title: "Price List",
-      href: "/admin/parts/prices",
+      href: "#",
       icon: Tag,
+      subItems: [
+        {
+          title: "Car Parts",
+          href: "/admin/parts/prices",
+          icon: Package,
+        },
+        {
+          title: "Items",
+          href: "/admin/parts/prices/items",
+          icon: PaintBucket,
+        }
+      ]
     },
     // Conditionally include Purchasing and Expenses Monitoring
     ...(isAccountingEmail(session?.user?.email) ? [
@@ -204,6 +217,8 @@ export function AdminSidebar() {
                       isSubActive = pathname === "/admin/parts" && currentTab === "accessories"
                     } else if (subItem.href === "/admin/parts") {
                       isSubActive = pathname === "/admin/parts" && currentTab !== "accessories"
+                    } else if (subItem.href === "/admin/parts/prices") {
+                      isSubActive = pathname === "/admin/parts/prices"
                     } else {
                       isSubActive = pathname === subItem.href || (subItem.href !== '/admin' && Boolean(pathname?.startsWith(`${subItem.href}/`)))
                     }

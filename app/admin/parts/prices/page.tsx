@@ -24,7 +24,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select"
 import { VEHICLE_BRANDS } from "@/lib/constants"
-import { AccountingRestrictionOverlay } from "@/components/admin/accounting-restriction-overlay"
+
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
 interface PartPrice {
@@ -233,7 +233,7 @@ export default function PartsPricesPage() {
   }
 
   return (
-    <AccountingRestrictionOverlay moduleName="Parts Pricing Ledger">
+    <>
       <div className="min-h-screen bg-slate-50/50 pb-20">
       {/* ─── Header ─── */}
       <header className="bg-white border-b sticky top-0 z-30 px-4 py-4 md:px-8 shadow-sm">
@@ -256,7 +256,7 @@ export default function PartsPricesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search parts or brands..."
-                className="pl-9 bg-slate-100/10 border-slate-700/50 focus:bg-slate-800/50 transition-all text-slate-100 placeholder:text-slate-500 font-medium"
+                className="pl-9 bg-white border-slate-200 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary transition-all text-slate-900 placeholder:text-slate-400 font-medium"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -588,6 +588,6 @@ export default function PartsPricesPage() {
         </DialogContent>
       </Dialog>
       </div>
-    </AccountingRestrictionOverlay>
+    </>
   )
 }
