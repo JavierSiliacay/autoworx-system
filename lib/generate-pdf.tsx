@@ -1346,22 +1346,14 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment, repo
     return html;
   };
 
-  const parsePartsText = (text: string, partsItems: any[] = []) => {
-    if (!text && partsItems.length === 0) return `<div style="display: flex; flex: 1; align-items: center; justify-content: center; min-height: 120px;">
-         <div style="font-size: 22px; font-weight: 900; color: #bbb; text-transform: uppercase; letter-spacing: 2px; text-align: center; width: 100%;">NO PARTS<br/>WERE ADDED</div>
-       </div>`;
-    
-    let html = '<div style="column-width: 150px; column-gap: 15px; column-fill: balance;"><ul style="margin-top: 2px; padding-left: 18px; margin-bottom: 0;">';
-    
-    if (partsItems.length > 0) {
-      for (const item of partsItems) {
-        if (!item.description) continue;
-        const qtyStr = (item.quantity && item.quantity > 0) ? `${item.quantity}` : '';
-        const unitStr = item.unit ? `${item.unit}` : '';
-        const qtyUnit = (qtyStr || unitStr) ? ` ${qtyStr}${unitStr}`.toUpperCase() : '';
-        html += `<li style="margin-bottom: 2px;">${toTitleCase(item.description)}<span style="font-weight: bold;">${qtyUnit}</span></li>`;
+  const parsePartsText = (text: string | undefined, partsItems: any[] = []) => {
+    if (text !== undefined) {
+      if (!text || text.trim() === '') {
+        return `<div style="display: flex; flex: 1; align-items: center; justify-content: center; min-height: 120px;">
+          <div style="font-size: 22px; font-weight: 900; color: #bbb; text-transform: uppercase; letter-spacing: 2px; text-align: center; width: 100%;">NO PARTS<br/>WERE ADDED</div>
+        </div>`;
       }
-    } else if (text) {
+      let html = '<div style="column-width: 150px; column-gap: 15px; column-fill: balance;"><ul style="margin-top: 2px; padding-left: 18px; margin-bottom: 0;">';
       const lines = text.split('\n');
       for (let line of lines) {
         const trimmed = line.trim();
@@ -1369,13 +1361,30 @@ export async function generateJobOrderPDF(appointment: TrackingAppointment, repo
         const content = (trimmed.startsWith('-') || trimmed.startsWith('•')) ? trimmed.substring(1).trim() : trimmed;
         html += `<li style="margin-bottom: 2px;">${toTitleCase(content)}</li>`;
       }
+      html += '</ul></div>';
+      return html;
     }
-    html += '</ul></div>';
-    return html;
+
+    if (partsItems.length > 0) {
+      let html = '<div style="column-width: 150px; column-gap: 15px; column-fill: balance;"><ul style="margin-top: 2px; padding-left: 18px; margin-bottom: 0;">';
+      for (const item of partsItems) {
+        if (!item.description) continue;
+        const qtyStr = (item.quantity && item.quantity > 0) ? `${item.quantity}` : '';
+        const unitStr = item.unit ? `${item.unit}` : '';
+        const qtyUnit = (qtyStr || unitStr) ? ` ${qtyStr}${unitStr}`.toUpperCase() : '';
+        html += `<li style="margin-bottom: 2px;">${toTitleCase(item.description)}<span style="font-weight: bold;">${qtyUnit}</span></li>`;
+      }
+      html += '</ul></div>';
+      return html;
+    }
+
+    return `<div style="display: flex; flex: 1; align-items: center; justify-content: center; min-height: 120px;">
+         <div style="font-size: 22px; font-weight: 900; color: #bbb; text-transform: uppercase; letter-spacing: 2px; text-align: center; width: 100%;">NO PARTS<br/>WERE ADDED</div>
+       </div>`;
   };
 
   const scopeOfWorksHtml = parseScopeText(appointment.costing?.scopeOfWorks || appointment.scopeOfWorks || "");
-  const partsHtml = parsePartsText(appointment.costing?.partsText || "", categorized["Parts"] || []);
+  const partsHtml = parsePartsText(appointment.costing?.partsText, categorized["Parts"] || []);
   const mechanicNotesRaw = appointment.costing?.jobOrderHistory?.slice(-1)[0]?.mechanicNotes || "";
   const mechanicNotesHtml = mechanicNotesRaw.trim() ? `
     <div style="margin-top: 15px; padding: 10px; border: 2px dashed #c00; background: #fffaf9; width: 100%; box-sizing: border-box; page-break-inside: avoid;">
