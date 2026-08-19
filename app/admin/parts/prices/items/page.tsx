@@ -31,12 +31,12 @@ interface PriceListItem {
   category: string
   unit: string
   supplier_price: number
-  selling_price: number
+  selling_price: number | null
   updated_at: string
   updated_by: string
 }
 
-const CATEGORIES = ["Nax Paints", "Premila Paints", "Solvents & Thinners", "Primers", "Topcoats", "Consumables", "Abrasives", "Custom"]
+const CATEGORIES = ["THINNERS & PRIMERS", "SUPPLIES & ABRASIVES", "NAX COLOR", "PREMILA COLOR", "TOPCOATS", "DETAILING MATS"]
 
 const formatNumberWithCommas = (val: string) => {
   const numeric = val.replace(/[^0-9.]/g, "");
@@ -62,8 +62,7 @@ export default function ItemsPriceListPage() {
 
   const [formData, setFormData] = useState({
     item_name: "",
-    category: "Nax Paints",
-    customCategory: "",
+    category: "THINNERS & PRIMERS",
     unit: "Lit",
     customUnit: "",
     supplier_price: "",
@@ -123,8 +122,8 @@ export default function ItemsPriceListPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.item_name || !formData.supplier_price || !formData.selling_price) {
-      toast({ title: "Required Fields", description: "Item Name, Supplier Price, and Selling Price are required.", variant: "destructive" })
+    if (!formData.item_name || !formData.supplier_price) {
+      toast({ title: "Required Fields", description: "Item Name and Supplier Price are required.", variant: "destructive" })
       return
     }
 
@@ -132,20 +131,13 @@ export default function ItemsPriceListPage() {
     try {
       const method = editingItem ? "PUT" : "POST"
       const cleanSupplierPrice = Number(formData.supplier_price.replace(/,/g, ""))
-      const cleanSellingPrice = Number(formData.selling_price.replace(/,/g, ""))
+      const cleanSellingPrice = formData.selling_price ? Number(formData.selling_price.replace(/,/g, "")) : null
       
-      const finalCategory = formData.category === "Custom" ? formData.customCategory : formData.category
-      const finalUnit = formData.unit === "Custom" ? formData.customUnit : formData.unit
-
-      if (formData.category === "Custom" && !formData.customCategory) {
-        toast({ title: "Required", description: "Please enter your custom category name.", variant: "destructive" })
-        setIsSaving(false)
-        return
-      }
+      const finalUnit = formData.unit === "Custom" ? formData.customUnit : formData.unit;
 
       const payload = {
         item_name: formData.item_name,
-        category: finalCategory,
+        category: formData.category,
         unit: finalUnit,
         supplier_price: cleanSupplierPrice,
         selling_price: cleanSellingPrice,
@@ -192,8 +184,7 @@ export default function ItemsPriceListPage() {
     setEditingItem(null)
     setFormData({
       item_name: "",
-      category: selectedCategory !== "All Categories" ? selectedCategory : "Nax Paints",
-      customCategory: "",
+      category: selectedCategory !== "All Categories" ? selectedCategory : "THINNERS & PRIMERS",
       unit: "Lit",
       customUnit: "",
       supplier_price: "",
@@ -209,12 +200,11 @@ export default function ItemsPriceListPage() {
     setEditingItem(item)
     setFormData({
       item_name: item.item_name,
-      category: isStandardCategory ? item.category : "Custom",
-      customCategory: isStandardCategory ? "" : item.category,
+      category: isStandardCategory ? item.category : "THINNERS & PRIMERS",
       unit: isStandardUnit ? item.unit : "Custom",
       customUnit: isStandardUnit ? "" : item.unit,
       supplier_price: formatNumberWithCommas(String(item.supplier_price)),
-      selling_price: formatNumberWithCommas(String(item.selling_price))
+      selling_price: item.selling_price != null ? formatNumberWithCommas(String(item.selling_price)) : ""
     })
     setIsModalOpen(true)
   }
@@ -277,7 +267,7 @@ export default function ItemsPriceListPage() {
           >
             All
           </Button>
-          {Array.from(new Set([...CATEGORIES.filter(c => c !== "Custom"), ...activeCategories])).map(cat => (
+          {Array.from(new Set([...CATEGORIES, ...activeCategories])).map(cat => (
             <Button
               key={cat}
               variant={selectedCategory === cat ? "default" : "outline"}
@@ -334,7 +324,7 @@ export default function ItemsPriceListPage() {
                         {item.supplier_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-6 py-4 text-right font-mono font-bold text-green-700">
-                        {item.selling_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {item.selling_price != null ? item.selling_price.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "-"}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex flex-col items-end">
@@ -406,18 +396,6 @@ export default function ItemsPriceListPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {formData.category === "Custom" && (
-                  <div className="grid gap-2">
-                    <Label className="text-slate-700">Custom Category <span className="text-red-500">*</span></Label>
-                    <Input
-                      required
-                      placeholder="Enter category"
-                      value={formData.customCategory}
-                      onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
-                      className="text-slate-900"
-                    />
-                  </div>
-                )}
 
                 <div className="grid gap-2">
                   <Label className="text-slate-700">Unit <span className="text-red-500">*</span></Label>
@@ -464,10 +442,9 @@ export default function ItemsPriceListPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label className="text-slate-700">Selling Price (₱) <span className="text-red-500">*</span></Label>
+                  <Label className="text-slate-700">Selling Price (₱)</Label>
                   <Input
-                    required
-                    placeholder="0.00"
+                    placeholder="Leave blank if not set"
                     value={formData.selling_price}
                     onChange={(e) => setFormData({ ...formData, selling_price: formatNumberWithCommas(e.target.value) })}
                     className="font-mono text-green-700 font-bold"
