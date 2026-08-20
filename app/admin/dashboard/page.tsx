@@ -5684,23 +5684,37 @@ export default function AdminDashboard() {
                                                     })()}
                                                     <div>
                                                       <label className="text-xs text-muted-foreground mb-1 block">Qty</label>
-                                                      <Input
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        min="1"
-                                                        value={item.quantity}
-                                                        onChange={(e) => {
-                                                          const val = e.target.value.replace(/[^0-9.]/g, '');
-                                                          updateCostItem(appointment.id, item.id, { quantity: parseInt(val) || 1 })
-                                                        }}
-                                                        onKeyDown={(e) => {
-                                                          if (e.key === 'Enter' && !e.shiftKey) {
-                                                            e.preventDefault()
-                                                            addCostItem(appointment.id, item.type, item.category, item.unit)
-                                                          }
-                                                        }}
-                                                        className="h-8 text-sm"
-                                                      />
+                                                      <div className="relative group/num">
+                                                        <Input
+                                                          type="number"
+                                                          min="1"
+                                                          value={item.quantity}
+                                                          onChange={(e) => updateCostItem(appointment.id, item.id, { quantity: parseInt(e.target.value) || 1 })}
+                                                          onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                              e.preventDefault()
+                                                              addCostItem(appointment.id, item.type, item.category, item.unit)
+                                                            }
+                                                          }}
+                                                          className="h-8 text-sm pr-6 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
+                                                        />
+                                                        <div className="absolute right-0 top-0 bottom-0 flex flex-col border-l border-input opacity-0 group-hover/num:opacity-100 focus-within:opacity-100 transition-opacity">
+                                                          <button 
+                                                            type="button" 
+                                                            onClick={() => updateCostItem(appointment.id, item.id, { quantity: (item.quantity || 0) + 1 })}
+                                                            className="flex-1 flex items-center justify-center px-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-tr-md"
+                                                          >
+                                                            <ChevronUp className="h-3 w-3" />
+                                                          </button>
+                                                          <button 
+                                                            type="button" 
+                                                            onClick={() => updateCostItem(appointment.id, item.id, { quantity: Math.max(1, (item.quantity || 0) - 1) })}
+                                                            className="flex-1 flex items-center justify-center px-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-br-md border-t border-input"
+                                                          >
+                                                            <ChevronDown className="h-3 w-3" />
+                                                          </button>
+                                                        </div>
+                                                      </div>
                                                     </div>
                                                     <div>
                                                       <label className="text-xs text-muted-foreground mb-1 block">Unit</label>
@@ -5839,17 +5853,31 @@ export default function AdminDashboard() {
                                           </div>
                                           <div className="flex items-center gap-3">
                                             <span className="text-sm text-muted-foreground">Discount</span>
-                                            <Input
-                                              type="text"
-                                              inputMode="decimal"
-                                              min="0"
-                                              value={appointment.costing?.discount || 0}
-                                              onChange={(e) => {
-                                                const val = e.target.value.replace(/[^0-9.]/g, '');
-                                                updateDiscount(appointment.id, parseFloat(val) || 0, appointment.costing?.discountType || "fixed")
-                                              }}
-                                              className="h-8 text-sm w-24"
-                                            />
+                                            <div className="relative group/num w-24">
+                                              <Input
+                                                type="number"
+                                                min="0"
+                                                value={appointment.costing?.discount || 0}
+                                                onChange={(e) => updateDiscount(appointment.id, parseFloat(e.target.value) || 0, appointment.costing?.discountType || "fixed")}
+                                                className="h-8 text-sm pr-6 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
+                                              />
+                                              <div className="absolute right-0 top-0 bottom-0 flex flex-col border-l border-input opacity-0 group-hover/num:opacity-100 focus-within:opacity-100 transition-opacity">
+                                                <button 
+                                                  type="button" 
+                                                  onClick={() => updateDiscount(appointment.id, (appointment.costing?.discount || 0) + 1, appointment.costing?.discountType || "fixed")}
+                                                  className="flex-1 flex items-center justify-center px-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-tr-md"
+                                                >
+                                                  <ChevronUp className="h-3 w-3" />
+                                                </button>
+                                                <button 
+                                                  type="button" 
+                                                  onClick={() => updateDiscount(appointment.id, Math.max(0, (appointment.costing?.discount || 0) - 1), appointment.costing?.discountType || "fixed")}
+                                                  className="flex-1 flex items-center justify-center px-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-br-md border-t border-input"
+                                                >
+                                                  <ChevronDown className="h-3 w-3" />
+                                                </button>
+                                              </div>
+                                            </div>
                                             <Select
                                               value={appointment.costing?.discountType || "fixed"}
                                               onValueChange={(value) => updateDiscount(appointment.id, appointment.costing?.discount || 0, value as "fixed" | "percentage", true)}
@@ -8570,3 +8598,6 @@ export default function AdminDashboard() {
     </AccountingRestrictionOverlay>
   )
 }
+
+// Triggering Next.js Fast Refresh...
+
