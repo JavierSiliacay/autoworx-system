@@ -5685,10 +5685,14 @@ export default function AdminDashboard() {
                                                     <div>
                                                       <label className="text-xs text-muted-foreground mb-1 block">Qty</label>
                                                       <Input
-                                                        type="number"
+                                                        type="text"
+                                                        inputMode="decimal"
                                                         min="1"
                                                         value={item.quantity}
-                                                        onChange={(e) => updateCostItem(appointment.id, item.id, { quantity: parseInt(e.target.value) || 1 })}
+                                                        onChange={(e) => {
+                                                          const val = e.target.value.replace(/[^0-9.]/g, '');
+                                                          updateCostItem(appointment.id, item.id, { quantity: parseInt(val) || 1 })
+                                                        }}
                                                         onKeyDown={(e) => {
                                                           if (e.key === 'Enter' && !e.shiftKey) {
                                                             e.preventDefault()
@@ -5770,11 +5774,15 @@ export default function AdminDashboard() {
                                                     <div>
                                                       <label className="text-xs text-muted-foreground mb-1 block">Unit Price</label>
                                                       <Input
-                                                        type="number"
+                                                        type="text"
+                                                        inputMode="decimal"
                                                         min="0"
                                                         step="0.01"
                                                         value={item.unitPrice}
-                                                        onChange={(e) => updateCostItem(appointment.id, item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                                                        onChange={(e) => {
+                                                          const val = e.target.value.replace(/[^0-9.]/g, '');
+                                                          updateCostItem(appointment.id, item.id, { unitPrice: parseFloat(val) || 0 })
+                                                        }}
                                                         onKeyDown={(e) => {
                                                           if (e.key === 'Enter' && !e.shiftKey) {
                                                             e.preventDefault()
@@ -5832,10 +5840,14 @@ export default function AdminDashboard() {
                                           <div className="flex items-center gap-3">
                                             <span className="text-sm text-muted-foreground">Discount</span>
                                             <Input
-                                              type="number"
+                                              type="text"
+                                              inputMode="decimal"
                                               min="0"
                                               value={appointment.costing?.discount || 0}
-                                              onChange={(e) => updateDiscount(appointment.id, parseFloat(e.target.value) || 0, appointment.costing?.discountType || "fixed")}
+                                              onChange={(e) => {
+                                                const val = e.target.value.replace(/[^0-9.]/g, '');
+                                                updateDiscount(appointment.id, parseFloat(val) || 0, appointment.costing?.discountType || "fixed")
+                                              }}
                                               className="h-8 text-sm w-24"
                                             />
                                             <Select

@@ -18,4 +18,18 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
   )
 }
 
+// Globally prevent mouse wheel from changing input[type=number] values anywhere in the app
+if (typeof window !== 'undefined') {
+  const preventNumberScroll = (e: Event) => {
+    const target = e.target as HTMLInputElement
+    if (target && target.type === 'number') {
+      e.preventDefault()
+    }
+  }
+
+  // Bind to both wheel events in capture phase
+  window.addEventListener('wheel', preventNumberScroll, { passive: false, capture: true })
+  window.addEventListener('mousewheel', preventNumberScroll, { passive: false, capture: true })
+}
+
 export { Input }
