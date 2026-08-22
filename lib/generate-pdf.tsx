@@ -1081,7 +1081,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
 </html>`;
 }
 
-export function generateActiveRepairsDoc(records: any[], monthLabel: string, title: string = "ACTIVE ON-GOING REPAIRS", dateColumnLabel: string = "DATE ENTERED"): string {
+export function generateActiveRepairsDoc(records: any[], monthLabel: string, title: string = "ACTIVE ON-GOING REPAIRS", dateColumnLabel: string = "DATE ENTERED", options?: { includeEstimate?: boolean }): string {
   const rowsHtml = records.map((r: any, idx: number) => {
     const claimType = r.insurance ? r.insurance.toUpperCase() : "";
     const unitStr = `${r.vehicle_year || r.vehicleYear || ""} ${r.vehicle_make || r.vehicleMake || ""} ${r.vehicle_model || r.vehicleModel || ""}`.trim();
@@ -1118,6 +1118,33 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
       }
     }
 
+    // Estimate calculation (mirrors getCategorizedCosts logic in the component)
+    const costingData = r.costing
+    let estimateTotal = 0
+    if (costingData) {
+      if (costingData.gatepass_breakdown) {
+        estimateTotal = Number(costingData.gatepass_breakdown.total) || 0
+      } else if (costingData.items && costingData.items.length > 0) {
+        const subtotal = costingData.items.reduce((sum: number, item: any) => sum + (item.total || 0), 0)
+        let discount = 0
+        if (Number(costingData.discount) > 0) {
+          discount = costingData.discountType === "percentage"
+            ? (subtotal * Number(costingData.discount)) / 100
+            : Number(costingData.discount)
+        }
+        let vat = 0
+        if (costingData.vatEnabled) {
+          vat = Number(costingData.vatAmount) || ((subtotal - discount) * 0.12)
+        }
+        estimateTotal = subtotal - discount + vat
+      } else if (costingData.total) {
+        estimateTotal = Number(costingData.total) || 0
+      }
+    }
+    const estimateTdHtml = options?.includeEstimate
+      ? `<td style="text-align: right; font-weight: bold; color: #059669;">${estimateTotal > 0 ? `&#8369;${estimateTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "&mdash;"}</td>`
+      : ""
+
     return `
       <tr>
         <td>${idx + 1}</td>
@@ -1133,6 +1160,7 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
         <td style="color: #d97706; font-weight: bold;">${formattedTargetDate}</td>
         <td>${ageDaysText}</td>
         <td>${ageMonthsText}</td>
+        ${estimateTdHtml}
       </tr>
     `;
   }).join("");
@@ -1204,7 +1232,7 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
   <table>
     <thead>
       <tr>
-        <th colspan="13" style="text-align: left; border: none; padding-bottom: 10px;">
+        <th colspan="${options?.includeEstimate ? 14 : 13}" style="text-align: left; border: none; padding-bottom: 10px;">
           <h1>
             <span class="red-line">${title.split(" ")[0]}</span>
             <span class="black-line">${title.split(" ").slice(1).join(" ")}</span>
@@ -1234,6 +1262,7 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
         <th style="font-size: 8px; width: 7%;">TARGET DATE</th>
         <th style="font-size: 8px; width: 4%;">AGE (D)</th>
         <th style="font-size: 8px; width: 4%;">AGE (M)</th>
+        ${options?.includeEstimate ? '<th style="font-size: 8px; width: 9%;">ESTIMATE AMOUNT</th>' : ""}
       </tr>
     </thead>
     <tbody>

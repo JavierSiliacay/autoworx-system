@@ -131,6 +131,8 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
     const [showCategories, setShowCategories] = useState(false)
     const [claimTypeFilter, setClaimTypeFilter] = useState("all")
     const [isManualModalOpen, setIsManualModalOpen] = useState(false)
+    const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false)
+    const [includeEstimateInPrint, setIncludeEstimateInPrint] = useState(true)
     const [viewDetailsModal, setViewDetailsModal] = useState<{ isOpen: boolean, record: any | null }>({ isOpen: false, record: null })
     const [manualEntry, setManualEntry] = useState({
         name: "",
@@ -358,7 +360,7 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
             dynamicTitle = `ACTIVE ${searchQuery.trim().toUpperCase()} REPAIRS`
         }
 
-        const htmlContent = generateActiveRepairsDoc(filteredRecords, reportPeriodLabel, dynamicTitle, "DATE ENTRY")
+        const htmlContent = generateActiveRepairsDoc(filteredRecords, reportPeriodLabel, dynamicTitle, "DATE ENTRY", { includeEstimate: includeEstimateInPrint })
 
         const printWindow = window.open("", "_blank")
         if (!printWindow) {
@@ -635,7 +637,7 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                 <Edit className="w-4 h-4" />
                                 Edit Data
                             </Button>
-                            <Button onClick={handlePrint} className="gap-2 shrink-0">
+                            <Button onClick={() => setIsPrintDialogOpen(true)} className="gap-2 shrink-0">
                                 <Printer className="w-4 h-4" />
                                 Print / Download PDF
                             </Button>
@@ -891,6 +893,22 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                         <p className="text-xs text-muted-foreground">No cost breakdown available.</p>
                                     )}
                                 </div>
+                                {/* Estimate Amount Summary */}
+                                {(() => {
+                                    const modalCosts = viewDetailsModal.record ? getCategorizedCosts(viewDetailsModal.record) : null
+                                    if (!modalCosts) return null
+                                    return (
+                                        <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                            <div>
+                                                <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Estimate Amount</div>
+                                                <div className="text-[10px] text-muted-foreground mt-0.5">Total projected repair cost</div>
+                                            </div>
+                                            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                                                {modalCosts.total > 0 ? `₱${formatWithCommas(modalCosts.total.toFixed(2))}` : "—"}
+                                            </div>
+                                        </div>
+                                    )
+                                })()}
                                 <div>
                                     <h3 className="text-sm font-semibold mb-2">Job Order History</h3>
                                     {viewDetailsModal.record?.costing?.jobOrderHistory?.length > 0 ? (
@@ -944,6 +962,38 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                     <div />
                                 )}
                                 <Button variant="outline" onClick={() => setViewDetailsModal({ isOpen: false, record: null })}>Close</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
+                        <DialogContent className="sm:max-w-[380px]">
+                            <DialogHeader>
+                                <DialogTitle>Print Options</DialogTitle>
+                                <DialogDescription>
+                                    Configure what to include in the printed report.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4 space-y-4">
+                                <label className="flex items-center gap-3 cursor-pointer group select-none">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 rounded accent-primary cursor-pointer"
+                                        checked={includeEstimateInPrint}
+                                        onChange={(e) => setIncludeEstimateInPrint(e.target.checked)}
+                                    />
+                                    <div>
+                                        <div className="text-sm font-medium group-hover:text-primary transition-colors">Include Estimate Amount</div>
+                                        <div className="text-xs text-muted-foreground">Show the repair estimate total column in the printed report</div>
+                                    </div>
+                                </label>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsPrintDialogOpen(false)}>Cancel</Button>
+                                <Button className="gap-2" onClick={() => { setIsPrintDialogOpen(false); handlePrint(); }}>
+                                    <Printer className="w-4 h-4" />
+                                    Print
+                                </Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
@@ -1038,6 +1088,7 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                             <th className="p-1 border border-border text-center font-bold text-[9px]">TARGET DATE</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px] w-14">AGE (DAYS)</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px] w-14">AGE (MONTHS)</th>
+                            <th className="p-1 border border-border text-center font-bold text-[9px] w-24">ESTIMATE AMOUNT</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px] w-32">REMARKS</th>
                             <th className="p-1 border border-border text-center font-bold text-[9px] w-16 no-print">STATUS</th>
                         </tr>
@@ -1164,6 +1215,9 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                                         </td>
                                         <td className="p-1 border border-border text-center font-mono text-[9px]">
                                             {ageMonths}m
+                                        </td>
+                                        <td className="p-1 border border-border text-center font-mono text-[9px] text-emerald-600 font-bold">
+                                            {costs.total > 0 ? `₱${formatWithCommas(costs.total.toFixed(2))}` : "—"}
                                         </td>
                                         <td className={`p-1 border border-border text-left ${!isEditing ? "truncate max-w-[110px]" : "min-w-[200px]"}`} title={r.paul_notes || r.paulNotes || r.remarks || ""}>
                                             {isEditing ? (
