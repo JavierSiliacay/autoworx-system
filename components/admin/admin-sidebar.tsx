@@ -21,7 +21,8 @@ import {
   Banknote,
   Award,
   Boxes,
-  PaintBucket
+  PaintBucket,
+  Wallet
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -107,6 +108,11 @@ export function AdminSidebar() {
         title: "Expenses Monitoring",
         href: "/admin/expenses",
         icon: Banknote,
+      },
+      {
+        title: "Collection Monitoring",
+        href: "/admin/collections",
+        icon: Wallet,
       }
     ] : []),
     {
