@@ -1165,6 +1165,37 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
     `;
   }).join("");
 
+  // Grand total of all estimates
+  let grandTotal = 0
+  let unitsWithEstimate = 0
+  records.forEach((r) => {
+    const cd = r.costing
+    if (!cd) return
+    let val = 0
+    if (cd.gatepass_breakdown) {
+      val = Number(cd.gatepass_breakdown.total) || 0
+    } else if (cd.items && cd.items.length > 0) {
+      const subtotal = cd.items.reduce((s: number, item: any) => s + (item.total || 0), 0)
+      let discount = 0
+      if (Number(cd.discount) > 0) {
+        discount = cd.discountType === "percentage" ? (subtotal * Number(cd.discount)) / 100 : Number(cd.discount)
+      }
+      const vat = cd.vatEnabled ? (Number(cd.vatAmount) || ((subtotal - discount) * 0.12)) : 0
+      val = subtotal - discount + vat
+    } else {
+      val = Number(cd.total) || 0
+    }
+    if (val > 0) {
+      grandTotal += val
+      unitsWithEstimate++
+    }
+  })
+  const grandTotalFormatted = grandTotal > 0
+    ? `&#8369;${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : "&mdash;"
+  const grandTotalColspan = options?.includeEstimate ? 13 : 12
+  const missingEstimate = records.length - unitsWithEstimate
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1269,6 +1300,16 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
       ${rowsHtml}
     </tbody>
   </table>
+  ${options?.includeEstimate ? `
+  <div style="margin-top: 0; border-top: 2px solid #059669; background: #d1fae5; padding: 6px 10px; display: flex; justify-content: flex-end; align-items: center; gap: 12px; page-break-inside: avoid;">
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+      <div style="font-weight: bold; font-size: 9px; color: #065f46; text-transform: uppercase; letter-spacing: 1px;">
+        Grand Total Estimate &mdash; ${unitsWithEstimate}/${records.length} Units
+      </div>
+      ${missingEstimate > 0 ? `<div style="font-size: 8px; color: #b45309;">&#9888; ${missingEstimate} unit${missingEstimate !== 1 ? 's' : ''} without estimate &mdash; total may be incomplete</div>` : ""}
+    </div>
+    <div style="font-weight: bold; font-size: 12px; color: #065f46;">${grandTotalFormatted}</div>
+  </div>` : ""}
 </body>
 </html>`;
 }

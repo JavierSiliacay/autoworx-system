@@ -340,9 +340,10 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                 aircon: acc.aircon + costs.aircon,
                 electrical: acc.electrical + costs.electrical,
                 mechanical: acc.mechanical + costs.mechanical,
-                total: acc.total + costs.total
+                total: acc.total + costs.total,
+                unitsWithEstimate: acc.unitsWithEstimate + (costs.total > 0 ? 1 : 0)
             }
-        }, { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0 })
+        }, { brpad: 0, aircon: 0, electrical: 0, mechanical: 0, total: 0, unitsWithEstimate: 0 })
     }, [tableRecords, editedData])
 
     const handlePrint = async () => {
@@ -1268,9 +1269,38 @@ export function ActiveRepairsMonitoring({ records, onUpdate }: { records: any[],
                             <tr><td colSpan={18} className="p-12 text-center text-muted-foreground italic">No records found for {reportPeriodLabel}.</td></tr>
                         )}
                     </tbody>
-
                 </table>
             </div>
+            {tableRecords.length > 0 && (
+                <div className="border-t-2 border-emerald-500/40 bg-emerald-500/10 px-4 py-3 flex items-center justify-end gap-4">
+                    <div className="flex items-center gap-2">
+                        {/* Amber warning if some units are missing estimates */}
+                        {tableTotals.unitsWithEstimate < tableRecords.length && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-full px-2 py-0.5 cursor-help">
+                                        <span>⚠</span>
+                                        <span>{tableRecords.length - tableTotals.unitsWithEstimate} without estimate</span>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="bg-amber-600 text-white border-none shadow-lg">
+                                    <p className="font-bold">{tableRecords.length - tableTotals.unitsWithEstimate} unit{tableRecords.length - tableTotals.unitsWithEstimate !== 1 ? 's' : ''} have no estimate yet</p>
+                                    <p className="text-xs opacity-90">Grand total may be incomplete</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+                        <div className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+                            Grand Total Estimate
+                        </div>
+                        <div className="text-[10px] font-normal text-muted-foreground">
+                            ({tableTotals.unitsWithEstimate}/{tableRecords.length} units)
+                        </div>
+                    </div>
+                    <div className="text-lg font-bold text-emerald-700 dark:text-emerald-400 font-mono tracking-tight">
+                        {tableTotals.total > 0 ? `₱${formatWithCommas(tableTotals.total.toFixed(2))}` : "—"}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
