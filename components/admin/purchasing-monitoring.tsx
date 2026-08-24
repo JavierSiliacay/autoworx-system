@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect, useMemo } from "react"
 import { Search, Plus, Loader2, Check, Printer, FileText, ListChecks, Edit, Trash2, RotateCcw, Undo, Unlink } from "lucide-react"
@@ -162,21 +162,40 @@ export function PurchasingMonitoring() {
   const filteredPurchases = useMemo(() => {
     let result = purchases
     if (searchQuery) {
-      const tokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean)
+      const trimmedQuery = searchQuery.trim().toLowerCase()
+      const queryWithoutSpaces = trimmedQuery.replace(/\s+/g, "")
+      const tokens = trimmedQuery.split(/\s+/).filter(Boolean)
+
       result = result.filter(p => {
-        const searchableText = [
+        const itemsDescriptions = p.items ? p.items.map(i => i.description).filter(Boolean).join(" ") : ""
+        const searchableFields = [
           p.item_description,
+          itemsDescriptions,
           p.supplier_name,
           p.remarks,
           p.unit_model,
           p.plate_number,
           p.vehicle_owner,
+          p.customer_type,
+          p.insurance_company_name,
           p.pr_number,
           p.type,
           p.status
-        ].filter(Boolean).join(" ").toLowerCase()
+        ].filter(Boolean)
 
-        return tokens.every(token => searchableText.includes(token))
+        const searchableText = searchableFields.join(" ").toLowerCase()
+        const searchableTextWithoutSpaces = searchableText.replace(/\s+/g, "")
+
+        // 1. Exact match when ignoring all spaces (e.g., searching "kbd2418" matches plate "kbd 2418", or "pr1001" matches "pr 1001")
+        if (searchableTextWithoutSpaces.includes(queryWithoutSpaces)) {
+          return true
+        }
+
+        // 2. Tokenized multi-keyword match (with per-token space-insensitive fallback)
+        return tokens.every(token => {
+          const tokenNoSpace = token.replace(/\s+/g, "")
+          return searchableText.includes(token) || (tokenNoSpace && searchableTextWithoutSpaces.includes(tokenNoSpace))
+        })
       })
     }
     if (typeFilter !== "all") {
