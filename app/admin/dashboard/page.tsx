@@ -94,6 +94,8 @@ import {
 
 import { SERVICES, VEHICLE_BRANDS, REPAIR_STATUS_OPTIONS, REPAIR_PARTS, COST_ITEM_TYPES, COST_ITEM_CATEGORIES, COMMON_UNITS, type RepairStatus, type CostItem, type CostingData, type CostItemType, type JobOrderHistoryEntry } from "@/lib/constants"
 import { getRepairStatusInfo, generateTrackingCode } from "@/lib/appointment-tracking"
+import { useAppointmentsQuery } from "@/hooks/use-appointments-query"
+import { useQueryClient } from "@tanstack/react-query"
 import { generateTrackingPDF, generateGatepassPDF, type GatepassData } from "@/lib/generate-pdf"
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal"
 import { AIAnalystDialog } from "@/components/ai/ai-analyst-dialog"
@@ -776,20 +778,26 @@ export default function AdminDashboard() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const historySearchInputRef = useRef<HTMLInputElement>(null)
   const trashSearchInputRef = useRef<HTMLInputElement>(null)
+  const queryClient = useQueryClient()
+  const { data: appointmentsData, isLoading: isQueryLoading, refetch: refetchAppointments } = useAppointmentsQuery(status === "authenticated")
+
+  // Sync TanStack Query cache to state whenever fresh server data arrives
+  useEffect(() => {
+    if (appointmentsData && Array.isArray(appointmentsData)) {
+      const converted = (appointmentsData as AppointmentDB[]).map(dbToFrontend)
+      setAppointments(converted)
+      setIsLoading(false)
+    }
+  }, [appointmentsData])
 
   const loadAppointments = useCallback(async () => {
     try {
-      const response = await fetch("/api/appointments")
-      if (response.ok) {
-        const data = await response.json() as AppointmentDB[]
-        const converted = data.map(dbToFrontend)
-        setAppointments(converted)
-      }
+      await refetchAppointments()
     } catch (error) {
       console.error("Error loading appointments:", error)
     }
     setIsLoading(false)
-  }, [])
+  }, [refetchAppointments])
 
   const loadHistory = useCallback(async () => {
     setIsLoadingHistory(true)
@@ -1003,10 +1011,21 @@ export default function AdminDashboard() {
             const updatedApt = dbToFrontend(payload.new as AppointmentDB)
             setAppointments((prev) => {
               const now = Date.now()
-              // Guard: If we recently updated this specific appointment locally, 
-              // ignore the server's update for a few seconds to prevent cursor jumps and state flickering.
-              if (lastStateUpdateRef.current[updatedApt.id] && now - lastStateUpdateRef.current[updatedApt.id] < 3000) {
-                return prev
+              const lastLocalUpdate = lastStateUpdateRef.current[updatedApt.id]
+              
+              // Guard: If we recently updated this specific appointment locally (within 8s), 
+              // preserve local costing items to prevent cursor jumps and state wiping
+              if (lastLocalUpdate && now - lastLocalUpdate < 8000) {
+                return prev.map(apt => {
+                  if (apt.id === updatedApt.id) {
+                    return {
+                      ...updatedApt,
+                      // Preserve local in-flight costing if it has more items or was edited more recently
+                      costing: apt.costing || updatedApt.costing
+                    }
+                  }
+                  return apt
+                })
               }
               return prev.map(apt => apt.id === updatedApt.id ? updatedApt : apt)
             })
