@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import jsPDF from "jspdf"
@@ -2267,6 +2267,24 @@ export default function AdminDashboard() {
     })
   }
 
+  const handlePrintBilling = (appointment: Appointment) => {
+    const savedSA = appointment.costing?.serviceAdvisorName || appointment.serviceAdvisor || "N/A"
+    const savedDelivery = appointment.costing?.deliveryDate
+    const savedDocDate = appointment.costing?.documentDate
+
+    toast({
+      title: "Generating Billing Statement...",
+      description: `Client: ${appointment.name}`,
+    })
+
+    handlePrintReport(appointment, {
+      serviceAdvisor: savedSA,
+      deliveryDate: savedDelivery?.toString() || "",
+      documentDate: savedDocDate,
+      bannerTitle: "BILLING"
+    })
+  }
+
   const handleGenerateGatepass = (appointment: Appointment, origin: 'history' | 'appointments' = 'appointments') => {
     // Helper to categorize costs for pre-filling
     const getBreakdown = (costing: any) => {
@@ -2488,7 +2506,7 @@ export default function AdminDashboard() {
 
   const handlePrintReport = async (
     appointment: Appointment,
-    overrides?: { serviceAdvisor?: string, deliveryDate?: string, documentDate?: string }
+    overrides?: { serviceAdvisor?: string, deliveryDate?: string, documentDate?: string, bannerTitle?: string }
   ) => {
     // 1. Format professional filename for the document title
     const categoryLabel = getServiceCategoryLabel(appointment);
@@ -2557,7 +2575,8 @@ export default function AdminDashboard() {
       const pdfOptions = {
         serviceAdvisor: overrides?.serviceAdvisor || "N/A",
         deliveryDate: overrides?.deliveryDate || "",
-        documentDate: overrides?.documentDate || ""
+        documentDate: overrides?.documentDate || "",
+        bannerTitle: overrides?.bannerTitle
       }
 
       const htmlContent = await generateTrackingPDF(
@@ -5134,6 +5153,17 @@ export default function AdminDashboard() {
                                     <Download className="w-4 h-4 mr-1" />
                                     {appointment.status === 'pending' ? 'Appointment Confirmation' : 'Download Full Report'}
                                   </Button>
+                                  {appointment.status === 'completed' && (
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      className="bg-green-700 hover:bg-green-800 text-white shadow-md transition-all hover:scale-[1.02]"
+                                      onClick={() => handlePrintBilling(appointment)}
+                                    >
+                                      <Receipt className="w-4 h-4 mr-1" />
+                                      Billing
+                                    </Button>
+                                  )}
                                   {appointment.isSynced && (
                                     <Button
                                       size="sm"
@@ -6969,6 +6999,42 @@ export default function AdminDashboard() {
                                   >
                                     <Download className="w-4 h-4 mr-1" />
                                     Download Full Report
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="bg-green-700 hover:bg-green-800 text-white shadow-md transition-all hover:scale-[1.02]"
+                                    onClick={() => handlePrintBilling({
+                                      id: record.id,
+                                      trackingCode: record.tracking_code,
+                                      name: record.name,
+                                      email: record.email,
+                                      phone: record.phone,
+                                      vehicleMake: record.vehicle_make,
+                                      vehicleModel: record.vehicle_model,
+                                      vehicleYear: record.vehicle_year,
+                                      vehiclePlate: record.vehicle_plate,
+                                      vehicleColor: record.vehicle_color || "N/A",
+                                      chassisNumber: record.chassis_number || "N/A",
+                                      engineNumber: record.engine_number || "N/A",
+                                      assigneeDriver: record.assignee_driver || "N/A",
+                                      service: record.service,
+                                      message: record.message,
+                                      status: "completed",
+                                      createdAt: record.original_created_at,
+                                      repairStatus: record.repair_status as any,
+                                      currentRepairPart: record.current_repair_part,
+                                      statusUpdatedAt: record.completed_at,
+                                      costing: record.costing,
+                                      insurance: record.insurance,
+                                      estimateNumber: record.estimate_number,
+                                      serviceAdvisor: record.costing?.serviceAdvisorName,
+                                      paulNotes: record.paul_notes,
+                                      source: 'history'
+                                    } as any)}
+                                  >
+                                    <Receipt className="w-4 h-4 mr-1" />
+                                    Billing
                                   </Button>
                                   <Button
                                     size="sm"

@@ -252,6 +252,8 @@ export interface PDFOptions {
   serviceAdvisor?: string;
   deliveryDate?: number | string;
   documentDate?: string;
+  /** Override the blue banner title (e.g. "BILLING STATEMENT"). Falls back to the default per-role/status label when absent. */
+  bannerTitle?: string;
 }
 
 export async function generateTrackingPDF(appointment: TrackingAppointment, role: 'admin' | 'user' = 'user', reportTitle?: string, options: PDFOptions = {}): Promise<string> {
@@ -433,7 +435,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       </div>
     </div>
     
-    <div class="estimate-bar">${appointment.status === 'pending' ? 'APPOINTMENT CONFIRMATION' : (isAdmin ? 'REPAIR ESTIMATE' : 'REPAIR STATUS REPORT')}</div>
+    <div class="estimate-bar">${options.bannerTitle ? options.bannerTitle : (appointment.status === 'pending' ? 'APPOINTMENT CONFIRMATION' : (isAdmin ? 'REPAIR ESTIMATE' : 'REPAIR STATUS REPORT'))}</div>
     
     ${appointment.status === 'pending' ? `
     <div class="estimate-meta">
