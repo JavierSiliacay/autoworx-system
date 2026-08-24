@@ -1,4 +1,4 @@
-import { BookingFormData } from "@/components/booking/booking-form"
+﻿import { BookingFormData } from "@/components/booking/booking-form"
 import type { CostingData, RepairStatus, CostItem } from "@/lib/constants"
 import { PRODUCTION_URL } from "./constants"
 
@@ -435,7 +435,7 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
       </div>
     </div>
     
-    <div class="estimate-bar">${options.bannerTitle ? options.bannerTitle : (appointment.status === 'pending' ? 'APPOINTMENT CONFIRMATION' : (isAdmin ? 'REPAIR ESTIMATE' : 'REPAIR STATUS REPORT'))}</div>
+    <div class="estimate-bar" style="${options.bannerTitle?.toUpperCase().includes('BILLING') ? 'background: #fde047 !important;' : '' }">${options.bannerTitle ? options.bannerTitle : (appointment.status === 'pending' ? 'APPOINTMENT CONFIRMATION' : (isAdmin ? 'REPAIR ESTIMATE' : 'REPAIR STATUS REPORT'))}</div>
     
     ${appointment.status === 'pending' ? `
     <div class="estimate-meta">
@@ -579,8 +579,11 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         </tbody>
       </table>
     </div>
+    <div style="font-size: 10px; font-weight: bold; color: red; margin-top: 4px; margin-bottom: 2px; text-transform: uppercase;">
+      DELIVERY DATE: <span style="text-decoration: underline; color: red;">${appointment.costing?.deliveryDate || options.deliveryDate || "_______"}</span> WORKING DAYS
+    </div>
     ${appointment.costing?.notes ? `
-    <div style="margin-top: 4px; padding: 4px 8px; background: #f9f9f9; border-left: 3px solid #d9e1f2; font-size: 8.5px; font-style: italic; white-space: pre-wrap;">
+    <div style="margin-top: 4px; margin-bottom: 2px; padding: 4px 8px; background: #f9f9f9; border-left: 3px solid #d9e1f2; font-size: 8.5px; font-style: italic; white-space: pre-wrap;">
       <strong>Notes:</strong> ${appointment.costing.notes}
     </div>
     ` : ""}
@@ -591,13 +594,10 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
         Thank you
       </p>
     </div>
-    ` : "")}
-
-
-
-    <div style="font-size: 10px; font-weight: bold; color: red; margin-bottom: 2px; text-transform: uppercase;">
+    <div style="font-size: 10px; font-weight: bold; color: red; margin-top: 4px; margin-bottom: 2px; text-transform: uppercase;">
       DELIVERY DATE: <span style="text-decoration: underline; color: red;">${appointment.costing?.deliveryDate || options.deliveryDate || "_______"}</span> WORKING DAYS
     </div>
+    ` : "")}
 
     <div class="footer-layout">
       <div class="terms-box">
