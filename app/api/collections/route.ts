@@ -50,6 +50,24 @@ export async function POST(request: Request) {
     const supabase = createAdminClient()
     const body = await request.json()
 
+    let receiptNumber = body.receipt_number ? String(body.receipt_number).trim() : ""
+    if (!receiptNumber) {
+      const { data: allCollections } = await supabase.from("collections").select("receipt_number")
+      let maxNum = 0
+      if (allCollections && allCollections.length > 0) {
+        allCollections.forEach(c => {
+          if (c.receipt_number) {
+            const match = String(c.receipt_number).match(/\d+/)
+            if (match) {
+              const num = parseInt(match[0], 10)
+              if (!isNaN(num) && num > maxNum) maxNum = num
+            }
+          }
+        })
+      }
+      receiptNumber = maxNum > 0 ? String(maxNum + 1) : "785"
+    }
+
     const { data, error } = await supabase
       .from("collections")
       .insert([{
@@ -59,7 +77,7 @@ export async function POST(request: Request) {
         unit: body.unit,
         plate: body.plate,
         receipt_type: body.receipt_type,
-        receipt_number: body.receipt_number,
+        receipt_number: receiptNumber,
         description: body.description,
         payment_type: body.payment_type,
         total_amount: parseFloat(body.total_amount),

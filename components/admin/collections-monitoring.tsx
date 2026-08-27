@@ -36,7 +36,7 @@ interface Collection {
 }
 
 const RECEIPT_TYPES = ["JO", "AR", "OR"]
-const PAYMENT_TYPES = ["CASH", "CHECK", "QR PAY", "BANK TRANSFER"]
+const PAYMENT_TYPES = ["CASH", "CHECK", "QR PAY", "BANK TRANSFER", "CANCELLED"]
 
 export function CollectionsMonitoring() {
   const [collections, setCollections] = useState<Collection[]>([])
@@ -267,6 +267,24 @@ export function CollectionsMonitoring() {
 
   const totalFilteredAmount = filteredCollections.reduce((acc, curr) => acc + curr.total_amount, 0)
 
+  const getNextReceiptNumber = (existingCollections: Collection[]) => {
+    let maxNum = 0
+    existingCollections.forEach(c => {
+      if (c.receipt_number) {
+        // Extract numeric portion (handles strings like '0768', '784', 'JO-784', etc.)
+        const match = c.receipt_number.match(/\d+/)
+        if (match) {
+          const num = parseInt(match[0], 10)
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num
+          }
+        }
+      }
+    })
+    // If no records found or maxNum is less than 784, start at 785
+    return maxNum > 0 ? String(maxNum + 1) : "785"
+  }
+
   const openModal = (collectionToEdit?: Collection) => {
     setHasSubmitted(false)
     if (collectionToEdit) {
@@ -291,6 +309,7 @@ export function CollectionsMonitoring() {
       })
     } else {
       setEditingCollection(null)
+      const nextNum = getNextReceiptNumber(collections)
       setFormData({
         date: format(new Date(), "yyyy-MM-dd"),
         customer_name: "",
@@ -298,7 +317,7 @@ export function CollectionsMonitoring() {
         unit: "",
         plate: "",
         receipt_type: "JO",
-        receipt_number: "",
+        receipt_number: nextNum,
         description: "",
         payment_type: "CASH",
         total_amount: "",
@@ -313,8 +332,9 @@ export function CollectionsMonitoring() {
     e.preventDefault()
     setHasSubmitted(true)
 
-    const rawAmount = parseFloat(formData.total_amount.replace(/,/g, ''))
-    if (isNaN(rawAmount) || rawAmount <= 0) {
+    const isCancelled = formData.payment_type === "CANCELLED"
+    const rawAmount = isCancelled ? 0 : parseFloat(formData.total_amount.replace(/,/g, ''))
+    if (!isCancelled && (isNaN(rawAmount) || rawAmount <= 0)) {
       toast({ title: "Validation Error", description: "Please enter a valid total amount.", variant: "destructive" })
       return
     }
@@ -716,30 +736,39 @@ export function CollectionsMonitoring() {
                       </td>
                     </tr>
                   ) : (
-                    filteredCollections.map((item, idx) => (
-                      <tr key={item.id} className="border-b border-gray-300 hover:bg-blue-50/40 transition-colors print:h-8">
-                        <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 text-center font-mono font-bold text-gray-700">{idx + 1}</td>
-                        <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 font-mono whitespace-nowrap text-center">{format(parseISO(item.date), "MM/dd/yyyy")}</td>
-                        <td className="border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 font-bold uppercase text-gray-900 truncate">{item.customer_name}</td>
-                        <td className="border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 uppercase text-gray-700 truncate">{item.address}</td>
-                        <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 uppercase text-gray-800 font-medium text-center">{item.unit}</td>
-                        <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 uppercase font-mono font-bold text-gray-800 text-center">{item.plate}</td>
-                        <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 text-center font-bold text-blue-800">
-                          {item.receipt_type === "JO" || item.receipt_type === "AR" ? item.receipt_type : ""}
-                        </td>
-                        <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 text-center font-bold text-emerald-800">
-                          {item.receipt_type === "OR" ? "OR" : ""}
-                        </td>
-                        <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 font-mono font-medium text-center">{item.receipt_number}</td>
-                        <td className="border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 uppercase text-gray-800 text-[10px] print:text-[7.5px] leading-tight">{item.description}</td>
-                        <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 uppercase text-center font-semibold text-gray-700 text-[10px] print:text-[7.5px]">{item.payment_type}</td>
-                        <td className="border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 text-right font-mono font-bold text-blue-950">
-                          ₱{item.total_amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                        <td className="border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 uppercase font-medium text-gray-800 text-center">{item.cashier_name}</td>
-                        <td className="border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 text-[10px] print:text-[7.5px] text-gray-600 italic text-center">{item.remarks || ""}</td>
-                      </tr>
-                    ))
+                    filteredCollections.map((item, idx) => {
+                      const isItemCancelled = item.payment_type === "CANCELLED"
+                      return (
+                        <tr key={item.id} className={cn("border-b border-gray-300 hover:bg-blue-50/40 transition-colors print:h-8", isItemCancelled && "bg-red-50/30 text-gray-500")}>
+                          <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 text-center font-mono font-bold text-gray-700">{idx + 1}</td>
+                          <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 font-mono whitespace-nowrap text-center">{format(parseISO(item.date), "MM/dd/yyyy")}</td>
+                          <td className={cn("border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 font-bold uppercase truncate", isItemCancelled ? "text-red-700 font-bold" : "text-gray-900")}>{item.customer_name}</td>
+                          <td className="border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 uppercase text-gray-700 truncate">{item.address}</td>
+                          <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 uppercase text-gray-800 font-medium text-center">{item.unit}</td>
+                          <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 uppercase font-mono font-bold text-gray-800 text-center">{item.plate}</td>
+                          <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 text-center font-bold text-blue-800">
+                            {item.receipt_type === "JO" || item.receipt_type === "AR" ? item.receipt_type : ""}
+                          </td>
+                          <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 text-center font-bold text-emerald-800">
+                            {item.receipt_type === "OR" ? "OR" : ""}
+                          </td>
+                          <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 font-mono font-medium text-center">{item.receipt_number}</td>
+                          <td className={cn("border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 uppercase text-[10px] print:text-[7.5px] leading-tight", isItemCancelled ? "font-bold text-red-600 tracking-wider" : "text-gray-800")}>{item.description}</td>
+                          <td className="border border-gray-400 px-2 py-1.5 print:px-0.5 print:py-1 uppercase text-center font-semibold text-[10px] print:text-[7.5px]">
+                            {isItemCancelled ? (
+                              <span className="text-red-600 font-bold bg-red-100/70 px-1 py-0.5 rounded text-[8px] print:text-[7px]">CANCELLED</span>
+                            ) : (
+                              <span className="text-gray-700">{item.payment_type}</span>
+                            )}
+                          </td>
+                          <td className={cn("border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 text-right font-mono font-bold", isItemCancelled ? "text-gray-400" : "text-blue-950")}>
+                            ₱{item.total_amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 uppercase font-medium text-gray-800 text-center">{item.cashier_name}</td>
+                          <td className="border border-gray-400 px-3 py-1.5 print:px-0.5 print:py-1 text-[10px] print:text-[7.5px] text-gray-600 italic text-center">{item.remarks || ""}</td>
+                        </tr>
+                      )
+                    })
                   )}
 
                   {/* Blank lines dynamically generated to fill physical bond paper sheet */}
@@ -865,10 +894,15 @@ export function CollectionsMonitoring() {
                     </td>
                   </tr>
                 ) : (
-                  filteredCollections.map((item, index) => (
+                    filteredCollections.map((item, index) => {
+                    const isItemCancelled = item.payment_type === "CANCELLED"
+                    return (
                     <tr 
                       key={item.id} 
-                      className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors group cursor-pointer" 
+                      className={cn(
+                        "border-b border-gray-100 hover:bg-blue-50/50 transition-colors group cursor-pointer",
+                        isItemCancelled && "bg-red-50/30 text-gray-500"
+                      )} 
                       onClick={() => !isSelectMode && setViewingCollection(item)}
                     >
                       {isSelectMode && (
@@ -884,7 +918,9 @@ export function CollectionsMonitoring() {
                       <td className="px-2 py-2 whitespace-nowrap text-[11px] font-mono">
                         {format(parseISO(item.date), "MMM dd, yyyy")}
                       </td>
-                      <td className="px-2 py-2 font-bold !text-gray-900 text-xs uppercase">{item.customer_name}</td>
+                      <td className={cn("px-2 py-2 text-xs uppercase", isItemCancelled ? "text-red-700 font-bold" : "font-bold !text-gray-900")}>
+                        {item.customer_name}
+                      </td>
                       <td className="px-2 py-2 text-[11px] text-gray-700 uppercase">{item.address}</td>
                       <td className="px-2 py-2 text-[11px] font-medium uppercase text-gray-800">{item.unit}</td>
                       <td className="px-2 py-2 font-mono font-bold text-gray-700 text-[11px] uppercase">{item.plate}</td>
@@ -910,9 +946,19 @@ export function CollectionsMonitoring() {
                         )}
                       </td>
                       <td className="px-2 py-2 font-mono text-[11px] text-gray-800 font-medium text-center">{item.receipt_number}</td>
-                      <td className="px-2 py-2 !text-gray-900 text-xs uppercase leading-tight max-w-[200px] truncate" title={item.description}>{item.description}</td>
-                      <td className="px-2 py-2 text-[11px] font-semibold uppercase text-gray-700">{item.payment_type}</td>
-                      <td className="px-2 py-2 text-right font-bold !text-gray-900 text-xs font-mono whitespace-nowrap">
+                      <td className={cn("px-2 py-2 text-xs uppercase leading-tight max-w-[200px] truncate", isItemCancelled ? "font-bold text-red-600 tracking-wider" : "!text-gray-900")} title={item.description}>
+                        {item.description}
+                      </td>
+                      <td className="px-2 py-2 text-[11px] uppercase font-semibold">
+                        {isItemCancelled ? (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
+                            CANCELLED
+                          </span>
+                        ) : (
+                          <span className="text-gray-700">{item.payment_type}</span>
+                        )}
+                      </td>
+                      <td className={cn("px-2 py-2 text-right text-xs font-mono whitespace-nowrap", isItemCancelled ? "text-gray-400 font-semibold" : "font-bold !text-gray-900")}>
                         ₱ {item.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-2 py-2 text-[11px] uppercase font-medium text-gray-800">{item.cashier_name}</td>
@@ -940,7 +986,8 @@ export function CollectionsMonitoring() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    )
+                  })
                 )}
               </tbody>
               {filteredCollections.length > 0 && (
@@ -1000,64 +1047,94 @@ export function CollectionsMonitoring() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="customer_name" className="!text-gray-700 font-semibold text-xs uppercase">Customer Name <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="customer_name" className="!text-gray-700 font-semibold text-xs uppercase">
+                    Customer Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="customer_name"
                     required
+                    disabled={formData.payment_type === "CANCELLED"}
                     placeholder="e.g. REYES"
                     value={formData.customer_name}
                     onChange={(e) => setFormData({...formData, customer_name: e.target.value})}
-                    className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase"
+                    className={cn(
+                      "!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase",
+                      formData.payment_type === "CANCELLED" && "!bg-red-50 !text-red-700 font-bold cursor-not-allowed !border-red-200"
+                    )}
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="address" className="!text-gray-700 font-semibold text-xs uppercase">Address <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="address" className="!text-gray-700 font-semibold text-xs uppercase">
+                    Address {formData.payment_type !== "CANCELLED" && <span className="text-red-500">*</span>}
+                  </Label>
                   <Input
                     id="address"
-                    required
+                    required={formData.payment_type !== "CANCELLED"}
+                    disabled={formData.payment_type === "CANCELLED"}
                     placeholder="e.g. KAUSWAGAN, CDO"
                     value={formData.address}
                     onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase"
+                    className={cn(
+                      "!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase",
+                      formData.payment_type === "CANCELLED" && "!bg-gray-100 !text-gray-500 cursor-not-allowed"
+                    )}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <Label htmlFor="unit" className="!text-gray-700 font-semibold text-xs uppercase">Unit (Vehicle) <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="unit" className="!text-gray-700 font-semibold text-xs uppercase">
+                      Unit (Vehicle) {formData.payment_type !== "CANCELLED" && <span className="text-red-500">*</span>}
+                    </Label>
                     <Input
                       id="unit"
-                      required
+                      required={formData.payment_type !== "CANCELLED"}
+                      disabled={formData.payment_type === "CANCELLED"}
                       placeholder="e.g. HILUX"
                       value={formData.unit}
                       onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                      className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase"
+                      className={cn(
+                        "!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase",
+                        formData.payment_type === "CANCELLED" && "!bg-gray-100 !text-gray-500 cursor-not-allowed"
+                      )}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="plate" className="!text-gray-700 font-semibold text-xs uppercase">Plate # <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="plate" className="!text-gray-700 font-semibold text-xs uppercase">
+                      Plate # {formData.payment_type !== "CANCELLED" && <span className="text-red-500">*</span>}
+                    </Label>
                     <Input
                       id="plate"
-                      required
+                      required={formData.payment_type !== "CANCELLED"}
+                      disabled={formData.payment_type === "CANCELLED"}
                       placeholder="e.g. KCE 200"
                       value={formData.plate}
                       onChange={(e) => setFormData({...formData, plate: e.target.value})}
-                      className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase font-mono"
+                      className={cn(
+                        "!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase font-mono",
+                        formData.payment_type === "CANCELLED" && "!bg-gray-100 !text-gray-500 cursor-not-allowed"
+                      )}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="description" className="!text-gray-700 font-semibold text-xs uppercase">Business Style / Description <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="description" className="!text-gray-700 font-semibold text-xs uppercase">
+                    Business Style / Description <span className="text-red-500">*</span>
+                  </Label>
                   <Textarea
                     id="description"
                     required
+                    disabled={formData.payment_type === "CANCELLED"}
                     rows={2}
                     placeholder="e.g. COST OF REPAIR - FULL PAYMENT"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase text-xs"
+                    className={cn(
+                      "!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase text-xs",
+                      formData.payment_type === "CANCELLED" && "!bg-red-50 !text-red-700 font-bold cursor-not-allowed !border-red-200"
+                    )}
                   />
                 </div>
               </div>
@@ -1079,22 +1156,57 @@ export function CollectionsMonitoring() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="receipt_number" className="!text-gray-700 font-semibold text-xs uppercase">Receipt # <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="receipt_number" className="!text-gray-700 font-semibold text-xs uppercase flex items-center justify-between">
+                      <span>Receipt # <span className="text-red-500">*</span></span>
+                      <span className="text-[10px] text-gray-400 font-normal lowercase">(auto)</span>
+                    </Label>
                     <Input
                       id="receipt_number"
                       required
-                      placeholder="e.g. 0010"
+                      readOnly
+                      disabled
+                      placeholder="e.g. 785"
                       value={formData.receipt_number}
-                      onChange={(e) => setFormData({...formData, receipt_number: e.target.value})}
-                      className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 font-mono"
+                      className="!bg-gray-100 !border-gray-300 !text-gray-700 font-mono font-bold cursor-not-allowed"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
                   <Label htmlFor="payment_type" className="!text-gray-700 font-semibold text-xs uppercase">Payment Type <span className="text-red-500">*</span></Label>
-                  <Select value={formData.payment_type} onValueChange={(val) => setFormData({...formData, payment_type: val})}>
-                    <SelectTrigger className="!bg-white !border-gray-300 !text-gray-900">
+                  <Select 
+                    value={formData.payment_type} 
+                    onValueChange={(val) => {
+                      if (val === "CANCELLED") {
+                        setFormData({
+                          ...formData,
+                          payment_type: val,
+                          customer_name: "CANCELLED",
+                          address: "N/A",
+                          unit: "N/A",
+                          plate: "N/A",
+                          description: "CANCELLED",
+                          total_amount: "0.00",
+                          cashier_name: "N/A"
+                        })
+                      } else {
+                        setFormData({
+                          ...formData,
+                          payment_type: val,
+                          ...(formData.payment_type === "CANCELLED" ? {
+                            customer_name: "",
+                            address: "",
+                            unit: "",
+                            plate: "",
+                            description: "",
+                            total_amount: "",
+                            cashier_name: ""
+                          } : {})
+                        })
+                      }
+                    }}
+                  >
+                    <SelectTrigger className={cn("!bg-white !border-gray-300 !text-gray-900", formData.payment_type === "CANCELLED" && "!border-red-500 !text-red-600 font-bold")}>
                       <SelectValue placeholder="Payment Type" />
                     </SelectTrigger>
                     <SelectContent className="!bg-white !border-gray-200 z-[130]">
@@ -1102,17 +1214,21 @@ export function CollectionsMonitoring() {
                       <SelectItem value="CHECK" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 font-medium">CHECK</SelectItem>
                       <SelectItem value="QR PAY" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 font-medium">QR PAY (GCASH / MAYA)</SelectItem>
                       <SelectItem value="BANK TRANSFER" className="!text-gray-900 cursor-pointer hover:!bg-gray-100 font-medium">BANK TRANSFER</SelectItem>
+                      <SelectItem value="CANCELLED" className="!text-red-600 cursor-pointer hover:!bg-red-50 font-bold">CANCELLED</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="total_amount" className="!text-gray-700 font-semibold text-xs uppercase">Total Amount (₱) <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="total_amount" className="!text-gray-700 font-semibold text-xs uppercase">
+                    Total Amount (₱) {formData.payment_type !== "CANCELLED" && <span className="text-red-500">*</span>}
+                  </Label>
                   <Input
                     id="total_amount"
                     type="text"
                     inputMode="decimal"
-                    required
+                    required={formData.payment_type !== "CANCELLED"}
+                    disabled={formData.payment_type === "CANCELLED"}
                     onFocus={(e) => e.target.select()}
                     value={formData.total_amount}
                     onChange={(e) => {
@@ -1127,20 +1243,29 @@ export function CollectionsMonitoring() {
                       val = parts.join('.');
                       setFormData({...formData, total_amount: val});
                     }}
-                    className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 text-lg font-bold text-blue-700"
+                    className={cn(
+                      "!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 placeholder:!text-gray-500 text-lg font-bold text-blue-700",
+                      formData.payment_type === "CANCELLED" && "!bg-gray-100 !text-gray-400 cursor-not-allowed font-mono"
+                    )}
                     placeholder="0.00"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="cashier_name" className="!text-gray-700 font-semibold text-xs uppercase">Cashier Name <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="cashier_name" className="!text-gray-700 font-semibold text-xs uppercase">
+                    Cashier Name {formData.payment_type !== "CANCELLED" && <span className="text-red-500">*</span>}
+                  </Label>
                   <Input
                     id="cashier_name"
-                    required
+                    required={formData.payment_type !== "CANCELLED"}
+                    disabled={formData.payment_type === "CANCELLED"}
                     placeholder="e.g. GENELYN"
                     value={formData.cashier_name}
                     onChange={(e) => setFormData({...formData, cashier_name: e.target.value})}
-                    className="!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase"
+                    className={cn(
+                      "!bg-white !border-gray-300 focus-visible:ring-blue-500 focus-visible:ring-2 focus-visible:border-blue-500 focus-visible:ring-offset-0 !text-gray-900 uppercase",
+                      formData.payment_type === "CANCELLED" && "!bg-gray-100 !text-gray-500 cursor-not-allowed"
+                    )}
                   />
                 </div>
 
@@ -1276,7 +1401,12 @@ export function CollectionsMonitoring() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Payment Type</p>
-                  <p className="text-xs font-bold text-gray-900 bg-gray-50 px-2.5 py-1.5 rounded-md uppercase">{viewingCollection.payment_type}</p>
+                  <p className={cn(
+                    "text-xs font-bold px-2.5 py-1.5 rounded-md uppercase",
+                    viewingCollection.payment_type === "CANCELLED" ? "text-red-700 bg-red-100/70 border border-red-200" : "text-gray-900 bg-gray-50"
+                  )}>
+                    {viewingCollection.payment_type}
+                  </p>
                 </div>
               </div>
 

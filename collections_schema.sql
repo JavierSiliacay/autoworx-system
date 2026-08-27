@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.collections (
     receipt_type TEXT NOT NULL CHECK (receipt_type IN ('JO', 'AR', 'OR')),
     receipt_number TEXT NOT NULL,
     description TEXT NOT NULL,
-    payment_type TEXT NOT NULL CHECK (payment_type IN ('CASH', 'CHECK', 'QR PAY', 'BANK TRANSFER')),
+    payment_type TEXT NOT NULL CHECK (payment_type IN ('CASH', 'CHECK', 'QR PAY', 'BANK TRANSFER', 'CANCELLED')),
     total_amount NUMERIC NOT NULL,
     cashier_name TEXT NOT NULL,
     remarks TEXT,
