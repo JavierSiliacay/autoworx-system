@@ -22,7 +22,10 @@ import {
   Award,
   Boxes,
   PaintBucket,
-  Wallet
+  Wallet,
+  Calculator,
+  ArrowDownLeft,
+  ArrowUpRight
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -36,7 +39,10 @@ export function AdminSidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({ "Parts Room": true })
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    "Parts Room": true,
+    "Accounting Works": true
+  })
 
   const toggleMenu = (title: string, e: React.MouseEvent) => {
     e.preventDefault()
@@ -97,22 +103,41 @@ export function AdminSidebar() {
         }
       ]
     },
-    // Conditionally include Purchasing and Expenses Monitoring
+    // Accounting Works Folder Module
     ...(isAccountingEmail(session?.user?.email) ? [
       {
-        title: "Purchasing",
-        href: "/admin/purchasing",
-        icon: ShoppingCart,
-      },
-      {
-        title: "Expenses Monitoring",
-        href: "/admin/expenses",
-        icon: Banknote,
-      },
-      {
-        title: "Collection Monitoring",
-        href: "/admin/collections",
-        icon: Wallet,
+        title: "Accounting Works",
+        href: "#",
+        icon: Calculator,
+        subItems: [
+          {
+            title: "Purchasing Monitoring",
+            href: "/admin/purchasing",
+            icon: ShoppingCart,
+          },
+          {
+            title: "Expenses Monitoring",
+            href: "/admin/expenses",
+            icon: Banknote,
+          },
+          {
+            title: "Collection Monitoring",
+            href: "/admin/collections",
+            icon: Wallet,
+          },
+          {
+            title: "Account Receivables",
+            href: "/admin/receivables",
+            icon: ArrowDownLeft,
+            badge: "Soon",
+          },
+          {
+            title: "Account Payables",
+            href: "/admin/payables",
+            icon: ArrowUpRight,
+            badge: "Soon",
+          }
+        ]
       }
     ] : []),
     {
@@ -233,14 +258,21 @@ export function AdminSidebar() {
                       <Link key={subItem.href} href={subItem.href} onClick={() => setIsMobileOpen(false)}>
                         <div
                           className={cn(
-                            "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all group",
+                            "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group",
                             isSubActive
                               ? "bg-primary/10 text-primary"
                               : "text-muted-foreground hover:bg-muted hover:text-foreground"
                           )}
                         >
-                          <subItem.icon className={cn("w-4 h-4 shrink-0 transition-colors", isSubActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                          <span className="truncate">{subItem.title}</span>
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <subItem.icon className={cn("w-4 h-4 shrink-0 transition-colors", isSubActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                            <span className="truncate">{subItem.title}</span>
+                          </div>
+                          {(subItem as any).badge && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                              {(subItem as any).badge}
+                            </span>
+                          )}
                         </div>
                       </Link>
                     )
