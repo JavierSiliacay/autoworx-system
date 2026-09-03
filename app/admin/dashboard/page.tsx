@@ -558,6 +558,7 @@ export default function AdminDashboard() {
   const [focusNewItem, setFocusNewItem] = useState<string | null>(null)
   // Raw string map for unit price inputs so decimals aren't swallowed while typing
   const [unitPriceInputs, setUnitPriceInputs] = useState<Record<string, string>>({})
+  const [otherDiscountInputs, setOtherDiscountInputs] = useState<Record<string, string>>({})
 
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [filter, setFilter] = useState<string>("all")
@@ -3344,11 +3345,11 @@ export default function AdminDashboard() {
     setFocusNewItem(newItem.id)
   }
 
-  const calculateTotal = (subtotal: number, discount: number, discountType: "fixed" | "percentage", vatEnabled: boolean) => {
+  const calculateTotal = (subtotal: number, discount: number, discountType: "fixed" | "percentage", vatEnabled: boolean, otherDiscountAmount: number = 0) => {
     const discountAmount = discountType === "percentage"
       ? (subtotal * discount) / 100
       : discount
-    const afterDiscount = Math.max(0, subtotal - discountAmount)
+    const afterDiscount = Math.max(0, subtotal - discountAmount - (otherDiscountAmount || 0))
     const vatAmount = vatEnabled ? Math.round(afterDiscount * 0.12 * 100) / 100 : 0
     const total = Math.round((afterDiscount + vatAmount) * 100) / 100
     return {
@@ -3381,7 +3382,8 @@ export default function AdminDashboard() {
       subtotal,
       appointment.costing.discount,
       appointment.costing.discountType,
-      appointment.costing.vatEnabled ?? false
+      appointment.costing.vatEnabled ?? false,
+      appointment.costing.otherDiscountAmount || 0
     )
 
     updateCosting(appointmentId, {
@@ -3409,7 +3411,8 @@ export default function AdminDashboard() {
       subtotal,
       appointment.costing.discount,
       appointment.costing.discountType,
-      appointment.costing.vatEnabled ?? false
+      appointment.costing.vatEnabled ?? false,
+      appointment.costing.otherDiscountAmount || 0
     )
 
     updateCosting(appointmentId, {
@@ -3444,13 +3447,35 @@ export default function AdminDashboard() {
       appointment.costing.subtotal,
       discount,
       discountType,
-      appointment.costing.vatEnabled ?? false
+      appointment.costing.vatEnabled ?? false,
+      appointment.costing.otherDiscountAmount || 0
     )
 
     updateCosting(appointmentId, {
       ...appointment.costing,
       discount,
       discountType,
+      vatAmount,
+      total,
+    }, immediate)
+  }
+
+  const updateOtherDiscount = (appointmentId: string, otherDiscountName: string, otherDiscountAmount: number, immediate = false) => {
+    const appointment = appointments.find((apt) => apt.id === appointmentId)
+    if (!appointment?.costing) return
+
+    const { vatAmount, total } = calculateTotal(
+      appointment.costing.subtotal,
+      appointment.costing.discount,
+      appointment.costing.discountType,
+      appointment.costing.vatEnabled ?? false,
+      otherDiscountAmount
+    )
+
+    updateCosting(appointmentId, {
+      ...appointment.costing,
+      otherDiscountName,
+      otherDiscountAmount,
       vatAmount,
       total,
     }, immediate)
@@ -3464,7 +3489,8 @@ export default function AdminDashboard() {
       appointment.costing.subtotal,
       appointment.costing.discount,
       appointment.costing.discountType,
-      vatEnabled
+      vatEnabled,
+      appointment.costing.otherDiscountAmount || 0
     )
 
     updateCosting(appointmentId, {
@@ -5970,6 +5996,40 @@ export default function AdminDashboard() {
                                               </SelectContent>
                                             </Select>
                                           </div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm text-muted-foreground whitespace-nowrap">Other Discount</span>
+                                            <Input
+                                              type="text"
+                                              placeholder="e.g. Senior, PWD"
+                                              value={appointment.costing?.otherDiscountName || ""}
+                                              onChange={(e) => updateOtherDiscount(appointment.id, e.target.value, appointment.costing?.otherDiscountAmount || 0)}
+                                              className="h-8 text-sm w-44"
+                                            />
+                                            <div className="relative group/num w-28">
+                                              <Input
+                                                type="text"
+                                                inputMode="decimal"
+                                                placeholder="Amount (P)"
+                                                value={
+                                                  otherDiscountInputs[appointment.id] !== undefined
+                                                    ? otherDiscountInputs[appointment.id]
+                                                    : (appointment.costing?.otherDiscountAmount
+                                                        ? Number(appointment.costing.otherDiscountAmount).toLocaleString("en-US")
+                                                        : "")
+                                                }
+                                                onChange={(e) => {
+                                                  const raw = e.target.value.replace(/[^0-9.]/g, '')
+                                                  const parts = raw.split('.')
+                                                  const formattedInt = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                                  const formatted = parts.length > 1 ? `${formattedInt}.${parts.slice(1).join('')}` : formattedInt
+                                                  setOtherDiscountInputs(prev => ({ ...prev, [appointment.id]: formatted }))
+                                                  const parsed = parseFloat(raw)
+                                                  updateOtherDiscount(appointment.id, appointment.costing?.otherDiscountName || "", isNaN(parsed) ? 0 : parsed)
+                                                }}
+                                                className="h-8 text-sm"
+                                              />
+                                            </div>
+                                          </div>
                                           <div className="flex items-center gap-3">
                                             <label className="flex items-center gap-2 cursor-pointer">
                                               <input
@@ -6854,6 +6914,15 @@ export default function AdminDashboard() {
                                                   ? (record.costing.subtotal * record.costing.discount) / 100
                                                   : record.costing.discount
                                               ).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {Number(record.costing.otherDiscountAmount || 0) > 0 && (
+                                          <div className="flex justify-between items-center text-orange-600">
+                                            <span>{record.costing.otherDiscountName ? `${record.costing.otherDiscountName} Discount` : "Other Discount"}</span>
+                                            <span className="font-mono font-semibold">
+                                              -P{Number(record.costing.otherDiscountAmount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                             </span>
                                           </div>
                                         )}

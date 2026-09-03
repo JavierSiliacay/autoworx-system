@@ -121,6 +121,8 @@ export interface CostingData {
   subtotal: number
   discount: number
   discountType: "fixed" | "percentage"
+  otherDiscountName?: string
+  otherDiscountAmount?: number
   vatEnabled: boolean
   vatAmount: number
   total: number

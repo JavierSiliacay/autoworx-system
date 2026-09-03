@@ -1,4 +1,4 @@
-﻿import { BookingFormData } from "@/components/booking/booking-form"
+import { BookingFormData } from "@/components/booking/booking-form"
 import type { CostingData, RepairStatus, CostItem } from "@/lib/constants"
 import { PRODUCTION_URL } from "./constants"
 
@@ -633,6 +633,11 @@ export async function generateTrackingPDF(appointment: TrackingAppointment, role
           ? (appointment.costing!.subtotal * appointment.costing!.discount) / 100
           : appointment.costing!.discount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
           </div>` : ""}
+          ${(appointment.costing?.otherDiscountAmount || 0) > 0 ? `
+          <div class="totals-summary-row" style="color: #ea580c;">
+            <span>${appointment.costing?.otherDiscountName ? `${appointment.costing.otherDiscountName} Discount` : "Other Discount"} less ${Number(appointment.costing!.otherDiscountAmount).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pesos</span>
+            <span>-₱${Number(appointment.costing!.otherDiscountAmount).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>` : ""}
           ${appointment.costing?.vatEnabled ? `<div class="totals-summary-row" style="color: #666; font-size: 8.5px;"><span>VAT 12%</span><span>₱${(appointment.costing?.vatAmount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>` : ""}
           <div class="totals-summary-row bold"><span>TOTAL</span><span>₱${(appointment.costing?.total || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span></div>
         </div>
@@ -1134,6 +1139,9 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
             ? (subtotal * Number(costingData.discount)) / 100
             : Number(costingData.discount)
         }
+        if (Number(costingData.otherDiscountAmount) > 0) {
+          discount += Number(costingData.otherDiscountAmount)
+        }
         let vat = 0
         if (costingData.vatEnabled) {
           vat = Number(costingData.vatAmount) || ((subtotal - discount) * 0.12)
@@ -1181,6 +1189,9 @@ export function generateActiveRepairsDoc(records: any[], monthLabel: string, tit
       let discount = 0
       if (Number(cd.discount) > 0) {
         discount = cd.discountType === "percentage" ? (subtotal * Number(cd.discount)) / 100 : Number(cd.discount)
+      }
+      if (Number(cd.otherDiscountAmount) > 0) {
+        discount += Number(cd.otherDiscountAmount)
       }
       const vat = cd.vatEnabled ? (Number(cd.vatAmount) || ((subtotal - discount) * 0.12)) : 0
       val = subtotal - discount + vat
