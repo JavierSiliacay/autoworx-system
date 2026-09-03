@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import jsPDF from "jspdf"
@@ -556,6 +556,8 @@ export default function AdminDashboard() {
   // Track the last selected category to auto-fill new items
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined)
   const [focusNewItem, setFocusNewItem] = useState<string | null>(null)
+  // Raw string map for unit price inputs so decimals aren't swallowed while typing
+  const [unitPriceInputs, setUnitPriceInputs] = useState<Record<string, string>>({})
 
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [filter, setFilter] = useState<string>("all")
@@ -5841,14 +5843,42 @@ export default function AdminDashboard() {
                                                         inputMode="decimal"
                                                         min="0"
                                                         step="0.01"
-                                                        value={item.unitPrice}
+                                                        value={unitPriceInputs[item.id] ?? item.unitPrice.toString()}
                                                         onChange={(e) => {
-                                                          const val = e.target.value.replace(/[^0-9.]/g, '');
-                                                          updateCostItem(appointment.id, item.id, { unitPrice: parseFloat(val) || 0 })
+                                                          // Allow only digits and a single decimal point while typing
+                                                          const raw = e.target.value.replace(/[^0-9.]/g, '')
+                                                          const parts = raw.split('.')
+                                                          const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : raw
+                                                          setUnitPriceInputs(prev => ({ ...prev, [item.id]: sanitized }))
+                                                          // Only update the numeric state when the value is a valid complete number
+                                                          const parsed = parseFloat(sanitized)
+                                                          if (!isNaN(parsed) && !sanitized.endsWith('.')) {
+                                                            updateCostItem(appointment.id, item.id, { unitPrice: parsed })
+                                                          }
+                                                        }}
+                                                        onBlur={(e) => {
+                                                          // Commit final numeric value on blur and clear local string
+                                                          const raw = e.target.value.replace(/[^0-9.]/g, '')
+                                                          const parsed = parseFloat(raw) || 0
+                                                          updateCostItem(appointment.id, item.id, { unitPrice: parsed })
+                                                          setUnitPriceInputs(prev => {
+                                                            const next = { ...prev }
+                                                            delete next[item.id]
+                                                            return next
+                                                          })
                                                         }}
                                                         onKeyDown={(e) => {
                                                           if (e.key === 'Enter' && !e.shiftKey) {
                                                             e.preventDefault()
+                                                            // Commit current value before adding new item
+                                                            const raw = (e.target as HTMLInputElement).value.replace(/[^0-9.]/g, '')
+                                                            const parsed = parseFloat(raw) || 0
+                                                            updateCostItem(appointment.id, item.id, { unitPrice: parsed })
+                                                            setUnitPriceInputs(prev => {
+                                                              const next = { ...prev }
+                                                              delete next[item.id]
+                                                              return next
+                                                            })
                                                             addCostItem(appointment.id, item.type, item.category, item.unit)
                                                           }
                                                         }}
