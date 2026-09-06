@@ -3344,7 +3344,7 @@ export default function AdminDashboard() {
     updateCosting(appointmentId, newCosting, true)
     setFocusNewItem(newItem.id)
   }
-
+//asdasd
   const calculateTotal = (subtotal: number, discount: number, discountType: "fixed" | "percentage", vatEnabled: boolean, otherDiscountAmount: number = 0) => {
     const discountAmount = discountType === "percentage"
       ? (subtotal * discount) / 100
