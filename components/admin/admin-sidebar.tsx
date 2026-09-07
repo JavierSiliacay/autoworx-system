@@ -129,7 +129,6 @@ export function AdminSidebar() {
             title: "Account Receivables",
             href: "/admin/receivables",
             icon: ArrowDownLeft,
-            badge: "Soon",
           },
           {
             title: "Account Payables",
