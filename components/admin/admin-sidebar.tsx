@@ -134,7 +134,6 @@ export function AdminSidebar() {
             title: "Account Payables",
             href: "/admin/payables",
             icon: ArrowUpRight,
-            badge: "Soon",
           }
         ]
       }

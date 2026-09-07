@@ -1,4 +1,4 @@
-import { UnderConstructionModule } from "@/components/admin/under-construction-module"
+import { PayablesMonitoring } from "@/components/admin/payables-monitoring"
 import { Metadata } from "next"
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
@@ -6,7 +6,7 @@ import { authOptions, isAccountingEmail } from "@/lib/auth"
 
 export const metadata: Metadata = {
   title: "Account Payables | Autoworx Accounting",
-  description: "Supplier obligations, bill matching, and disbursement schedules.",
+  description: "Supplier obligations, check payments, and PDC disbursement schedules.",
 }
 
 export default async function PayablesPage() {
@@ -16,5 +16,5 @@ export default async function PayablesPage() {
     redirect("/admin/dashboard")
   }
 
-  return <UnderConstructionModule moduleName="Account Payables" type="ap" />
+  return <PayablesMonitoring />
 }

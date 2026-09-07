@@ -90,15 +90,48 @@ export function ReceivablesMonitoring() {
     let result = receivables
 
     if (searchQuery.trim()) {
-      const tokens = searchQuery.toLowerCase().trim().split(/\s+/)
+      const trimmedQuery = searchQuery.trim().toLowerCase()
+      const queryNoSpaces = trimmedQuery.replace(/[\s\-_,.]+/g, "")
+      const tokens = trimmedQuery.split(/\s+/).filter(Boolean)
+
       result = result.filter(r => {
-        const text = [
+        const amountNum = Number(r.amount) || 0
+        const formattedAmount = amountNum.toLocaleString("en-PH", { minimumFractionDigits: 2 })
+        const rawAmountStr = r.amount !== undefined && r.amount !== null ? r.amount.toString() : ""
+
+        const searchableFields = [
           r.client_name,
           r.remarks,
-          r.amount?.toString(),
-          r.status
-        ].filter(Boolean).join(" ").toLowerCase()
-        return tokens.every(token => text.includes(token))
+          r.status,
+          r.date,
+          rawAmountStr,
+          formattedAmount,
+          rawAmountStr.replace(/,/g, ""),
+          r.status === "PAID" ? "paid cleared" : "pending unpaid"
+        ].filter(Boolean)
+
+        const searchableText = searchableFields.join(" ").toLowerCase()
+        const searchableNoSpaces = searchableText.replace(/[\s\-_,.]+/g, "")
+
+        if (queryNoSpaces && searchableNoSpaces.includes(queryNoSpaces)) {
+          return true
+        }
+
+        return tokens.every(token => {
+          const tokenClean = token.trim()
+          if (!tokenClean) return true
+          const tokenNoSpace = tokenClean.replace(/[\s\-_,.]+/g, "")
+
+          if (searchableText.includes(tokenClean)) {
+            return true
+          }
+
+          if (tokenNoSpace && searchableNoSpaces.includes(tokenNoSpace)) {
+            return true
+          }
+
+          return false
+        })
       })
     }
 
@@ -250,9 +283,9 @@ export function ReceivablesMonitoring() {
     // FORCED LIGHT MODE WRAPPER (Matching Collections & Expenses Exactly)
     <div className="min-h-screen print:min-h-0 print:h-auto print:block !bg-gray-50 !text-gray-900 font-sans p-6 print:p-0 print:!bg-white">
 
-      {/* Watermark only visible in print */}
-      <div className="hidden print:flex fixed inset-0 pointer-events-none items-center justify-center z-0">
-        <img src="/autoworxlogo.png" alt="Autoworx Watermark" className="w-[420px] max-w-[60%] object-contain opacity-[0.05] mix-blend-multiply" />
+      {/* Watermark overlay - Repeating on EVERY print page */}
+      <div className="hidden print:flex print-watermark">
+        <img src="/autoworxlogo.png" alt="Autoworx Watermark" />
       </div>
 
       <style>{`
@@ -260,6 +293,29 @@ export function ReceivablesMonitoring() {
           @page {
             margin: 8mm 10mm;
             size: portrait;
+          }
+          .print-watermark {
+            display: flex !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 9999 !important;
+            pointer-events: none !important;
+          }
+          .print-watermark img {
+            width: 420px !important;
+            max-width: 65% !important;
+            object-fit: contain !important;
+            opacity: 0.07 !important;
+            mix-blend-mode: multiply !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           html, body, #__next, body > div, main {
             background-color: #ffffff !important;
@@ -275,13 +331,12 @@ export function ReceivablesMonitoring() {
           .print-page-wrap {
             width: 100% !important;
             max-width: 100% !important;
-            min-height: 92vh !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
+            display: block !important;
             margin: 0 !important;
             padding: 0 !important;
             box-sizing: border-box !important;
+            background-color: transparent !important;
+            background: transparent !important;
           }
           table {
             page-break-inside: auto;
@@ -296,7 +351,35 @@ export function ReceivablesMonitoring() {
           }
           tr { page-break-inside: avoid; }
           thead { display: table-header-group; }
-          tfoot { display: table-footer-group; }
+          tfoot { display: table-row-group !important; page-break-inside: avoid !important; }
+          .print-signature-wrap,
+          .print-signature-wrap * {
+            border: none;
+            box-shadow: none !important;
+          }
+          .print-signature-wrap .border-b-2 {
+            border-bottom: 2px solid #000000 !important;
+          }
+          .print-status-pending {
+            color: #ea580c !important;
+            border-color: #f97316 !important;
+            background-color: #fff7ed !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print-status-paid {
+            color: #047857 !important;
+            border-color: #059669 !important;
+            background-color: #ecfdf5 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print-text-orange {
+            color: #ea580c !important;
+          }
+          .print-text-green {
+            color: #047857 !important;
+          }
         }
       `}</style>
 
@@ -431,46 +514,73 @@ export function ReceivablesMonitoring() {
         </div>
       </div>
 
-      {/* Printable Page Wrapper (Ensures proper top-to-bottom layout in print) */}
-      <div className="print-page-wrap relative z-10">
+      {/* Printable Page Wrapper */}
+      <div className="print-page-wrap relative z-10 print:z-auto">
         <div>
           {/* Printable Header (Visible only in Print) */}
-          <div className="hidden print:block mb-4 border-b-2 border-black pb-3">
+          <div className="hidden print:block mb-3 border-b-2 border-black pb-2">
             <div className="flex justify-between items-start">
               <div>
                 <h1 className="text-xl font-black uppercase tracking-tight text-black">
                   AUTOWORX REPAIR & DETAILS
                 </h1>
-                <h2 className="text-sm font-extrabold uppercase tracking-wider text-gray-800 mt-0.5">
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-800 mt-0.5">
                   ACCOUNT RECEIVABLES MONITORING REPORT
                 </h2>
-                <p className="text-xs font-semibold text-gray-700 mt-1">
+                <p className="text-[11px] font-semibold text-gray-700 mt-0.5">
                   AS OF: <span className="text-blue-900 font-bold">{format(new Date(), "MMMM d, yyyy")}</span>
                   {statusFilter !== "all" && (
-                    <span className="ml-2 px-2 py-0.5 text-[10px] bg-gray-100 border border-gray-400 rounded uppercase font-bold text-gray-800">
+                    <span className="ml-2 px-1.5 py-0.5 text-[9px] bg-gray-100 border border-gray-400 rounded uppercase font-bold text-gray-800">
                       Status Filter: {statusFilter} Only
                     </span>
                   )}
                 </p>
               </div>
-              <div className="text-right text-xs text-gray-700">
-                <p className="font-bold text-black text-sm">Autoworx Repair & General Mdse.</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">Date Printed: {format(new Date(), "PPpp")}</p>
+              <div className="text-right text-[11px] text-gray-700">
+                <p className="font-bold text-black text-xs">Autoworx Repair & General Mdse.</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Date Printed: {format(new Date(), "PPpp")}</p>
               </div>
             </div>
           </div>
 
+          {/* Summary Totals Bar - Visible on screen, hidden in print to avoid duplication with table totals footer */}
+          {filteredReceivables.length > 0 && (
+            <div
+              className="mb-3.5 px-4 py-3 bg-gray-100/90 border-2 !border-gray-300 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-gray-900 shadow-sm print:hidden"
+            >
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                <span className="uppercase text-[11px] tracking-wider text-gray-700 font-black">
+                  TOTAL AMOUNT:
+                </span>
+                <span className="font-mono font-black text-sm sm:text-base text-blue-700">
+                  ₱{totalReceivables.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-gray-300 font-normal">•</span>
+                <span className="text-amber-800 print-text-orange font-bold">
+                  Pending: ₱{totalPending.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-gray-300 font-normal">•</span>
+                <span className="text-emerald-800 print-text-green font-bold">
+                  Paid: ₱{totalPaid.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="text-[11px] text-gray-500 font-medium">
+                {filteredReceivables.length} record{filteredReceivables.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          )}
+
           {/* Main Table Container */}
-          <div className="!bg-white rounded-xl shadow-sm border !border-gray-200 overflow-hidden relative z-10 print:border-none print:shadow-none print:rounded-none">
+          <div className="!bg-white print:!bg-transparent rounded-xl shadow-sm border !border-gray-200 overflow-hidden relative z-10 print:z-auto print:border-none print:shadow-none print:rounded-none print:overflow-visible">
             <div className="overflow-x-auto print:overflow-visible">
-              <table className="w-full text-xs text-left border-collapse border !border-gray-300 print:!border-gray-400 print:text-[11px] print:[&_th]:border print:[&_th]:!border-gray-400 print:[&_td]:border print:[&_td]:!border-gray-300">
+              <table className="w-full text-xs text-left border-collapse border !border-gray-300 print:!border-gray-400 print:text-[10.5px] print:[&_th]:border print:[&_th]:!border-gray-400 print:[&_td]:border print:[&_td]:!border-gray-300">
                 <thead>
                   <tr className="!bg-gray-100/90 !text-gray-700 font-bold border-b-2 !border-gray-300 print:!border-gray-400 select-none uppercase tracking-wider text-[10px] print:text-[10px] print:!bg-gray-100" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
-                    <th className="py-3 px-3 w-12 text-center print:w-10">#</th>
-                    <th className="py-3 px-4 print:py-2">Client Name</th>
-                    <th className="py-3 px-4 text-right w-40 print:w-36 print:py-2">Amount</th>
-                    <th className="py-3 px-3 text-center w-32 print:w-28 print:py-2">Status</th>
-                    <th className="py-3 px-4 print:py-2">Remarks</th>
+                    <th className="py-3 px-3 w-12 text-center print:w-8 print:py-1.5 print:px-2">#</th>
+                    <th className="py-3 px-4 print:py-1.5 print:px-3 print:w-48">Client Name</th>
+                    <th className="py-3 px-4 text-right w-40 print:w-32 print:py-1.5 print:px-3">Amount</th>
+                    <th className="py-3 px-3 text-center w-32 print:w-24 print:py-1.5 print:px-2">Status</th>
+                    <th className="py-3 px-4 print:py-1.5 print:px-3">Remarks</th>
                     <th className="py-3 px-3 text-center w-36 print:hidden">Actions</th>
                   </tr>
                 </thead>
@@ -502,30 +612,36 @@ export function ReceivablesMonitoring() {
                           key={item.id}
                           className={cn(
                             "hover:bg-gray-50/80 transition-colors",
-                            isPaid ? "bg-emerald-50/20 print:bg-white" : ""
+                            isPaid ? "bg-emerald-50/20 print:!bg-transparent" : "print:!bg-transparent"
                           )}
                         >
-                          <td className="py-2.5 px-3 text-center text-gray-500 font-mono text-[10px] print:py-1.5">
+                          <td className="py-2.5 px-3 text-center text-gray-500 font-mono text-[10px] print:py-1.5 print:px-2 print:text-[10px]">
                             {idx + 1}
                           </td>
-                          <td className="py-2.5 px-4 font-bold text-gray-900 text-sm print:text-xs print:py-1.5 uppercase">
+                          <td className="py-2.5 px-4 font-bold text-gray-900 text-sm print:text-[10.5px] print:py-1.5 print:px-3 uppercase print:leading-normal">
                             {item.client_name}
                           </td>
-                          <td className="py-2.5 px-4 text-right font-mono font-bold text-gray-900 text-sm print:text-xs print:py-1.5">
+                          <td className="py-2.5 px-4 text-right font-mono font-bold text-gray-900 text-sm print:text-[10.5px] print:py-1.5 print:px-3 print:leading-normal">
                             ₱{Number(item.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
-                          <td className="py-2.5 px-3 text-center print:py-1.5">
+                          <td className="py-2.5 px-3 text-center print:py-1.5 print:px-2">
                             {isPaid ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 print:border-emerald-500 print:bg-emerald-50 print:text-emerald-900">
+                              <span
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 print-status-paid print:text-[9px] print:py-0.5 print:px-2"
+                                style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
+                              >
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600 print:hidden" /> PAID
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 print:border-amber-500 print:bg-amber-50 print:text-amber-900">
+                              <span
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 print-status-pending print:text-[9px] print:py-0.5 print:px-2"
+                                style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
+                              >
                                 <Clock className="w-3 h-3 text-amber-600 print:hidden" /> PENDING
                               </span>
                             )}
                           </td>
-                          <td className="py-2.5 px-4 text-gray-600 italic text-[11px] print:py-1.5 print:text-[10px]">
+                          <td className="py-2.5 px-4 text-gray-600 italic text-[11px] print:py-1.5 print:px-3 print:text-[9.5px] print:leading-normal">
                             {item.remarks || "-"}
                           </td>
                           <td className="py-2.5 px-3 text-center print:hidden">
@@ -590,19 +706,20 @@ export function ReceivablesMonitoring() {
                 </tbody>
                 {filteredReceivables.length > 0 && (
                   <tfoot>
-                    <tr className="bg-gray-100/90 font-bold border-t-2 !border-gray-300 print:!border-gray-500 text-gray-900 print:!bg-gray-100" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
-                      <td colSpan={2} className="py-3 px-4 text-right uppercase text-[11px] tracking-wider print:py-2">
-                        Total:
+                    {/* Table Totals Row */}
+                    <tr className="bg-gray-100 font-bold border-t-2 !border-gray-400 print:!border-black text-gray-900 print:!bg-gray-200 break-inside-avoid [page-break-inside:avoid]" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
+                      <td colSpan={2} className="py-3 px-4 text-right uppercase text-[11px] tracking-wider print:py-2.5 print:px-3 print:text-[10.5px] print:text-black print:font-black">
+                        TOTAL AMOUNT:
                       </td>
-                      <td className="py-3 px-4 text-right font-mono font-black text-sm text-blue-700 print:text-black print:py-2">
+                      <td className="py-3 px-4 text-right font-mono font-black text-sm text-blue-700 print:text-black print:py-2.5 print:px-3 print:text-[10.5px] print:font-black">
                         ₱{totalReceivables.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td colSpan={2} className="py-3 px-4 text-gray-700 text-[11px] print:py-2">
-                        <span className="text-amber-800 font-bold">
+                      <td colSpan={2} className="py-3 px-4 text-gray-800 text-[11px] print:py-2.5 print:px-3 print:text-[10.5px] print:text-black">
+                        <span className="text-amber-800 print-text-orange font-bold">
                           Pending: ₱{totalPending.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                         </span>
-                        <span className="mx-2">•</span>
-                        <span className="text-emerald-800 font-bold">
+                        <span className="mx-2 text-gray-400 print:text-gray-600">•</span>
+                        <span className="text-emerald-800 print-text-green font-bold">
                           Paid: ₱{totalPaid.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                         </span>
                       </td>
@@ -613,41 +730,43 @@ export function ReceivablesMonitoring() {
               </table>
             </div>
           </div>
-        </div>
 
-        {/* Print Signature Section (Print Only, pushed to bottom of page) */}
-        <div className="hidden print:grid grid-cols-2 gap-16 mt-auto pt-10 text-xs font-bold text-gray-800">
-          <div>
-            <p className="mb-10 uppercase tracking-wider text-[11px] text-gray-600">PREPARED BY:</p>
-            <div className="w-60 border-b-2 border-black"></div>
-            <p className="font-extrabold text-xs text-black mt-1.5 uppercase tracking-wide">Accounting / Cashier</p>
-          </div>
-          <div className="text-right flex flex-col items-end">
-            <p className="mb-10 uppercase tracking-wider text-[11px] text-gray-600">NOTED / APPROVED BY:</p>
-            <div className="w-60 border-b-2 border-black"></div>
-            <p className="font-extrabold text-xs text-black mt-1.5 uppercase tracking-wide">General Manager / Sir Paul</p>
+          {/* Signatures & Approvals - Outside of table, clean with NO box lines */}
+          <div className="print-signature-wrap hidden print:block mt-6 pt-3 px-2 border-0 border-none print:border-none print:[border:none!important] break-inside-avoid [page-break-inside:avoid]">
+            <div className="grid grid-cols-2 gap-16 text-xs font-bold text-gray-800 border-0 border-none print:border-none print:[border:none!important] break-inside-avoid [page-break-inside:avoid]">
+              <div>
+                <p className="mb-8 uppercase tracking-wider text-[11px] text-gray-600">PREPARED BY:</p>
+                <div className="w-56 border-b-2 border-black"></div>
+                <p className="font-extrabold text-xs text-black mt-1.5 uppercase tracking-wide">Accounting / Cashier</p>
+              </div>
+              <div className="text-right flex flex-col items-end">
+                <p className="mb-8 uppercase tracking-wider text-[11px] text-gray-600">NOTED / APPROVED BY:</p>
+                <div className="w-56 border-b-2 border-black"></div>
+                <p className="font-extrabold text-xs text-black mt-1.5 uppercase tracking-wide">General Manager / Sir Paul</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Add / Edit Receivable Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md !bg-white !text-gray-900 border !border-gray-300 shadow-2xl">
+        <DialogContent className="sm:max-w-[520px] p-6 !bg-white !text-gray-900 border !border-gray-300 shadow-2xl">
           <form onSubmit={handleSubmit}>
-            <DialogHeader className="space-y-1.5 pb-2 border-b !border-gray-200">
+            <DialogHeader className="space-y-1.5 pb-3 border-b !border-gray-200">
               <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-600" />
                 {editingReceivable ? "Edit Receivable" : "Add Receivable"}
               </DialogTitle>
-              <DialogDescription className="text-xs text-gray-500">
+              <DialogDescription className="text-xs text-gray-500 mt-1">
                 Input the client name and amount for this account receivable.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
+            <div className="py-5 space-y-5">
               {/* Client Name Field */}
-              <div className="space-y-1.5">
-                <Label htmlFor="client_name" className="text-xs font-semibold text-gray-700">
+              <div className="space-y-2">
+                <Label htmlFor="client_name" className="text-xs font-semibold text-gray-800">
                   Client Name <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -655,19 +774,19 @@ export function ReceivablesMonitoring() {
                   placeholder="e.g. Standard Insurance, Pioneer, Juan Dela Cruz"
                   value={formData.client_name}
                   onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                  className="!bg-white !border-gray-300 !text-gray-900 text-sm"
+                  className="h-10 !bg-white !border-gray-300 !text-gray-900 text-sm focus-visible:ring-blue-500"
                   autoFocus
                   required
                 />
               </div>
 
               {/* Amount Field */}
-              <div className="space-y-1.5">
-                <Label htmlFor="rec_amount" className="text-xs font-semibold text-gray-700">
+              <div className="space-y-2">
+                <Label htmlFor="rec_amount" className="text-xs font-semibold text-gray-800">
                   Amount (PHP) <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm pointer-events-none">
                     ₱
                   </span>
                   <Input
@@ -680,15 +799,15 @@ export function ReceivablesMonitoring() {
                       const formatted = formatAmountWithCommas(e.target.value)
                       setFormData({ ...formData, amount: formatted })
                     }}
-                    className="pl-8 !bg-white !border-gray-300 !text-gray-900 text-sm font-mono font-bold"
+                    className="h-10 pl-8 !bg-white !border-gray-300 !text-gray-900 text-sm font-mono font-bold focus-visible:ring-blue-500"
                     required
                   />
                 </div>
               </div>
 
               {/* Remarks Field (Optional) */}
-              <div className="space-y-1.5">
-                <Label htmlFor="rec_remarks" className="text-xs font-semibold text-gray-700">
+              <div className="space-y-2">
+                <Label htmlFor="rec_remarks" className="text-xs font-semibold text-gray-800">
                   Remarks / Notes <span className="text-gray-400 font-normal">(Optional)</span>
                 </Label>
                 <Textarea
@@ -696,24 +815,24 @@ export function ReceivablesMonitoring() {
                   placeholder="Optional notes, plate number, LOA #, or check details..."
                   value={formData.remarks}
                   onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                  className="!bg-white !border-gray-300 !text-gray-900 text-sm min-h-[60px] resize-none"
+                  className="!bg-white !border-gray-300 !text-gray-900 text-sm min-h-[75px] resize-none focus-visible:ring-blue-500"
                 />
               </div>
             </div>
 
-            <DialogFooter className="border-t !border-gray-200 pt-3 flex justify-end gap-2">
+            <DialogFooter className="border-t !border-gray-200 pt-4 mt-3 flex justify-end gap-2.5">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsModalOpen(false)}
-                className="!bg-white !border-gray-300 !text-gray-700 hover:bg-gray-100"
+                className="h-10 px-4 !bg-white !border-gray-300 !text-gray-700 hover:bg-gray-100 font-medium"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                className="h-10 px-5 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm"
               >
                 {isSubmitting ? "Saving..." : editingReceivable ? "Save Changes" : "Add Receivable"}
               </Button>
