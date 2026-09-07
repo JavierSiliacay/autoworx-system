@@ -230,6 +230,7 @@ interface AppointmentDB {
   insurance?: string
   estimate_number?: string
   paul_notes?: string
+  remarks?: string
   service_advisor?: string
   loa_attachment?: string
   loa_attachment_2?: string
@@ -270,6 +271,7 @@ interface Appointment {
   insurance?: string
   estimateNumber?: string
   paulNotes?: string
+  remarks?: string
   serviceAdvisor?: string
   updatedAt?: string
   loaAttachment?: string
@@ -312,6 +314,7 @@ interface HistoryRecord {
   insurance?: string
   estimate_number?: string
   paul_notes?: string
+  remarks?: string
   damage_images?: string[]
   orcr_image?: string
   orcr_image_2?: string
@@ -401,6 +404,7 @@ function dbToFrontend(apt: AppointmentDB): Appointment {
     insurance: apt.insurance,
     estimateNumber: apt.estimate_number,
     paulNotes: apt.paul_notes,
+    remarks: apt.remarks,
     serviceAdvisor: apt.service_advisor,
     updatedAt: apt.status_updated_at || apt.created_at,
     loaAttachment: fixImageUrl(apt.loa_attachment || apt.costing?.loaAttachment),
@@ -887,6 +891,7 @@ export default function AdminDashboard() {
           insurance: h.insurance,
           estimateNumber: h.estimate_number,
           paulNotes: h.paul_notes,
+          remarks: h.remarks,
           isSynced: true, // History items are considered synced by default as they are final
           source: 'history' as const
         }))
@@ -2169,7 +2174,8 @@ export default function AdminDashboard() {
         message: editingAppointment.message,
         insurance: editingAppointment.insurance,
         estimate_number: editingAppointment.estimateNumber,
-        paul_notes: editingAppointment.paulNotes
+        paul_notes: editingAppointment.paulNotes,
+        remarks: editingAppointment.remarks
       };
     } else {
       // Appointments API handles its own camel->snake conversion
@@ -2190,6 +2196,7 @@ export default function AdminDashboard() {
         service: finalService,
         message: editingAppointment.message,
         insurance: editingAppointment.insurance,
+        remarks: editingAppointment.remarks,
         serviceAdvisor: editingAppointment.serviceAdvisor,
       };
     }
@@ -2222,6 +2229,7 @@ export default function AdminDashboard() {
             insurance: editingAppointment.insurance,
             estimate_number: editingAppointment.estimateNumber,
             paul_notes: editingAppointment.paulNotes,
+            remarks: editingAppointment.remarks,
             costing: editingAppointment.costing,
             original_created_at: editingAppointment.createdAt,
             completed_at: editingAppointment.statusUpdatedAt
@@ -3567,6 +3575,34 @@ export default function AdminDashboard() {
       clearTimeout(costingDebounceRef.current[`paul-${appointmentId}`])
     }
     costingDebounceRef.current[`paul-${appointmentId}`] = setTimeout(syncWithBackend, 1000)
+  }
+
+  const updateRemarks = (appointmentId: string, remarks: string) => {
+    // Track that we are manually updating this record
+    lastStateUpdateRef.current[appointmentId] = Date.now()
+
+    // 1. Update local state immediately
+    setAppointments((prev) =>
+      prev.map((apt) => (apt.id === appointmentId ? { ...apt, remarks } : apt))
+    )
+
+    // 2. Sync with backend (debounced)
+    const syncWithBackend = async () => {
+      try {
+        await fetch("/api/appointments", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: appointmentId, remarks }),
+        })
+      } catch (error) {
+        console.error("Failed to sync remarks:", error)
+      }
+    }
+
+    if (costingDebounceRef.current[`remarks-${appointmentId}`]) {
+      clearTimeout(costingDebounceRef.current[`remarks-${appointmentId}`])
+    }
+    costingDebounceRef.current[`remarks-${appointmentId}`] = setTimeout(syncWithBackend, 1000)
   }
 
   const toggleCardExpanded = (id: string) => {
@@ -5583,8 +5619,30 @@ export default function AdminDashboard() {
                                       </div>
                                     )}
                                     <p className="text-[10px] text-muted-foreground">
-                                      * Visible to all administrators. Authorized personnel only.
+                                      * Personal reminders/instructions for Sir Paul. Not synced to Release Monitoring.
                                     </p>
+                                  </div>
+
+                                  {/* Remarks (Accessible to all admins & staff, synced to Release Monitoring) */}
+                                  <div className="pt-4 border-t border-border space-y-2">
+                                    <div className="flex items-center gap-2 text-foreground">
+                                      <FileText className="w-4 h-4 text-primary" />
+                                      <h4 className="font-semibold text-foreground">Remarks</h4>
+                                      <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                                        Release Monitoring
+                                      </span>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <Textarea
+                                        value={appointment.remarks || ""}
+                                        onChange={(e) => updateRemarks(appointment.id, e.target.value)}
+                                        placeholder="Type remarks or notes for this unit (synced to Release Monitoring)..."
+                                        className="min-h-[70px] text-sm bg-background border-border focus-visible:ring-primary resize-none"
+                                      />
+                                      <p className="text-[10px] text-muted-foreground">
+                                        * Accessible to all admins & staff. Synced directly to Release Monitoring remarks.
+                                      </p>
+                                    </div>
                                   </div>
 
                                   {/* Costing Section */}
@@ -7093,6 +7151,7 @@ export default function AdminDashboard() {
                                       insurance: record.insurance,
                                       estimateNumber: record.estimate_number,
                                       paulNotes: record.paul_notes,
+                                      remarks: record.remarks,
                                       source: 'history'
                                     } as any)}
                                   >
@@ -7129,6 +7188,7 @@ export default function AdminDashboard() {
                                       estimateNumber: record.estimate_number,
                                       serviceAdvisor: record.costing?.serviceAdvisorName,
                                       paulNotes: record.paul_notes,
+                                      remarks: record.remarks,
                                       source: 'history'
                                     } as any)}
                                   >
@@ -7712,6 +7772,16 @@ export default function AdminDashboard() {
                   value={editingAppointment.message || ""}
                   onChange={(e) => setEditingAppointment({ ...editingAppointment, message: e.target.value })}
                   className="min-h-[100px]"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="edit-remarks">Remarks (Release Monitoring)</Label>
+                <Textarea
+                  id="edit-remarks"
+                  value={editingAppointment.remarks || ""}
+                  onChange={(e) => setEditingAppointment({ ...editingAppointment, remarks: e.target.value })}
+                  placeholder="Enter remarks for release monitoring..."
+                  className="min-h-[80px]"
                 />
               </div>
             </div>

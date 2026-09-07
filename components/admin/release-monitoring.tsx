@@ -171,7 +171,7 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                         r.vehicle_model,
                         r.vehicle_year?.toString(),
                         r.estimate_number,
-                        r.paul_notes,
+                        r.remarks || r.paul_notes,
                         r.current_repair_part
                     ].some(field => normalizeString(field || "").includes(normToken))
                 })
@@ -1104,10 +1104,10 @@ export function ReleaseMonitoring({ records, onUpdate }: { records: any[], onUpd
                                                 />
                                             ) : (releaseDateStr)}
                                         </td>
-                                        <td className="p-2 border border-border text-left truncate max-w-[120px]" title={r.paul_notes || ""}>
+                                        <td className="p-2 border border-border text-left truncate max-w-[120px]" title={currentVal("remarks") || r.remarks || ""}>
                                             {isEditing ? (
-                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("paul_notes")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), paul_notes: e.target.value } }))} />
-                                            ) : (r.paul_notes || "")}
+                                                <Input className="h-5 px-0 text-[9px] w-full min-w-[30px] bg-transparent border-0 border-b border-primary/30 rounded-none shadow-none focus-visible:ring-0" value={currentVal("remarks")} onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), remarks: e.target.value } }))} />
+                                            ) : (r.remarks || "")}
                                         </td>
                                         <td className="p-2 border border-border text-center no-print">
                                             {(() => {

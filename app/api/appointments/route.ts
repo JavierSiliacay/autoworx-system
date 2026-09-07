@@ -231,6 +231,7 @@ export async function POST(request: Request) {
         insurance: body.insurance || null,
         service_advisor: body.serviceAdvisor || null,
         estimate_number: estimateNumber,
+        remarks: body.remarks || null,
         status: "pending",
         is_backjob: body.isBackJob || false,
         is_synced: body.isSynced || false,
@@ -348,6 +349,7 @@ export async function PUT(request: Request) {
   if (updates.damageImages !== undefined) dbUpdates.damage_images = updates.damageImages
   if (updates.insurance !== undefined) dbUpdates.insurance = updates.insurance
   if (updates.paulNotes !== undefined || updates.paul_notes !== undefined) dbUpdates.paul_notes = updates.paulNotes ?? updates.paul_notes
+  if (updates.remarks !== undefined) dbUpdates.remarks = updates.remarks
   if (updates.orcrImage !== undefined || updates.orcr_image !== undefined) dbUpdates.orcr_image = updates.orcrImage ?? updates.orcr_image
   if (updates.orcrImage2 !== undefined || updates.orcr_image_2 !== undefined) dbUpdates.orcr_image_2 = updates.orcrImage2 ?? updates.orcr_image_2
   if (updates.serviceAdvisor !== undefined) dbUpdates.service_advisor = updates.serviceAdvisor

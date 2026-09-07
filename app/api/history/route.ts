@@ -64,6 +64,7 @@ export async function PUT(request: Request) {
     if (updates.loaAttachments !== undefined) dbUpdates.loa_attachments = updates.loaAttachments
     if (updates.paulNotes !== undefined) dbUpdates.paul_notes = updates.paulNotes
     if (updates.paul_notes !== undefined) dbUpdates.paul_notes = updates.paul_notes
+    if (updates.remarks !== undefined) dbUpdates.remarks = updates.remarks
     if (updates.currentRepairPart !== undefined) dbUpdates.current_repair_part = updates.currentRepairPart
     if (updates.current_repair_part !== undefined) dbUpdates.current_repair_part = updates.current_repair_part
     if (updates.repairStatus !== undefined) dbUpdates.repair_status = updates.repairStatus
@@ -183,7 +184,8 @@ export async function POST(request: Request) {
       vehicle_plate: manualData.vehicle_plate,
       vehicle_color: manualData.vehicle_color || "",
       insurance: manualData.insurance,
-      paul_notes: manualData.paul_notes || manualData.remarks,
+      paul_notes: manualData.paul_notes || null,
+      remarks: manualData.remarks || null,
       costing: manualData.costing,
       service: manualData.service || "Manual Entry",
       final_status: "completed",
@@ -252,6 +254,7 @@ export async function POST(request: Request) {
     insurance: appointment.insurance || null,
     estimate_number: appointment.estimate_number || null,
     paul_notes: appointment.paul_notes || null,
+    remarks: appointment.remarks || null,
     service_advisor: appointment.service_advisor || null,
     loa_attachment: appointment.loa_attachment || null,
     loa_attachment_2: appointment.loa_attachment_2 || null,
@@ -414,6 +417,7 @@ export async function PATCH(request: Request) {
       insurance: record.insurance,
       estimate_number: record.estimate_number,
       paul_notes: record.paul_notes,
+      remarks: record.remarks || null,
       loa_attachment: record.loa_attachment,
       loa_attachment_2: record.loa_attachment_2,
       loa_attachments: record.loa_attachments,

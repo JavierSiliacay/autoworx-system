@@ -955,7 +955,7 @@ export function generateReleaseMonitoringDoc(records: any[], monthLabel: string,
         ${isSales ? `<td style="color: #d97706; font-weight: bold;">${formattedTargetDate}</td>` : ""}
         <td>${ageDaysText}</td>
         <td>${ageMonthsText}</td>
-        <td class="text-left">${r.paul_notes || r.paulNotes || r.remarks || ""}</td>
+        <td class="text-left">${r.remarks || r.paul_notes || r.paulNotes || ""}</td>
       </tr>
     `;
   }).join("");

@@ -180,7 +180,7 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                         r.vehicle_model || r.vehicleModel,
                         r.vehicle_year?.toString() || r.vehicleYear?.toString(),
                         r.estimate_number || r.estimateNumber,
-                        r.paul_notes || r.paulNotes,
+                        r.remarks || r.paul_notes || r.paulNotes,
                         r.current_repair_part || r.currentRepairPart,
                         r.trackingCode || r.tracking_code
                     ].some(field => normalizeString(field || "").includes(normToken))
@@ -1218,14 +1218,14 @@ export function SalesMonitoring({ records, onUpdate }: { records: any[], onUpdat
                                         <td className="p-1 border border-border text-center font-mono text-[9px]">
                                             {ageMonths}m
                                         </td>
-                                        <td className={`p-1 border border-border text-left ${!isEditing ? "truncate max-w-[110px]" : "min-w-[200px]"}`} title={r.paul_notes || r.paulNotes || r.remarks || ""}>
+                                        <td className={`p-1 border border-border text-left ${!isEditing ? "truncate max-w-[110px]" : "min-w-[200px]"}`} title={currentVal("remarks") || r.remarks || ""}>
                                             {isEditing ? (
                                                 <Input 
                                                     className="h-6 text-[10px] px-1 w-full" 
-                                                    value={currentVal("paul_notes")} 
-                                                    onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), paul_notes: e.target.value } }))} 
+                                                    value={currentVal("remarks")} 
+                                                    onChange={(e) => setEditedData(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), remarks: e.target.value } }))} 
                                                 />
-                                            ) : (r.paul_notes || r.paulNotes || r.remarks)}
+                                            ) : (r.remarks || r.paul_notes || r.paulNotes || "")}
                                         </td>
                                         <td className="p-1 border border-border text-center no-print">
                                             {r.archived_reason === "Manual Entry" ? (
