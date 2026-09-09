@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react"
 import {
 Search, Plus, Loader2, Edit, Trash2, Calendar as CalendarIcon, FileDown, ListChecks,
-RefreshCw, Check, X, Printer, ChevronsUpDown, FileText
+RefreshCw, Check, X, Printer, ChevronsUpDown, FileText, AlertTriangle, CheckCircle2,
+RotateCcw, Clock, History
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -19,6 +20,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { useSession } from "next-auth/react"
+import { isDeveloperEmail } from "@/lib/auth"
+
+export interface ExpensePrintRecord {
+  id: string
+  created_at: string
+  printed_by: string
+  report_period: string
+  period_value: string
+  period_label: string
+  view_mode: "detailed" | "summary"
+  category_filter: string
+  payment_filter: string
+  total_amount: number
+  records_count: number
+  snapshot_data: Expense[] | null
+  reprint_count: number
+  last_reprinted_at?: string | null
+}
 
 interface Expense {
 id: string
@@ -128,6 +148,16 @@ const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
 const [viewingExpense, setViewingExpense] = useState<Expense | null>(null)
 const [summaryCategoryModal, setSummaryCategoryModal] = useState<string | null>(null)
+
+// Print History & Pre-Print State
+  const { data: session } = useSession()
+  const isDev = isDeveloperEmail(session?.user?.email)
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
+  const [printHistory, setPrintHistory] = useState<ExpensePrintRecord[]>([])
+  const [isLoadingPrintHistory, setIsLoadingPrintHistory] = useState(false)
+  const [reprintingRecord, setReprintingRecord] = useState<ExpensePrintRecord | null>(null)
+  const [isLoggingPrint, setIsLoggingPrint] = useState(false)
+  const [deletingPrintId, setDeletingPrintId] = useState<string | null>(null)
 
 // Form State
 const [formData, setFormData] = useState({
@@ -472,60 +502,195 @@ toast({ title: "Error", description: "Failed to delete expense.", variant: "dest
 }
 }
 
-const categorySummaries = useMemo(() => {
-  const map: Record<string, { cash: number; cheque: number; po: number; online: number; total: number; descriptions: string[]; remarks: string[] }> = {}
+  const currentPeriodValue = useMemo(() => {
+    return reportPeriod === 'daily'
+      ? selectedDay
+      : reportPeriod === 'weekly'
+        ? selectedWeek
+        : reportPeriod === 'monthly'
+          ? selectedMonth
+          : reportPeriod === 'yearly'
+            ? selectedYear
+            : 'all'
+  }, [reportPeriod, selectedDay, selectedWeek, selectedMonth, selectedYear])
 
-  CATEGORIES.forEach(cat => {
-    map[cat] = { cash: 0, cheque: 0, po: 0, online: 0, total: 0, descriptions: [], remarks: [] }
-  })
-
-  filteredExpenses.forEach(exp => {
-    const rawCat = (exp.category || "").trim().toUpperCase()
-    const catKey = CATEGORIES.includes(rawCat) ? rawCat : "CUSTOM"
-    if (!map[catKey]) {
-      map[catKey] = { cash: 0, cheque: 0, po: 0, online: 0, total: 0, descriptions: [], remarks: [] }
+  const currentPeriodLabel = useMemo(() => {
+    try {
+      return reportPeriod === 'daily'
+        ? format(parseISO(selectedDay), "MMMM d, yyyy")
+        : reportPeriod === 'weekly'
+          ? formatWeekRange(selectedWeek)
+          : reportPeriod === 'monthly'
+            ? format(parseISO(selectedMonth + '-01'), "MMMM yyyy")
+            : (selectedYear === 'all' ? 'All Time' : `Year ${selectedYear}`)
+    } catch {
+      return selectedDay || selectedMonth || selectedYear || "Current Period"
     }
+  }, [reportPeriod, selectedDay, selectedWeek, selectedMonth, selectedYear])
 
-    const payType = (exp.type_of_payment || "").trim().toLowerCase()
-    if (payType.includes("cheque") || payType.includes("check")) {
-      map[catKey].cheque += exp.total_amount
-    } else if (payType.includes("po") || payType.includes("p.o") || payType.includes("purchase order")) {
-      map[catKey].po += exp.total_amount
-    } else if (payType.includes("online")) {
-      map[catKey].online += exp.total_amount
-    } else {
-      map[catKey].cash += exp.total_amount
-    }
-    map[catKey].total += exp.total_amount
-
-    if (exp.description && exp.description.trim()) {
-      if (!map[catKey].descriptions.includes(exp.description.trim())) {
-        map[catKey].descriptions.push(exp.description.trim())
+  const handleOpenPrintModal = async () => {
+    setIsPrintModalOpen(true)
+    setIsLoadingPrintHistory(true)
+    try {
+      const res = await fetch(`/api/expenses/print-history?report_period=${reportPeriod}&period_value=${currentPeriodValue}`)
+      if (res.ok) {
+        const data = await res.json()
+        setPrintHistory(data)
       }
+    } catch (err) {
+      console.error("Failed to fetch print history", err)
+    } finally {
+      setIsLoadingPrintHistory(false)
     }
+  }
 
-    if (exp.remarks && exp.remarks.trim()) {
-      if (!map[catKey].remarks.includes(exp.remarks.trim())) {
-        map[catKey].remarks.push(exp.remarks.trim())
+  const handlePrintFresh = async () => {
+    setIsLoggingPrint(true)
+    try {
+      await fetch("/api/expenses/print-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          report_period: reportPeriod,
+          period_value: currentPeriodValue,
+          period_label: currentPeriodLabel,
+          view_mode: viewMode,
+          category_filter: categoryFilter,
+          payment_filter: paymentFilter,
+          total_amount: totalFilteredAmount,
+          records_count: filteredExpenses.length,
+          snapshot_data: filteredExpenses
+        })
+      })
+
+      setReprintingRecord(null)
+      setIsPrintModalOpen(false)
+
+      setTimeout(() => {
+        window.print()
+      }, 150)
+    } catch (err) {
+      console.error("Error logging print:", err)
+      setIsPrintModalOpen(false)
+      window.print()
+    } finally {
+      setIsLoggingPrint(false)
+    }
+  }
+
+  const handleReprintSnapshot = async (record: ExpensePrintRecord) => {
+    setIsLoggingPrint(true)
+    try {
+      await fetch("/api/expenses/print-history", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: record.id })
+      })
+
+      setReprintingRecord(record)
+      setIsPrintModalOpen(false)
+
+      setTimeout(() => {
+        window.print()
+        setTimeout(() => {
+          setReprintingRecord(null)
+        }, 1500)
+      }, 200)
+    } catch (err) {
+      console.error("Reprint error:", err)
+    } finally {
+      setIsLoggingPrint(false)
+    }
+  }
+
+  const handleDeletePrintLog = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this test print record?")) return
+    setDeletingPrintId(id)
+    try {
+      const res = await fetch(`/api/expenses/print-history?id=${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete print log")
+      setPrintHistory(prev => prev.filter(p => p.id !== id))
+      toast({
+        title: "Deleted",
+        description: "Test print record removed."
+      })
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.message || "Failed to delete log",
+        variant: "destructive"
+      })
+    } finally {
+      setDeletingPrintId(null)
+    }
+  }
+
+  const displayedExpenses = useMemo(() => {
+    if (reprintingRecord?.snapshot_data && Array.isArray(reprintingRecord.snapshot_data)) {
+      return reprintingRecord.snapshot_data
+    }
+    return filteredExpenses
+  }, [reprintingRecord, filteredExpenses])
+
+  const categorySummaries = useMemo(() => {
+    const map: Record<string, { cash: number; cheque: number; po: number; online: number; total: number; descriptions: string[]; remarks: string[] }> = {}
+
+    CATEGORIES.forEach(cat => {
+      map[cat] = { cash: 0, cheque: 0, po: 0, online: 0, total: 0, descriptions: [], remarks: [] }
+    })
+
+    displayedExpenses.forEach(exp => {
+      const rawCat = (exp.category || "").trim().toUpperCase()
+      const catKey = CATEGORIES.includes(rawCat) ? rawCat : "CUSTOM"
+      if (!map[catKey]) {
+        map[catKey] = { cash: 0, cheque: 0, po: 0, online: 0, total: 0, descriptions: [], remarks: [] }
       }
+
+      const payType = (exp.type_of_payment || "").trim().toLowerCase()
+      if (payType.includes("cheque") || payType.includes("check")) {
+        map[catKey].cheque += exp.total_amount
+      } else if (payType.includes("po") || payType.includes("p.o") || payType.includes("purchase order")) {
+        map[catKey].po += exp.total_amount
+      } else if (payType.includes("online")) {
+        map[catKey].online += exp.total_amount
+      } else {
+        map[catKey].cash += exp.total_amount
+      }
+      map[catKey].total += exp.total_amount
+
+      if (exp.description && exp.description.trim()) {
+        if (!map[catKey].descriptions.includes(exp.description.trim())) {
+          map[catKey].descriptions.push(exp.description.trim())
+        }
+      }
+
+      if (catKey !== "SHOP PARTS AND GOODS" && exp.remarks && exp.remarks.trim()) {
+        if (!map[catKey].remarks.includes(exp.remarks.trim())) {
+          map[catKey].remarks.push(exp.remarks.trim())
+        }
+      }
+    })
+
+    return map
+  }, [displayedExpenses])
+
+  const modalCategoryExpenses = useMemo(() => {
+    if (!summaryCategoryModal) return []
+    return displayedExpenses.filter(exp => {
+      const rawCat = (exp.category || "").trim().toUpperCase()
+      if (summaryCategoryModal === "CUSTOM") {
+        return !CATEGORIES.filter(c => c !== "CUSTOM").includes(rawCat)
+      }
+      return rawCat === summaryCategoryModal
+    })
+  }, [displayedExpenses, summaryCategoryModal])
+
+  const totalFilteredAmount = useMemo(() => {
+    if (reprintingRecord) {
+      return Number(reprintingRecord.total_amount) || 0
     }
-  })
-
-  return map
-}, [filteredExpenses])
-
-const modalCategoryExpenses = useMemo(() => {
-  if (!summaryCategoryModal) return []
-  return filteredExpenses.filter(exp => {
-    const rawCat = (exp.category || "").trim().toUpperCase()
-    if (summaryCategoryModal === "CUSTOM") {
-      return !CATEGORIES.filter(c => c !== "CUSTOM").includes(rawCat)
-    }
-    return rawCat === summaryCategoryModal
-  })
-}, [filteredExpenses, summaryCategoryModal])
-
-const totalFilteredAmount = filteredExpenses.reduce((acc, curr) => acc + curr.total_amount, 0)
+    return filteredExpenses.reduce((acc, curr) => acc + curr.total_amount, 0)
+  }, [reprintingRecord, filteredExpenses])
 
 return (
 // FORCED LIGHT MODE WRAPPER
@@ -600,7 +765,7 @@ return (
 <Button onClick={fetchExpenses} variant="outline" size="icon" className="!bg-white !border-gray-300 !text-gray-700 hover:bg-gray-100">
 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
 </Button>
-<Button onClick={() => window.print()} variant="outline" className="!bg-white !border-gray-300 !text-gray-700 hover:bg-gray-100">
+<Button onClick={handleOpenPrintModal} variant="outline" className="!bg-white !border-gray-300 !text-gray-700 hover:bg-gray-100">
 <Printer className="h-4 w-4 mr-2" /> Print Report
 </Button>
 
@@ -758,14 +923,14 @@ setSelectedMonth(`${y}-${monthPart}`)
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-xl font-black uppercase tracking-tight text-black">
-              MONTHLY OVERHEAD EXPENSES REPORT SUMMARY
+              {reportPeriod === "daily" ? "DAILY OVERHEAD EXPENSES REPORT SUMMARY" : reportPeriod === "weekly" ? "WEEKLY OVERHEAD EXPENSES REPORT SUMMARY" : reportPeriod === "monthly" ? "MONTHLY OVERHEAD EXPENSES REPORT SUMMARY" : reportPeriod === "yearly" ? "YEARLY OVERHEAD EXPENSES REPORT SUMMARY" : "OVERALL OVERHEAD EXPENSES REPORT SUMMARY"}
             </h1>
             <p className="text-xs font-bold text-gray-700 uppercase mt-1">
               AS OF: <span className="text-blue-700 font-extrabold">{reportPeriod === 'daily' ? format(parseISO(selectedDay), "MMMM d, yyyy") : reportPeriod === 'weekly' ? formatWeekRange(selectedWeek) : reportPeriod === 'monthly' ? format(parseISO(selectedMonth + '-01'), "MMMM yyyy") : (selectedYear === 'all' ? 'All Time' : selectedYear)}</span>
             </p>
           </div>
           <div className="text-right text-xs text-gray-600 font-semibold">
-            <p>Autoworx Repair & General Mdse.</p>
+            <p className="text-blue-700 font-bold">Autoworx Repair & General Mdse.</p>
             <p className="text-[10px] text-gray-500">Date Printed: {format(new Date(), "PPpp")}</p>
           </div>
         </div>
@@ -828,7 +993,7 @@ setSelectedMonth(`${y}-${monthPart}`)
                     {data.total > 0 ? `₱${data.total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
                   </td>
                   <td className="border border-gray-300 px-3 py-1.5 text-[10px] text-gray-600 italic">
-                    {data.remarks.length > 0 ? data.remarks.join("; ") : ""}
+                    {cat === "SHOP PARTS AND GOODS" ? "" : (data.remarks.length > 0 ? data.remarks.join("; ") : "")}
                   </td>
                 </tr>
               )
@@ -915,7 +1080,7 @@ setSelectedMonth(`${y}-${monthPart}`)
 {isSelectMode && (
 <th scope="col" className="px-4 py-3 whitespace-nowrap print:hidden w-12">
   <Checkbox 
-    checked={filteredExpenses.length > 0 && selectedExpenses.length === filteredExpenses.length}
+    checked={displayedExpenses.length > 0 && selectedExpenses.length === displayedExpenses.length}
     onCheckedChange={toggleSelectAll}
     aria-label="Select all"
   />
@@ -944,7 +1109,7 @@ setSelectedMonth(`${y}-${monthPart}`)
 Loading expenses...
 </td>
 </tr>
-) : filteredExpenses.length === 0 ? (
+) : displayedExpenses.length === 0 ? (
 <tr>
 <td colSpan={isSelectMode ? 14 : 13} className="px-4 py-12 text-center !text-gray-500">
 {reportPeriod === 'monthly' ? `There's no records of expenses in this month of ${  [
@@ -955,7 +1120,7 @@ Loading expenses...
 </td>
 </tr>
 ) : (
-filteredExpenses.map((expense, index) => (
+displayedExpenses.map((expense, index) => (
 <tr key={expense.id} className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors group cursor-pointer" onClick={() => !isSelectMode && setViewingExpense(expense)}>
 {isSelectMode && (
 <td className="px-3 py-2 print:hidden w-10" onClick={(e) => e.stopPropagation()}>
@@ -1546,6 +1711,247 @@ className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Close Breakdown
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pre-Print Modal with Print History & Change Detection */}
+      <Dialog open={isPrintModalOpen} onOpenChange={setIsPrintModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 !bg-white !border-gray-200 shadow-2xl">
+          <div className="p-6 border-b border-gray-100 bg-slate-50/70">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold shadow-sm">
+                  <Printer className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold text-gray-900">
+                    Print Expenses Report
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-gray-500 mt-0.5">
+                    Review printing history and confirm report details before sending to printer
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {isLoadingPrintHistory ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <p className="text-sm font-medium text-gray-500">Checking print history for this period...</p>
+              </div>
+            ) : (
+              <>
+                {/* Print Status Banner */}
+                {printHistory.length > 0 ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 space-y-2">
+                    <div className="flex items-start gap-3">
+                      <div className="p-1 rounded-full bg-amber-200 text-amber-800 mt-0.5">
+                        <AlertTriangle className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-bold text-amber-900">
+                          Notice: This period was already printed {printHistory.length} time{printHistory.length > 1 ? "s" : ""}
+                        </h4>
+                        <p className="text-xs text-amber-800 mt-0.5">
+                          Last printed by <strong className="font-semibold">{printHistory[0].printed_by}</strong> on{" "}
+                          {format(parseISO(printHistory[0].created_at), "MMMM d, yyyy 'at' h:mm a")}.
+                        </p>
+
+                        {/* Change Detection Comparison */}
+                        <div className="mt-2.5 pt-2.5 border-t border-amber-200/70 text-xs">
+                          {Number(printHistory[0].total_amount) !== totalFilteredAmount || printHistory[0].records_count !== filteredExpenses.length ? (
+                            <div className="flex items-start gap-1.5 text-amber-900 font-medium">
+                              <span className="shrink-0">⚠️</span>
+                              <span>
+                                <strong>Database changed since last print:</strong> Current live data has{" "}
+                                <span className="underline font-bold">{filteredExpenses.length} items</span> totaling{" "}
+                                <span className="underline font-bold">₱{totalFilteredAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span> (was {printHistory[0].records_count} items totaling ₱{Number(printHistory[0].total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}).
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-emerald-800 font-medium">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                              <span>Current database matches the last printed copy ({filteredExpenses.length} items totaling ₱{totalFilteredAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}).</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-1 rounded-full bg-emerald-200 text-emerald-800 mt-0.5">
+                        <CheckCircle2 className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-emerald-900">
+                          First Time Printing For This Period
+                        </h4>
+                        <p className="text-xs text-emerald-700 mt-0.5">
+                          No previous printouts recorded for <strong className="font-semibold">{currentPeriodLabel}</strong>. Printing now will create the initial official record in the audit history.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Current Report Details Card */}
+                <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-gray-200/80 pb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Report To Be Printed
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700 uppercase">
+                      {viewMode} Mode
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <span className="text-gray-400 block">Period:</span>
+                      <strong className="text-gray-800 font-semibold">{currentPeriodLabel}</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block">Category:</span>
+                      <strong className="text-gray-800 font-semibold truncate block">
+                        {categoryFilter === "all" ? "All Categories" : categoryFilter}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block">Payment:</span>
+                      <strong className="text-gray-800 font-semibold">
+                        {paymentFilter === "all" ? "All Types" : paymentFilter.toUpperCase()}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block">Total Records:</span>
+                      <strong className="text-gray-800 font-semibold">{filteredExpenses.length} entries</strong>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-200/80 flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700">Total Filtered Amount:</span>
+                    <span className="text-base font-extrabold font-mono text-blue-700">
+                      ₱{totalFilteredAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Previous Print History List */}
+                {printHistory.length > 0 && (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700">
+                      <History className="h-3.5 w-3.5 text-gray-500" />
+                      <span>Past Print History for {currentPeriodLabel}</span>
+                    </div>
+
+                    <div className="max-h-52 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white shadow-sm">
+                      {printHistory.map((rec, index) => (
+                        <div key={rec.id} className="p-3 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3 text-xs">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900">
+                                {format(parseISO(rec.created_at), "MMM d, yyyy h:mm a")}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700">
+                                by {rec.printed_by}
+                              </span>
+                              {rec.reprint_count > 0 && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800">
+                                  Reprinted {rec.reprint_count}x
+                                </span>
+                              )}
+                              {index === 0 && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                  Latest
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-gray-500 flex items-center gap-3">
+                              <span>Mode: <strong className="text-gray-700 capitalize">{rec.view_mode}</strong></span>
+                              <span>•</span>
+                              <span>Records: <strong className="text-gray-700">{rec.records_count}</strong></span>
+                              <span>•</span>
+                              <span>Total: <strong className="font-mono text-gray-800">₱{Number(rec.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong></span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleReprintSnapshot(rec)}
+                              disabled={isLoggingPrint || !rec.snapshot_data}
+                              className="h-7 text-xs font-semibold !bg-white !border-gray-200 !text-gray-700 hover:!bg-amber-50 hover:!text-amber-800 hover:!border-amber-300 gap-1 shadow-xs"
+                              title="Reprint the exact snapshot of expenses as they were when this copy was printed"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              Reprint Copy
+                            </Button>
+                            {isDev && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeletePrintLog(rec.id)}
+                                disabled={deletingPrintId === rec.id}
+                                className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                title="Delete this test print record (Developer only)"
+                              >
+                                {deletingPrintId === rec.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-gray-400 italic">
+                      ℹ️ "Reprint Copy" will print the exact historical snapshot captured at that time, marked with an official Reprint badge.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsPrintModalOpen(false)}
+              disabled={isLoggingPrint}
+              className="!bg-white !border-gray-300 !text-gray-700 hover:!bg-gray-100 !shadow-sm font-medium"
+            >
+              Cancel
+            </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handlePrintFresh}
+                disabled={isLoggingPrint || isLoadingPrintHistory}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold gap-2 shadow-sm"
+              >
+                {isLoggingPrint ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Preparing Print...
+                  </>
+                ) : (
+                  <>
+                    <Printer className="h-4 w-4" />
+                    {printHistory.length > 0 ? "Print Fresh Report (Log New Copy)" : "Print Report"}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
