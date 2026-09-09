@@ -136,7 +136,21 @@ export async function PUT(request: Request) {
       const statusUpper = body.status.toUpperCase()
       updatePayload.status = statusUpper
       if (statusUpper === "PAID") {
-        updatePayload.paid_at = body.paid_at || new Date().toISOString()
+        if (body.paid_at) {
+          updatePayload.paid_at = body.paid_at.includes("T")
+            ? body.paid_at
+            : new Date(`${body.paid_at}T12:00:00`).toISOString()
+        } else {
+          updatePayload.paid_at = new Date().toISOString()
+        }
+      } else {
+        updatePayload.paid_at = null
+      }
+    } else if (body.paid_at !== undefined) {
+      if (body.paid_at) {
+        updatePayload.paid_at = body.paid_at.includes("T")
+          ? body.paid_at
+          : new Date(`${body.paid_at}T12:00:00`).toISOString()
       } else {
         updatePayload.paid_at = null
       }

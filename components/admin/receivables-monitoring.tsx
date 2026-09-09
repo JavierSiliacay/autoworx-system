@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
 
 export interface Receivable {
@@ -25,6 +25,17 @@ export interface Receivable {
   paid_at?: string | null
   remarks?: string | null
   created_by?: string
+}
+
+const formatDateDisplay = (dateStr?: string | null) => {
+  if (!dateStr) return "—"
+  try {
+    const d = dateStr.includes("T") ? parseISO(dateStr) : parseISO(dateStr + "T00:00:00")
+    if (isNaN(d.getTime())) return dateStr
+    return format(d, "MMM d, yyyy")
+  } catch {
+    return dateStr
+  }
 }
 
 const formatAmountWithCommas = (input: string | number) => {
@@ -57,11 +68,13 @@ export function ReceivablesMonitoring() {
   const [editingReceivable, setEditingReceivable] = useState<Receivable | null>(null)
   const [receivableToDelete, setReceivableToDelete] = useState<string | null>(null)
   const [receivableToPay, setReceivableToPay] = useState<Receivable | null>(null)
+  const [paymentDate, setPaymentDate] = useState<string>(format(new Date(), "yyyy-MM-dd"))
   const [receivableToUndo, setReceivableToUndo] = useState<Receivable | null>(null)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
-  // Form State (Purely client_name, amount, and optional remarks)
+  // Form State (Date Billed, client_name, amount, and optional remarks)
   const [formData, setFormData] = useState({
+    date: format(new Date(), "yyyy-MM-dd"),
     client_name: "",
     amount: "",
     remarks: ""
@@ -98,12 +111,20 @@ export function ReceivablesMonitoring() {
         const amountNum = Number(r.amount) || 0
         const formattedAmount = amountNum.toLocaleString("en-PH", { minimumFractionDigits: 2 })
         const rawAmountStr = r.amount !== undefined && r.amount !== null ? r.amount.toString() : ""
+        const dateBilledDisplay = formatDateDisplay(r.date)
+        const datePaidDisplay = r.paid_at ? formatDateDisplay(r.paid_at) : ""
+        const rawDate = r.date || ""
+        const rawPaidAt = r.paid_at || ""
 
         const searchableFields = [
           r.client_name,
           r.remarks,
           r.status,
           r.date,
+          dateBilledDisplay,
+          datePaidDisplay,
+          rawDate,
+          rawPaidAt,
           rawAmountStr,
           formattedAmount,
           rawAmountStr.replace(/,/g, ""),
@@ -167,6 +188,7 @@ export function ReceivablesMonitoring() {
     if (recordToEdit) {
       setEditingReceivable(recordToEdit)
       setFormData({
+        date: recordToEdit.date ? recordToEdit.date.split("T")[0] : format(new Date(), "yyyy-MM-dd"),
         client_name: recordToEdit.client_name,
         amount: recordToEdit.amount !== undefined && recordToEdit.amount !== null
           ? formatAmountWithCommas(recordToEdit.amount.toString())
@@ -176,6 +198,7 @@ export function ReceivablesMonitoring() {
     } else {
       setEditingReceivable(null)
       setFormData({
+        date: format(new Date(), "yyyy-MM-dd"),
         client_name: "",
         amount: "",
         remarks: ""
@@ -204,6 +227,7 @@ export function ReceivablesMonitoring() {
       const method = isEdit ? "PUT" : "POST"
       const payload = {
         ...(isEdit && { id: editingReceivable.id }),
+        date: formData.date || format(new Date(), "yyyy-MM-dd"),
         client_name: formData.client_name.trim().toUpperCase(),
         amount: rawAmount,
         remarks: formData.remarks.trim() || null
@@ -238,16 +262,19 @@ export function ReceivablesMonitoring() {
     }
   }
 
-  const toggleStatus = async (record: Receivable) => {
-    const newStatus = record.status === "PENDING" ? "PAID" : "PENDING"
+  const handleMarkAsPaid = async (record: Receivable, selectedPaidDate: string) => {
     try {
+      const paidTimestamp = selectedPaidDate
+        ? new Date(`${selectedPaidDate}T12:00:00`).toISOString()
+        : new Date().toISOString()
+
       const res = await fetch("/api/receivables", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: record.id,
-          status: newStatus,
-          paid_at: newStatus === "PAID" ? new Date().toISOString() : null
+          status: "PAID",
+          paid_at: paidTimestamp
         })
       })
 
@@ -256,8 +283,33 @@ export function ReceivablesMonitoring() {
       const updated = await res.json()
       setReceivables(prev => prev.map(r => r.id === updated.id ? updated : r))
       toast({
-        title: newStatus === "PAID" ? "Marked as Paid" : "Reverted to Pending",
-        description: `${record.client_name} is now marked as ${newStatus}.`
+        title: "Marked as Paid",
+        description: `${record.client_name} is now marked as PAID on ${formatDateDisplay(paidTimestamp)}.`
+      })
+    } catch (err: any) {
+      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" })
+    }
+  }
+
+  const handleRevertToPending = async (record: Receivable) => {
+    try {
+      const res = await fetch("/api/receivables", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: record.id,
+          status: "PENDING",
+          paid_at: null
+        })
+      })
+
+      if (!res.ok) throw new Error("Failed to revert status")
+
+      const updated = await res.json()
+      setReceivables(prev => prev.map(r => r.id === updated.id ? updated : r))
+      toast({
+        title: "Reverted to Pending",
+        description: `${record.client_name} is now marked as PENDING.`
       })
     } catch (err: any) {
       toast({ title: "Error", description: "Failed to update status.", variant: "destructive" })
@@ -576,10 +628,12 @@ export function ReceivablesMonitoring() {
               <table className="w-full text-xs text-left border-collapse border !border-gray-300 print:!border-gray-400 print:text-[10.5px] print:[&_th]:border print:[&_th]:!border-gray-400 print:[&_td]:border print:[&_td]:!border-gray-300">
                 <thead>
                   <tr className="!bg-gray-100/90 !text-gray-700 font-bold border-b-2 !border-gray-300 print:!border-gray-400 select-none uppercase tracking-wider text-[10px] print:text-[10px] print:!bg-gray-100" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
-                    <th className="py-3 px-3 w-12 text-center print:w-8 print:py-1.5 print:px-2">#</th>
-                    <th className="py-3 px-4 print:py-1.5 print:px-3 print:w-48">Client Name</th>
-                    <th className="py-3 px-4 text-right w-40 print:w-32 print:py-1.5 print:px-3">Amount</th>
-                    <th className="py-3 px-3 text-center w-32 print:w-24 print:py-1.5 print:px-2">Status</th>
+                    <th className="py-3 px-3 w-10 text-center print:w-7 print:py-1.5 print:px-1">#</th>
+                    <th className="py-3 px-3.5 w-28 print:w-22 print:py-1.5 print:px-2">Date Billed</th>
+                    <th className="py-3 px-4 print:py-1.5 print:px-3">Client Name</th>
+                    <th className="py-3 px-4 text-right w-36 print:w-28 print:py-1.5 print:px-2.5">Amount</th>
+                    <th className="py-3 px-3 text-center w-28 print:w-20 print:py-1.5 print:px-2">Status</th>
+                    <th className="py-3 px-3.5 text-center w-28 print:w-22 print:py-1.5 print:px-2">Date Paid</th>
                     <th className="py-3 px-4 print:py-1.5 print:px-3">Remarks</th>
                     <th className="py-3 px-3 text-center w-36 print:hidden">Actions</th>
                   </tr>
@@ -587,14 +641,14 @@ export function ReceivablesMonitoring() {
                 <tbody className="divide-y !divide-gray-200 print:divide-gray-300">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-gray-500">
+                      <td colSpan={8} className="py-12 text-center text-gray-500">
                         <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-600 mb-2" />
                         Loading account receivables...
                       </td>
                     </tr>
                   ) : filteredReceivables.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-gray-500 print:py-8">
+                      <td colSpan={8} className="py-12 text-center text-gray-500 print:py-8">
                         <span className="print:hidden">
                           <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                           No receivables found. Click <strong>&quot;Add Receivable&quot;</strong> to record one.
@@ -615,30 +669,42 @@ export function ReceivablesMonitoring() {
                             isPaid ? "bg-emerald-50/20 print:!bg-transparent" : "print:!bg-transparent"
                           )}
                         >
-                          <td className="py-2.5 px-3 text-center text-gray-500 font-mono text-[10px] print:py-1.5 print:px-2 print:text-[10px]">
+                          <td className="py-2.5 px-3 text-center text-gray-500 font-mono text-[10px] print:py-1.5 print:px-1 print:text-[10px]">
                             {idx + 1}
+                          </td>
+                          <td className="py-2.5 px-3.5 text-gray-700 font-medium text-xs print:text-[10px] print:py-1.5 print:px-2 whitespace-nowrap">
+                            {formatDateDisplay(item.date)}
                           </td>
                           <td className="py-2.5 px-4 font-bold text-gray-900 text-sm print:text-[10.5px] print:py-1.5 print:px-3 uppercase print:leading-normal">
                             {item.client_name}
                           </td>
-                          <td className="py-2.5 px-4 text-right font-mono font-bold text-gray-900 text-sm print:text-[10.5px] print:py-1.5 print:px-3 print:leading-normal">
+                          <td className="py-2.5 px-4 text-right font-mono font-bold text-gray-900 text-sm print:text-[10.5px] print:py-1.5 print:px-2.5 print:leading-normal">
                             ₱{Number(item.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td className="py-2.5 px-3 text-center print:py-1.5 print:px-2">
                             {isPaid ? (
                               <span
-                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 print-status-paid print:text-[9px] print:py-0.5 print:px-2"
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 print-status-paid print:text-[9px] print:py-0.5 print:px-1.5"
                                 style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
                               >
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600 print:hidden" /> PAID
                               </span>
                             ) : (
                               <span
-                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 print-status-pending print:text-[9px] print:py-0.5 print:px-2"
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 print-status-pending print:text-[9px] print:py-0.5 print:px-1.5"
                                 style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
                               >
                                 <Clock className="w-3 h-3 text-amber-600 print:hidden" /> PENDING
                               </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3.5 text-center text-xs print:text-[10px] print:py-1.5 print:px-2 whitespace-nowrap">
+                            {isPaid && item.paid_at ? (
+                              <span className="font-semibold text-emerald-700 print-text-green">
+                                {formatDateDisplay(item.paid_at)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 font-mono">—</span>
                             )}
                           </td>
                           <td className="py-2.5 px-4 text-gray-600 italic text-[11px] print:py-1.5 print:px-3 print:text-[9.5px] print:leading-normal">
@@ -655,6 +721,7 @@ export function ReceivablesMonitoring() {
                                     setReceivableToUndo(item)
                                   } else {
                                     setReceivableToPay(item)
+                                    setPaymentDate(format(new Date(), "yyyy-MM-dd"))
                                   }
                                 }}
                                 className={cn(
@@ -708,13 +775,13 @@ export function ReceivablesMonitoring() {
                   <tfoot>
                     {/* Table Totals Row */}
                     <tr className="bg-gray-100 font-bold border-t-2 !border-gray-400 print:!border-black text-gray-900 print:!bg-gray-200 break-inside-avoid [page-break-inside:avoid]" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
-                      <td colSpan={2} className="py-3 px-4 text-right uppercase text-[11px] tracking-wider print:py-2.5 print:px-3 print:text-[10.5px] print:text-black print:font-black">
+                      <td colSpan={3} className="py-3 px-4 text-right uppercase text-[11px] tracking-wider print:py-2.5 print:px-3 print:text-[10.5px] print:text-black print:font-black">
                         TOTAL AMOUNT:
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-black text-sm text-blue-700 print:text-black print:py-2.5 print:px-3 print:text-[10.5px] print:font-black">
                         ₱{totalReceivables.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td colSpan={2} className="py-3 px-4 text-gray-800 text-[11px] print:py-2.5 print:px-3 print:text-[10.5px] print:text-black">
+                      <td colSpan={3} className="py-3 px-4 text-gray-800 text-[11px] print:py-2.5 print:px-3 print:text-[10.5px] print:text-black">
                         <span className="text-amber-800 print-text-orange font-bold">
                           Pending: ₱{totalPending.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                         </span>
@@ -759,13 +826,28 @@ export function ReceivablesMonitoring() {
                 {editingReceivable ? "Edit Receivable" : "Add Receivable"}
               </DialogTitle>
               <DialogDescription className="text-xs text-gray-500 mt-1">
-                Input the client name and amount for this account receivable.
+                Input the billing date, client name, and amount for this account receivable.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="py-5 space-y-5">
+            <div className="py-5 space-y-4">
+              {/* Date Billed Field */}
+              <div className="space-y-1.5">
+                <Label htmlFor="date_billed" className="text-xs font-semibold text-gray-800">
+                  Date Billed <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="date_billed"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  className="h-10 !bg-white !border-gray-300 !text-gray-900 text-sm focus-visible:ring-blue-500"
+                  required
+                />
+              </div>
+
               {/* Client Name Field */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="client_name" className="text-xs font-semibold text-gray-800">
                   Client Name <span className="text-red-500">*</span>
                 </Label>
@@ -775,13 +857,12 @@ export function ReceivablesMonitoring() {
                   value={formData.client_name}
                   onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
                   className="h-10 !bg-white !border-gray-300 !text-gray-900 text-sm focus-visible:ring-blue-500"
-                  autoFocus
                   required
                 />
               </div>
 
               {/* Amount Field */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="rec_amount" className="text-xs font-semibold text-gray-800">
                   Amount (PHP) <span className="text-red-500">*</span>
                 </Label>
@@ -806,7 +887,7 @@ export function ReceivablesMonitoring() {
               </div>
 
               {/* Remarks Field (Optional) */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="rec_remarks" className="text-xs font-semibold text-gray-800">
                   Remarks / Notes <span className="text-gray-400 font-normal">(Optional)</span>
                 </Label>
@@ -850,32 +931,56 @@ export function ReceivablesMonitoring() {
               Confirm Payment
             </DialogTitle>
             <DialogDescription className="text-xs text-gray-600 pt-1">
-              Are you sure you want to mark this account receivable as <strong>PAID</strong>?
+              Specify the date payment was received and confirm to mark as <strong>PAID</strong>.
             </DialogDescription>
           </DialogHeader>
 
           {receivableToPay && (
-            <div className="my-2 p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 font-semibold uppercase text-[10px]">Client Name:</span>
-                <span className="font-bold text-gray-900 text-sm">{receivableToPay.client_name}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 font-semibold uppercase text-[10px]">Amount:</span>
-                <span className="font-mono font-black text-emerald-700 text-base">
-                  ₱{Number(receivableToPay.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-              {receivableToPay.remarks && (
-                <div className="flex justify-between items-start pt-1.5 border-t border-gray-200">
-                  <span className="text-gray-500 font-semibold uppercase text-[10px]">Remarks:</span>
-                  <span className="text-gray-700 italic max-w-[240px] text-right">{receivableToPay.remarks}</span>
+            <div className="my-2 space-y-3">
+              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-lg space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 font-semibold uppercase text-[10px]">Client Name:</span>
+                  <span className="font-bold text-gray-900 text-sm">{receivableToPay.client_name}</span>
                 </div>
-              )}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 font-semibold uppercase text-[10px]">Date Billed:</span>
+                  <span className="font-semibold text-gray-800">{formatDateDisplay(receivableToPay.date)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 font-semibold uppercase text-[10px]">Amount:</span>
+                  <span className="font-mono font-black text-emerald-700 text-base">
+                    ₱{Number(receivableToPay.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                {receivableToPay.remarks && (
+                  <div className="flex justify-between items-start pt-1.5 border-t border-gray-200">
+                    <span className="text-gray-500 font-semibold uppercase text-[10px]">Remarks:</span>
+                    <span className="text-gray-700 italic max-w-[240px] text-right">{receivableToPay.remarks}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Date Paid Input */}
+              <div className="space-y-1.5">
+                <Label htmlFor="pay_date" className="text-xs font-bold text-gray-800">
+                  Date Paid <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="pay_date"
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="h-10 !bg-white !border-gray-300 !text-gray-900 text-sm font-medium focus-visible:ring-emerald-500"
+                  required
+                />
+                <p className="text-[11px] text-gray-500">
+                  Select the date payment was cleared or collected.
+                </p>
+              </div>
             </div>
           )}
 
-          <DialogFooter className="gap-2 pt-2">
+          <DialogFooter className="gap-2 pt-2 border-t !border-gray-200">
             <Button
               type="button"
               variant="outline"
@@ -888,12 +993,12 @@ export function ReceivablesMonitoring() {
             <Button
               type="button"
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
-              disabled={isUpdatingStatus}
+              disabled={isUpdatingStatus || !paymentDate}
               onClick={async () => {
                 if (!receivableToPay) return
                 setIsUpdatingStatus(true)
                 try {
-                  await toggleStatus(receivableToPay)
+                  await handleMarkAsPaid(receivableToPay, paymentDate)
                   setReceivableToPay(null)
                 } finally {
                   setIsUpdatingStatus(false)
@@ -958,7 +1063,7 @@ export function ReceivablesMonitoring() {
                 if (!receivableToUndo) return
                 setIsUpdatingStatus(true)
                 try {
-                  await toggleStatus(receivableToUndo)
+                  await handleRevertToPending(receivableToUndo)
                   setReceivableToUndo(null)
                 } finally {
                   setIsUpdatingStatus(false)
