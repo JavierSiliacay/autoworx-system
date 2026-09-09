@@ -8,8 +8,14 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }: { token?: { email?: string | null } | null }) =>
-        isAuthorizedAdminEmail(token?.email) || isAccountingEmail(token?.email),
+      authorized: ({ req, token }) => {
+        const pathname = req.nextUrl?.pathname || ""
+        // Always allow the error page to be viewed
+        if (pathname === "/admin/error" || pathname.startsWith("/admin/error")) {
+          return true
+        }
+        return isAuthorizedAdminEmail(token?.email) || isAccountingEmail(token?.email)
+      },
     },
   }
 )

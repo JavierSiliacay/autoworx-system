@@ -1,7 +1,10 @@
 import Link from "next/link"
 
 type Props = {
-  searchParams?: {
+  searchParams?: Promise<{
+    error?: string
+    callbackUrl?: string
+  }> | {
     error?: string
     callbackUrl?: string
   }
@@ -9,56 +12,67 @@ type Props = {
 
 const ERROR_HINTS: Record<string, string> = {
   Configuration:
-    "Auth is misconfigured in production. On Vercel, set NEXTAUTH_URL, NEXTAUTH_SECRET, GOOGLE_CLIENT_ID, and GOOGLE_CLIENT_SECRET, then redeploy.",
+    "Auth is misconfigured in production. Check NEXTAUTH_URL, NEXTAUTH_SECRET, GOOGLE_CLIENT_ID, and GOOGLE_CLIENT_SECRET.",
   AccessDenied:
-    "Your Google account isn’t authorized for this admin portal (email allowlist). Try a different account.",
+    "Your Google account is not on the authorized admin email list. Please sign in using an authorized Autoworx Google account.",
   OAuthSignin: "Google sign-in failed to start. Try again or check your Google OAuth settings.",
   OAuthCallback:
-    "Google redirected back with an error. Verify the authorized redirect URI in Google Cloud Console matches this site.",
+    "Google redirected back with an error. Verify the authorized redirect URI in Google Cloud Console matches this domain.",
+  OAuthCreateAccount: "Could not create user account in the provider.",
+  EmailCreateAccount: "Could not create user account via email.",
+  Callback: "Error during authentication callback.",
+  OAuthAccountNotLinked: "This email is already associated with another account.",
+  EmailSignin: "Email sign-in failed.",
+  CredentialsSignin: "The credentials you provided are invalid.",
+  SessionRequired: "Please sign in to access this page.",
 }
 
-export default function AdminAuthErrorPage({ searchParams }: Props) {
-  const error = searchParams?.error ?? "Unknown"
-  const callbackUrl = searchParams?.callbackUrl
-  const hint = ERROR_HINTS[error]
+export default async function AdminAuthErrorPage({ searchParams }: Props) {
+  const resolvedParams = searchParams ? await searchParams : {}
+  const error = resolvedParams?.error ?? "Unknown"
+  const callbackUrl = resolvedParams?.callbackUrl
+  const hint = ERROR_HINTS[error] || "An unexpected authentication error occurred. Please try logging in again."
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-xl rounded-xl border border-border bg-card p-6">
-        <h1 className="text-xl font-semibold text-foreground">Admin sign-in error</h1>
+      <div className="w-full max-w-xl rounded-xl border border-border bg-card p-6 shadow-xl">
+        <h1 className="text-xl font-semibold text-foreground">Admin Sign-in Notice</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          NextAuth returned an error while trying to sign you in.
+          Authentication could not be completed.
         </p>
 
-        <div className="mt-4 rounded-lg bg-secondary p-4">
-          <p className="text-xs text-muted-foreground">Error</p>
-          <p className="mt-1 font-mono text-sm text-foreground break-all">{error}</p>
+        <div className="mt-4 rounded-lg bg-muted/50 p-4 border border-border">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Error Code</p>
+          <p className="mt-1 font-mono text-sm text-foreground break-all font-semibold">{error}</p>
           {callbackUrl ? (
             <>
-              <p className="mt-3 text-xs text-muted-foreground">Callback URL</p>
+              <p className="mt-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attempted Page</p>
               <p className="mt-1 font-mono text-sm text-foreground break-all">{callbackUrl}</p>
             </>
           ) : null}
         </div>
 
-        {hint ? <p className="mt-4 text-sm text-foreground">{hint}</p> : null}
+        {hint ? (
+          <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-sm">
+            {hint}
+          </div>
+        ) : null}
 
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/admin"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
           >
-            Back to Admin login
+            Back to Admin Login
           </Link>
           <Link
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground"
+            className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
           >
-            Go to homepage
+            Go to Homepage
           </Link>
         </div>
       </div>
     </div>
   )
 }
-
