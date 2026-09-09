@@ -564,6 +564,11 @@ export default function AdminDashboard() {
   const [unitPriceInputs, setUnitPriceInputs] = useState<Record<string, string>>({})
   const [otherDiscountInputs, setOtherDiscountInputs] = useState<Record<string, string>>({})
 
+  // Auto-Save Engine States & Refs
+  const [autoSaveStatus, setAutoSaveStatus] = useState<Record<string, { status: 'idle' | 'saving' | 'saved' | 'error', lastSavedAt?: string }>>({})
+  const latestCostingRef = useRef<Record<string, CostingData>>({})
+  const pendingSyncRef = useRef<Record<string, CostingData>>({})
+
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [filter, setFilter] = useState<string>("all")
   const [vehicleBrandFilter, setVehicleBrandFilter] = useState<string>("all")
@@ -792,10 +797,56 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (appointmentsData && Array.isArray(appointmentsData)) {
       const converted = (appointmentsData as AppointmentDB[]).map(dbToFrontend)
-      setAppointments(converted)
+      setAppointments(prev => {
+        if (!prev || prev.length === 0) return converted
+
+        // Merge smartly: Never overwrite in-flight local costing for expanded or recently edited cards
+        return converted.map(serverApt => {
+          const localApt = prev.find(p => p.id === serverApt.id)
+          if (!localApt) return serverApt
+
+          const isCurrentlyExpanded = expandedCards.has(serverApt.id)
+          const hasPendingSync = !!pendingSyncRef.current[serverApt.id]
+          const lastUpdate = lastStateUpdateRef.current[serverApt.id]
+          const isRecentlyEdited = lastUpdate && (Date.now() - lastUpdate < 30000) // 30s edit protection buffer
+
+          if (isCurrentlyExpanded || hasPendingSync || isRecentlyEdited) {
+            return {
+              ...serverApt,
+              costing: localApt.costing || serverApt.costing,
+              paulNotes: localApt.paulNotes !== undefined ? localApt.paulNotes : serverApt.paulNotes,
+              remarks: localApt.remarks !== undefined ? localApt.remarks : serverApt.remarks,
+            }
+          }
+          return serverApt
+        })
+      })
       setIsLoading(false)
     }
-  }, [appointmentsData])
+  }, [appointmentsData, expandedCards])
+
+  // Flush any pending auto-saves before closing/reloading the browser window
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      Object.keys(pendingSyncRef.current).forEach((id) => {
+        const costing = pendingSyncRef.current[id]
+        if (costing) {
+          try {
+            fetch("/api/appointments", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id, costing }),
+              keepalive: true
+            })
+          } catch (e) {
+            console.error("beforeunload sync failed", e)
+          }
+        }
+      })
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [])
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -1962,44 +2013,129 @@ export default function AdminDashboard() {
     }
   }
 
+  const getLatestCosting = useCallback((appointmentId: string): CostingData => {
+    if (latestCostingRef.current[appointmentId]) {
+      return latestCostingRef.current[appointmentId]
+    }
+    const appointment = appointments.find((apt) => apt.id === appointmentId)
+    return appointment?.costing || {
+      items: [],
+      subtotal: 0,
+      discount: 0,
+      discountType: "fixed" as const,
+      vatEnabled: false,
+      vatAmount: 0,
+      total: 0,
+      notes: "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  }, [appointments])
+
+  const flushCostingSave = useCallback(async (appointmentId: string) => {
+    if (costingDebounceRef.current[appointmentId]) {
+      clearTimeout(costingDebounceRef.current[appointmentId])
+      costingDebounceRef.current[appointmentId] = null
+    }
+
+    const pendingCosting = pendingSyncRef.current[appointmentId] || latestCostingRef.current[appointmentId]
+    if (!pendingCosting) return
+
+    setAutoSaveStatus(prev => ({
+      ...prev,
+      [appointmentId]: { status: 'saving' }
+    }))
+
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: appointmentId, costing: pendingCosting }),
+      })
+
+      if (!res.ok) throw new Error("Save failed")
+
+      delete pendingSyncRef.current[appointmentId]
+      setAutoSaveStatus(prev => ({
+        ...prev,
+        [appointmentId]: {
+          status: 'saved',
+          lastSavedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      }))
+    } catch (err) {
+      console.error("Flush costing save failed:", err)
+      setAutoSaveStatus(prev => ({
+        ...prev,
+        [appointmentId]: { status: 'error' }
+      }))
+    }
+  }, [])
+
   const updateCosting = (id: string, costing: CostingData, immediate = false) => {
-    // Track that we are manually updating this record
+    // 1. Update mutable tracking refs immediately
     lastStateUpdateRef.current[id] = Date.now()
 
-    const updatedCosting = {
+    const updatedCosting: CostingData = {
       ...costing,
       items: sortCostingItems(costing.items || []),
       updatedAt: new Date().toISOString(),
     }
 
-    // 1. Update local state immediately for snappy UI
+    latestCostingRef.current[id] = updatedCosting
+    pendingSyncRef.current[id] = updatedCosting
+
+    // 2. Set auto-save indicator status to Saving
+    setAutoSaveStatus((prev) => ({
+      ...prev,
+      [id]: { status: 'saving' }
+    }))
+
+    // 3. Update local state immediately for snappy UI
     setAppointments((prev) =>
       prev.map((apt) => (apt.id === id ? { ...apt, costing: updatedCosting } : apt))
     )
 
-    // 2. Synchronize with backend (Immediate or Debounced)
+    // 4. Synchronize with backend (Immediate or Debounced)
     const syncWithBackend = async () => {
       try {
-        await fetch("/api/appointments", {
+        const payloadCosting = pendingSyncRef.current[id] || updatedCosting
+        const res = await fetch("/api/appointments", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id, costing: updatedCosting }),
+          body: JSON.stringify({ id, costing: payloadCosting }),
         })
+
+        if (!res.ok) throw new Error("Database update failed")
+
+        delete pendingSyncRef.current[id]
+        setAutoSaveStatus((prev) => ({
+          ...prev,
+          [id]: {
+            status: 'saved',
+            lastSavedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        }))
       } catch (error) {
         console.error("Failed to sync costing to backend:", error)
+        setAutoSaveStatus((prev) => ({
+          ...prev,
+          [id]: { status: 'error' }
+        }))
       }
     }
 
     // Clear existing timer if any
     if (costingDebounceRef.current[id]) {
       clearTimeout(costingDebounceRef.current[id])
+      costingDebounceRef.current[id] = null
     }
 
     if (immediate) {
       syncWithBackend()
     } else {
-      // Debounce the network request by 1 second to allow smooth typing
-      costingDebounceRef.current[id] = setTimeout(syncWithBackend, 1000)
+      // Debounce network request by 600ms to allow smooth typing
+      costingDebounceRef.current[id] = setTimeout(syncWithBackend, 600)
     }
   }
 
@@ -3301,19 +3437,7 @@ export default function AdminDashboard() {
   }, [focusNewItem])
 
   const addCostItem = (appointmentId: string, type: CostItemType, category?: string, unit?: string) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    const currentCosting = appointment?.costing || {
-      items: [],
-      subtotal: 0,
-      discount: 0,
-      discountType: "fixed" as const,
-      vatEnabled: false,
-      vatAmount: 0,
-      total: 0,
-      notes: "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
+    const currentCosting = getLatestCosting(appointmentId)
 
     // Save history before adding
     setCostingHistory(prev => ({
@@ -3333,8 +3457,9 @@ export default function AdminDashboard() {
       setSelectedCategory(category);
     }
 
+    const newItemId = `item-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
     const newItem: CostItem = {
-      id: `item-${Date.now()}`,
+      id: newItemId,
       type,
       category: finalCategory,
       description: "",
@@ -3346,7 +3471,7 @@ export default function AdminDashboard() {
 
     const newCosting: CostingData = {
       ...currentCosting,
-      items: [...currentCosting.items, newItem],
+      items: [...(currentCosting.items || []), newItem],
     }
 
     updateCosting(appointmentId, newCosting, true)
@@ -3368,10 +3493,9 @@ export default function AdminDashboard() {
   }
 
   const updateCostItem = (appointmentId: string, itemId: string, updates: Partial<CostItem>, immediate = false) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
+    const currentCosting = getLatestCosting(appointmentId)
 
-    const updatedItems = appointment.costing.items.map((item) => {
+    const updatedItems = (currentCosting.items || []).map((item) => {
       if (item.id === itemId) {
         // Track category changes if needed (though UI handles global state now)
         if (updates.category) {
@@ -3388,14 +3512,14 @@ export default function AdminDashboard() {
     const subtotal = updatedItems.reduce((sum, item) => sum + item.total, 0)
     const { vatAmount, total } = calculateTotal(
       subtotal,
-      appointment.costing.discount,
-      appointment.costing.discountType,
-      appointment.costing.vatEnabled ?? false,
-      appointment.costing.otherDiscountAmount || 0
+      currentCosting.discount,
+      currentCosting.discountType,
+      currentCosting.vatEnabled ?? false,
+      currentCosting.otherDiscountAmount || 0
     )
 
     updateCosting(appointmentId, {
-      ...appointment.costing,
+      ...currentCosting,
       items: updatedItems,
       subtotal,
       vatAmount,
@@ -3404,27 +3528,26 @@ export default function AdminDashboard() {
   }
 
   const removeCostItem = (appointmentId: string, itemId: string) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
+    const currentCosting = getLatestCosting(appointmentId)
 
     // Save history before removing
     setCostingHistory(prev => ({
       ...prev,
-      [appointmentId]: [...(prev[appointmentId] || []), { ...appointment.costing! }]
+      [appointmentId]: [...(prev[appointmentId] || []), { ...currentCosting }]
     }))
 
-    const updatedItems = appointment.costing.items.filter((item) => item.id !== itemId)
+    const updatedItems = (currentCosting.items || []).filter((item) => item.id !== itemId)
     const subtotal = updatedItems.reduce((sum, item) => sum + item.total, 0)
     const { vatAmount, total } = calculateTotal(
       subtotal,
-      appointment.costing.discount,
-      appointment.costing.discountType,
-      appointment.costing.vatEnabled ?? false,
-      appointment.costing.otherDiscountAmount || 0
+      currentCosting.discount,
+      currentCosting.discountType,
+      currentCosting.vatEnabled ?? false,
+      currentCosting.otherDiscountAmount || 0
     )
 
     updateCosting(appointmentId, {
-      ...appointment.costing,
+      ...currentCosting,
       items: updatedItems,
       subtotal,
       vatAmount,
@@ -3448,19 +3571,18 @@ export default function AdminDashboard() {
   }
 
   const updateDiscount = (appointmentId: string, discount: number, discountType: "fixed" | "percentage", immediate = false) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
+    const currentCosting = getLatestCosting(appointmentId)
 
     const { vatAmount, total } = calculateTotal(
-      appointment.costing.subtotal,
+      currentCosting.subtotal,
       discount,
       discountType,
-      appointment.costing.vatEnabled ?? false,
-      appointment.costing.otherDiscountAmount || 0
+      currentCosting.vatEnabled ?? false,
+      currentCosting.otherDiscountAmount || 0
     )
 
     updateCosting(appointmentId, {
-      ...appointment.costing,
+      ...currentCosting,
       discount,
       discountType,
       vatAmount,
@@ -3469,19 +3591,18 @@ export default function AdminDashboard() {
   }
 
   const updateOtherDiscount = (appointmentId: string, otherDiscountName: string, otherDiscountAmount: number, immediate = false) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
+    const currentCosting = getLatestCosting(appointmentId)
 
     const { vatAmount, total } = calculateTotal(
-      appointment.costing.subtotal,
-      appointment.costing.discount,
-      appointment.costing.discountType,
-      appointment.costing.vatEnabled ?? false,
+      currentCosting.subtotal,
+      currentCosting.discount,
+      currentCosting.discountType,
+      currentCosting.vatEnabled ?? false,
       otherDiscountAmount
     )
 
     updateCosting(appointmentId, {
-      ...appointment.costing,
+      ...currentCosting,
       otherDiscountName,
       otherDiscountAmount,
       vatAmount,
@@ -3490,19 +3611,18 @@ export default function AdminDashboard() {
   }
 
   const toggleVat = (appointmentId: string, vatEnabled: boolean) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
+    const currentCosting = getLatestCosting(appointmentId)
 
     const { vatAmount, total } = calculateTotal(
-      appointment.costing.subtotal,
-      appointment.costing.discount,
-      appointment.costing.discountType,
+      currentCosting.subtotal,
+      currentCosting.discount,
+      currentCosting.discountType,
       vatEnabled,
-      appointment.costing.otherDiscountAmount || 0
+      currentCosting.otherDiscountAmount || 0
     )
 
     updateCosting(appointmentId, {
-      ...appointment.costing,
+      ...currentCosting,
       vatEnabled,
       vatAmount,
       total,
@@ -3510,41 +3630,37 @@ export default function AdminDashboard() {
   }
 
   const updateCostingNotes = (appointmentId: string, notes: string) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
+    const currentCosting = getLatestCosting(appointmentId)
 
     updateCosting(appointmentId, {
-      ...appointment.costing,
+      ...currentCosting,
       notes,
     }, false)
   }
 
   const updateCostingStringField = (appointmentId: string, field: 'serviceAdvisorName' | 'brpAdvisorName' | 'deliveryDate' | 'documentDate', val: string) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
+    const currentCosting = getLatestCosting(appointmentId)
 
     updateCosting(appointmentId, {
-      ...appointment.costing,
+      ...currentCosting,
       [field]: val,
     }, false)
   }
 
   const setIncludePaulSignature = (appointmentId: string, include: boolean) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
+    const currentCosting = getLatestCosting(appointmentId)
 
     updateCosting(appointmentId, {
-      ...appointment.costing,
+      ...currentCosting,
       includePaulSignature: include,
     }, true)
   }
 
   const setIncludeAlfredSignature = (appointmentId: string, include: boolean) => {
-    const appointment = appointments.find((apt) => apt.id === appointmentId)
-    if (!appointment?.costing) return
+    const currentCosting = getLatestCosting(appointmentId)
 
     updateCosting(appointmentId, {
-      ...appointment.costing,
+      ...currentCosting,
       includeAlfredSignature: include,
     }, true)
   }
@@ -5647,15 +5763,15 @@ export default function AdminDashboard() {
 
                                   {/* Costing Section */}
                                   <div className="pt-4 border-t border-border">
-                                    <div className="flex items-center justify-between mb-4">
-                                      <div className="flex items-center gap-2">
+                                    <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                                      <div className="flex items-center gap-2 flex-wrap">
                                         <Receipt className="w-4 h-4 text-green-500" />
                                         <h4 className="font-semibold text-foreground">Cost Breakdown</h4>
                                         <Button
                                           variant="ghost"
                                           size="icon"
                                           className={cn(
-                                            "h-10 w-10 ml-1 transition-all duration-200",
+                                            "h-7 w-7 ml-0.5 transition-all duration-200",
                                             costingHistory[appointment.id]?.length > 0
                                               ? "text-primary hover:bg-primary/10 opacity-100"
                                               : "text-muted-foreground/30 opacity-50 cursor-not-allowed"
@@ -5666,6 +5782,40 @@ export default function AdminDashboard() {
                                         >
                                           <Undo2 className="w-3.5 h-3.5" />
                                         </Button>
+                                        {(() => {
+                                          const saveInfo = autoSaveStatus[appointment.id];
+                                          if (!saveInfo || saveInfo.status === 'idle') return null;
+                                          if (saveInfo.status === 'saving') {
+                                            return (
+                                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 animate-pulse">
+                                                <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                                                Saving...
+                                              </span>
+                                            );
+                                          }
+                                          if (saveInfo.status === 'saved') {
+                                            return (
+                                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                                                All changes saved {saveInfo.lastSavedAt ? `(${saveInfo.lastSavedAt})` : ''}
+                                              </span>
+                                            );
+                                          }
+                                          if (saveInfo.status === 'error') {
+                                            return (
+                                              <button
+                                                type="button"
+                                                onClick={() => flushCostingSave(appointment.id)}
+                                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 hover:bg-red-500/20 cursor-pointer transition-colors"
+                                                title="Click to retry saving"
+                                              >
+                                                <AlertCircle className="w-3 h-3 text-red-500" />
+                                                Save failed — Click to retry
+                                              </button>
+                                            );
+                                          }
+                                          return null;
+                                        })()}
                                       </div>
                                       <div className="flex gap-2 flex-wrap items-center">
 
@@ -5785,6 +5935,7 @@ export default function AdminDashboard() {
                                                               id={`description-${item.id}`}
                                                               value={item.description}
                                                               onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                                              onBlur={() => flushCostingSave(appointment.id)}
                                                               onKeyDown={(e) => {
                                                                 if (e.key === 'Enter' && !e.shiftKey) {
                                                                   e.preventDefault()
@@ -5799,6 +5950,7 @@ export default function AdminDashboard() {
                                                               id={`description-${item.id}`}
                                                               value={item.description}
                                                               onChange={(e) => updateCostItem(appointment.id, item.id, { description: e.target.value })}
+                                                              onBlur={() => flushCostingSave(appointment.id)}
                                                               onKeyDown={(e) => {
                                                                 if (e.key === 'Enter' && e.shiftKey) {
                                                                   e.preventDefault()
@@ -5825,6 +5977,7 @@ export default function AdminDashboard() {
                                                           min="1"
                                                           value={item.quantity}
                                                           onChange={(e) => updateCostItem(appointment.id, item.id, { quantity: parseInt(e.target.value) || 1 })}
+                                                          onBlur={() => flushCostingSave(appointment.id)}
                                                           onKeyDown={(e) => {
                                                             if (e.key === 'Enter' && !e.shiftKey) {
                                                               e.preventDefault()
@@ -5858,6 +6011,7 @@ export default function AdminDashboard() {
                                                           <Input
                                                             value={item.unit === "__CUSTOM__" ? "" : item.unit}
                                                             onChange={(e) => updateCostItem(appointment.id, item.id, { unit: e.target.value })}
+                                                            onBlur={() => flushCostingSave(appointment.id)}
                                                             placeholder="Type unit..."
                                                             className="h-8 text-sm pr-6 bg-background"
                                                             autoFocus
@@ -5944,7 +6098,8 @@ export default function AdminDashboard() {
                                                           // Commit final numeric value on blur and clear local string
                                                           const raw = e.target.value.replace(/[^0-9.]/g, '')
                                                           const parsed = parseFloat(raw) || 0
-                                                          updateCostItem(appointment.id, item.id, { unitPrice: parsed })
+                                                          updateCostItem(appointment.id, item.id, { unitPrice: parsed }, true)
+                                                          flushCostingSave(appointment.id)
                                                           setUnitPriceInputs(prev => {
                                                             const next = { ...prev }
                                                             delete next[item.id]
@@ -5957,7 +6112,7 @@ export default function AdminDashboard() {
                                                             // Commit current value before adding new item
                                                             const raw = (e.target as HTMLInputElement).value.replace(/[^0-9.]/g, '')
                                                             const parsed = parseFloat(raw) || 0
-                                                            updateCostItem(appointment.id, item.id, { unitPrice: parsed })
+                                                            updateCostItem(appointment.id, item.id, { unitPrice: parsed }, true)
                                                             setUnitPriceInputs(prev => {
                                                               const next = { ...prev }
                                                               delete next[item.id]
@@ -6022,6 +6177,7 @@ export default function AdminDashboard() {
                                                 min="0"
                                                 value={appointment.costing?.discount || 0}
                                                 onChange={(e) => updateDiscount(appointment.id, parseFloat(e.target.value) || 0, appointment.costing?.discountType || "fixed")}
+                                                onBlur={() => flushCostingSave(appointment.id)}
                                                 className="h-8 text-sm pr-6 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
                                               />
                                               <div className="absolute right-0 top-0 bottom-0 flex flex-col border-l border-input opacity-0 group-hover/num:opacity-100 focus-within:opacity-100 transition-opacity">
@@ -6061,6 +6217,7 @@ export default function AdminDashboard() {
                                               placeholder="e.g. Senior, PWD"
                                               value={appointment.costing?.otherDiscountName || ""}
                                               onChange={(e) => updateOtherDiscount(appointment.id, e.target.value, appointment.costing?.otherDiscountAmount || 0)}
+                                              onBlur={() => flushCostingSave(appointment.id)}
                                               className="h-8 text-sm w-44"
                                             />
                                             <div className="relative group/num w-28">
@@ -6084,6 +6241,7 @@ export default function AdminDashboard() {
                                                   const parsed = parseFloat(raw)
                                                   updateOtherDiscount(appointment.id, appointment.costing?.otherDiscountName || "", isNaN(parsed) ? 0 : parsed)
                                                 }}
+                                                onBlur={() => flushCostingSave(appointment.id)}
                                                 className="h-8 text-sm"
                                               />
                                             </div>
@@ -6122,6 +6280,7 @@ export default function AdminDashboard() {
                                             <Input
                                               value={appointment.costing?.serviceAdvisorName ?? "Ryan Christopher D. Quintos"}
                                               onChange={(e) => updateCostingStringField(appointment.id, 'serviceAdvisorName', e.target.value)}
+                                              onBlur={() => flushCostingSave(appointment.id)}
                                               placeholder="e.g. Ryan Christopher D. Quintos"
                                               className="h-9 text-sm bg-background border-border"
                                             />
@@ -6131,6 +6290,7 @@ export default function AdminDashboard() {
                                             <Input
                                               value={appointment.costing?.brpAdvisorName || ""}
                                               onChange={(e) => updateCostingStringField(appointment.id, 'brpAdvisorName', e.target.value)}
+                                              onBlur={() => flushCostingSave(appointment.id)}
                                               placeholder="e.g. John Doe (Leave blank if none)"
                                               className="h-9 text-sm bg-background border-border"
                                             />
@@ -6146,6 +6306,7 @@ export default function AdminDashboard() {
                                                 type="text"
                                                 value={appointment.costing?.deliveryDate || ""}
                                                 onChange={(e) => updateCostingStringField(appointment.id, 'deliveryDate', e.target.value)}
+                                                onBlur={() => flushCostingSave(appointment.id)}
                                                 placeholder="e.g. 5-7"
                                                 className="h-9 text-sm bg-background border-border"
                                               />
@@ -6258,6 +6419,7 @@ export default function AdminDashboard() {
                                             <textarea
                                               value={appointment.costing?.notes || ""}
                                               onChange={(e) => updateCostingNotes(appointment.id, e.target.value)}
+                                              onBlur={() => flushCostingSave(appointment.id)}
                                               placeholder="Add any notes about the costing..."
                                               className="w-full h-20 px-3 py-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                                             />
