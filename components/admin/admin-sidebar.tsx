@@ -22,6 +22,7 @@ import {
   Award,
   Boxes,
   PaintBucket,
+  Layers,
   Wallet,
   Calculator,
   ArrowDownLeft,
@@ -41,6 +42,7 @@ export function AdminSidebar() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     "Parts Room": true,
+    "Price List": true,
     "Accounting Works": true
   })
 
@@ -75,7 +77,7 @@ export function AdminSidebar() {
       icon: Package,
       subItems: [
         {
-          title: "Parts Inventory",
+          title: "Parts Job Slips",
           href: "/admin/parts",
           icon: Boxes,
         },
@@ -100,6 +102,11 @@ export function AdminSidebar() {
           title: "Items",
           href: "/admin/parts/prices/items",
           icon: PaintBucket,
+        },
+        {
+          title: "Others",
+          href: "/admin/parts/prices/others",
+          icon: Layers,
         }
       ]
     },

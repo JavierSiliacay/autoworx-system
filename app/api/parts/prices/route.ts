@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 
@@ -12,75 +12,91 @@ import { authOptions } from "@/lib/auth"
  */
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("parts_prices")
-    .select("*")
-    .order("brand", { ascending: true })
-    .order("category", { ascending: true })
+  try {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from("parts_prices")
+      .select("*")
+      .order("brand", { ascending: true })
+      .order("category", { ascending: true })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data)
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to fetch prices" }, { status: 500 })
+  }
 }
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const supabase = await createClient()
-  const body = await req.json()
-  
-  const { data, error } = await supabase
-    .from("parts_prices")
-    .insert([{
-      ...body,
-      updated_by: session.user?.email,
-      updated_at: new Date().toISOString()
-    }])
-    .select()
+  try {
+    const supabase = createAdminClient()
+    const body = await req.json()
+    
+    const { data, error } = await supabase
+      .from("parts_prices")
+      .insert([{
+        ...body,
+        updated_by: session.user?.email || "System",
+        updated_at: new Date().toISOString()
+      }])
+      .select()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data[0])
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data[0])
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to create price" }, { status: 500 })
+  }
 }
 
 export async function PUT(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const supabase = await createClient()
-  const { id, ...updates } = await req.json()
-  
-  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
+  try {
+    const supabase = createAdminClient()
+    const { id, ...updates } = await req.json()
+    
+    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
 
-  const { data, error } = await supabase
-    .from("parts_prices")
-    .update({
-      ...updates,
-      updated_by: session.user?.email,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", id)
-    .select()
+    const { data, error } = await supabase
+      .from("parts_prices")
+      .update({
+        ...updates,
+        updated_by: session.user?.email || "System",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", id)
+      .select()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data[0])
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data[0])
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to update price" }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { searchParams } = new URL(req.url)
-  const id = searchParams.get("id")
-  
-  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
+  try {
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get("id")
+    
+    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
 
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from("parts_prices")
-    .delete()
-    .eq("id", id)
+    const supabase = createAdminClient()
+    const { error } = await supabase
+      .from("parts_prices")
+      .delete()
+      .eq("id", id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to delete price" }, { status: 500 })
+  }
 }

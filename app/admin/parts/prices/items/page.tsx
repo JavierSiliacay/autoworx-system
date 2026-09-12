@@ -104,19 +104,24 @@ export default function ItemsPriceListPage() {
   }, [items])
 
   const filteredItems = useMemo(() => {
-    const searchTokens = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean)
+    const rawSearch = searchQuery.toLowerCase().trim()
+    const searchTokens = rawSearch.split(/\s+/).filter(Boolean)
+    const collapsedSearch = rawSearch.replace(/\s+/g, "")
 
     return items.filter(p => {
       // 1. Category Filter
       const matchesCategory = selectedCategory === "All Categories" || p.category === selectedCategory
 
-      // 2. Tokenized Search Filter
+      // 2. Tokenized & Space-Insensitive Search Filter
       if (searchTokens.length === 0) return matchesCategory
 
       const searchableText = `${p.item_name} ${p.category} ${p.unit}`.toLowerCase()
-      const matchesSearch = searchTokens.every(token => searchableText.includes(token))
+      const searchableCollapsed = searchableText.replace(/\s+/g, "")
 
-      return matchesCategory && matchesSearch
+      const matchesTokenized = searchTokens.every(token => searchableText.includes(token))
+      const matchesCollapsed = collapsedSearch.length > 0 && searchableCollapsed.includes(collapsedSearch)
+
+      return matchesCategory && (matchesTokenized || matchesCollapsed)
     })
   }, [items, selectedCategory, searchQuery])
 

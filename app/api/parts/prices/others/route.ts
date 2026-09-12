@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 
 /**
- * API Route for Price List Items Management
+ * API Route for Price List Others Management
  * GET: Fetch all items
  * POST: Create a new item entry
  * PUT: Update an existing item entry
@@ -15,7 +15,7 @@ export async function GET() {
   try {
     const supabase = createAdminClient()
     const { data, error } = await supabase
-      .from("price_list_items")
+      .from("price_list_others")
       .select("*")
       .order("category", { ascending: true })
       .order("item_name", { ascending: true })
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     
     const { data, error } = await supabase
-      .from("price_list_items")
+      .from("price_list_others")
       .insert([{
         ...body,
         updated_by: session.user?.email || "System",
@@ -62,7 +62,7 @@ export async function PUT(req: Request) {
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
 
     const { data, error } = await supabase
-      .from("price_list_items")
+      .from("price_list_others")
       .update({
         ...updates,
         updated_by: session.user?.email || "System",
@@ -90,7 +90,7 @@ export async function DELETE(req: Request) {
 
     const supabase = createAdminClient()
     const { error } = await supabase
-      .from("price_list_items")
+      .from("price_list_others")
       .delete()
       .eq("id", id)
 
